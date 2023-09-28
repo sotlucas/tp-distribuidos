@@ -31,7 +31,17 @@ class Client:
         with open(self.file_path, "r") as f:
             for line in f:
                 try:
-                    self.sock.send(line.encode())
+                    bytes = line.encode()
+                    # Add the \r\n\r\n sequence to mark the end of the message
+                    bytes += b"\r\n\r\n"
+                    bytes_to_send = len(bytes)
+
+                    while bytes_to_send > 0:
+                        # Send the data
+                        sent = self.sock.send(bytes)
+                        bytes_to_send -= sent
+                        bytes = bytes[sent:]
+
                 except OSError:
                     # When receiving SIGTERM, the socket is closed and a OSError is raised.
                     return
