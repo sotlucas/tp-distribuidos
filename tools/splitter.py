@@ -2,6 +2,12 @@ import os
 import sys
 import pandas as pd
 
+"""
+Script que recibe un archivo CSV y crea un archivo con las primeras N cantidad de filas
+Ejemplo de uso:
+    python tools/splitter.py itineraries.csv 100
+"""
+
 
 class FileSettings(object):
     def __init__(self, file_path, row_size=100):
@@ -31,7 +37,7 @@ class FileSplitter(object):
 
 
 def main():
-    file_path = sys.argv[1] if len(sys.argv) > 1 else "../../itineraries.csv"
+    file_path = sys.argv[1] if len(sys.argv) > 1 else "../itineraries.csv"
     row_size = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 
     print(f"Splitting {file_path} into {row_size} rows per file")
