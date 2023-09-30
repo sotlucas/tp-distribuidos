@@ -1,5 +1,5 @@
-import sys
 from filter import Filter, FilterConfig
+from communication import Communication, CommunicationConfig
 import logging
 import os
 
@@ -38,14 +38,19 @@ def main():
 
     initialize_log(logging_level)
 
-    filter_config = FilterConfig(
-        config_params["input_fields"],
-        config_params["output_fields"],
+    communication_config = CommunicationConfig(
         config_params["input_queue"],
         config_params["output_queue"],
         config_params["rabbit_host"],
     )
-    Filter(filter_config).run()
+
+    filter_config = FilterConfig(
+        config_params["input_fields"],
+        config_params["output_fields"],
+    )
+
+    filter = Filter(filter_config)
+    Communication(communication_config, filter.filter).run()
 
 
 if __name__ == "__main__":
