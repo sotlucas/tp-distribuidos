@@ -8,6 +8,46 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - testing_net
     ports:
       - "5672:5672"
       - "15672:15672"
+ 
+  client:
+    container_name: client
+    image: client:latest
+    entrypoint: python3 /main.py archivo.csv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    depends_on:
+      - uploader
+    restart: on-failure
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./temp/archivo.csv:/archivo.csv
+  
+  uploader:
+    container_name: uploader
+    image: uploader:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+    volumes:
+      - ./uploader/config.ini:/config.ini
+
+networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24
