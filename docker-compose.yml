@@ -46,7 +46,8 @@ services:
       - ./uploader/config.ini:/config.ini
 
   filter_general:
-    container_name: filter_general
+    deploy:
+      replicas: 1
     image: filter:latest
     entrypoint: python3 /main.py
     environment:

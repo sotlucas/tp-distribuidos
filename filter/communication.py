@@ -11,6 +11,8 @@ class CommunicationConfig:
 
 class Communication:
     def __init__(self, config, input_callback):
+        # reduce log level for pika
+        logging.getLogger("pika").setLevel(logging.WARNING)
         self.config = config
         self.input_callback = input_callback
         self.connection = pika.BlockingConnection(
@@ -27,11 +29,10 @@ class Communication:
         self.channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
-        logging.info("Received {}".format(body))
-        print("Received {}".format(body))
+        logging.debug("Received {}".format(body))
         output_message = self.input_callback(body.decode("utf-8"))
         self.send_output(output_message)
-        print("Done")
+        logging.debug("Sent")
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def send_output(self, message):

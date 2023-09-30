@@ -15,7 +15,6 @@ class Filter:
         input_fields = self.config.input_fields.split(",")
         reader = csv.DictReader([message], fieldnames=input_fields)
         for row in reader:
-            print(row)
             output_fields = self.config.output_fields.split(",")
             filtered_row = [row[key] for key in output_fields]
             return ",".join(filtered_row)
