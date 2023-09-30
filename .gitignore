@@ -2,3 +2,5 @@ venv/
 .vscode
 .idea
 temp/
+*.csv
+__pycache__
