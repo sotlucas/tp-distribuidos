@@ -31,7 +31,7 @@ class Client:
         with open(self.file_path, "r") as f:
             for line in f:
                 try:
-                    bytes = line.encode()
+                    bytes = line.rstrip().encode()
                     # Add the \r\n\r\n sequence to mark the end of the message
                     bytes += b"\r\n\r\n"
                     bytes_to_send = len(bytes)

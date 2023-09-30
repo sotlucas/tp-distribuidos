@@ -1,0 +1,57 @@
+import signal
+import socket
+import logging
+from communication import Communication
+from client_handler import ClientHandler
+
+
+class UploaderConfig:
+    def __init__(self, port, connection_timeout):
+        self.port = port
+        self.connection_timeout = connection_timeout
+
+
+class Uploader:
+    def __init__(self, config, communication_config):
+        self.config = config
+        self.communication = Communication(communication_config)
+        # Initialize server socket
+        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server_socket.bind(("", config.port))
+        self._server_socket.listen()
+        self.running = True
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
+
+    def run(self):
+        while self.running:
+            try:
+                client_sock = self.__accept_new_connection()
+                client_sock.settimeout(self.config.connection_timeout)
+                ClientHandler(client_sock, self.communication).handle_client()
+            except OSError as e:
+                logging.error(f"Error: {e}")
+                return
+
+    def __accept_new_connection(self):
+        """
+        Accept new connections
+
+        Function blocks until a connection to a client is made.
+        Then connection created is printed and returned
+        """
+        logging.info("action: accept_connections | result: in_progress")
+        c, addr = self._server_socket.accept()
+        logging.info(f"action: accept_connections | result: success | ip: {addr[0]}")
+        return c
+
+    def __stop(self, *args):
+        """
+        Stop server closing the server socket.
+        """
+        logging.info("action: server_shutdown | result: in_progress")
+        self.running = False
+        self._server_socket.shutdown(socket.SHUT_RDWR)
+        self._server_socket.close()
+        logging.info("action: server_socket_closed | result: success")
+        logging.info("action: server_shutdown | result: success")
