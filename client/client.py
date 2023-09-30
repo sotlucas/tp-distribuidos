@@ -3,11 +3,17 @@ import socket
 import logging
 
 
-class Client:
-    def __init__(self, server_ip, server_port, file_path):
+class ClientConfig:
+    def __init__(self, server_ip, server_port, file_path, remove_file_header) -> None:
         self.server_ip = server_ip
         self.server_port = server_port
         self.file_path = file_path
+        self.remove_file_header = remove_file_header
+
+
+class Client:
+    def __init__(self, config):
+        self.config = config
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.shutdown)
 
@@ -15,7 +21,7 @@ class Client:
         # Create a socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Connect to the server
-        self.sock.connect((self.server_ip, self.server_port))
+        self.sock.connect((self.config.server_ip, self.config.server_port))
         logging.info("Connected to server")
 
         self.send_file()
@@ -28,7 +34,11 @@ class Client:
         """
 
         logging.info("Sending file")
-        with open(self.file_path, "r") as f:
+        with open(self.config.file_path, "r") as f:
+            if self.config.remove_file_header:
+                # Skip the header
+                next(f)
+
             for line in f:
                 try:
                     bytes = line.rstrip().encode()
