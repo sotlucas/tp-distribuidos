@@ -40,7 +40,12 @@ class Communication:
         self.channel.exchange_declare(
             exchange=self.config.input_queue, exchange_type="fanout"
         )
-        result = self.channel.queue_declare(queue="", durable=True)
+        # To differentiate the queues for different filters, we append the output queue name to the input queue name.
+        # This is because the input queue name is used as the exchange name.
+        # So we do this to replicate the filters and function as workers.
+        result = self.channel.queue_declare(
+            queue=self.config.input_queue + self.config.output_queue, durable=True
+        )
         queue_name = result.method.queue
         self.channel.queue_bind(exchange=self.config.input_queue, queue=queue_name)
         self.channel.basic_consume(queue=queue_name, on_message_callback=self.callback)
