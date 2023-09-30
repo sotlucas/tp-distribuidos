@@ -58,6 +58,71 @@ services:
       - INPUT_QUEUE=vuelos
       - OUTPUT_QUEUE=vuelos_filtered
       - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=PUBSUB
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  filter_avg_max:
+    deploy:
+      replicas: 1
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
+      - OUTPUT_FIELDS=startingAirport,destinationAirport,totalFare
+      - INPUT_QUEUE=vuelos_filtered
+      - OUTPUT_QUEUE=vuelos_avg_max
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  filter_multiple:
+    deploy:
+      replicas: 1
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
+      - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
+      - INPUT_QUEUE=vuelos_filtered
+      - OUTPUT_QUEUE=vuelos_multiple
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  filter_distancia:
+    deploy:
+      replicas: 1
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
+      - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalTravelDistance
+      - INPUT_QUEUE=vuelos_filtered
+      - OUTPUT_QUEUE=vuelos_distancia
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
     depends_on:
       - rabbitmq
     restart: on-failure
