@@ -129,6 +129,46 @@ services:
     networks:
       - testing_net
 
+  processor_tres_escalas_o_mas:
+    deploy:
+      replicas: 1
+    image: tres_escalas_o_mas:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=vuelos_multiple
+      - OUTPUT_QUEUE=vuelos_tres_escalas_o_mas
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=PUBSUB
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  filter_tres_escalas_o_mas:
+    deploy:
+      replicas: 1
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
+      - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,segmentsArrivalAirportCode
+      - INPUT_QUEUE=vuelos_tres_escalas_o_mas
+      - OUTPUT_QUEUE=vuelos_tres_escala_o_mas_sink
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
 networks:
   testing_net:
     ipam:

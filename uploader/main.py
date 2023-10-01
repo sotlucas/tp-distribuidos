@@ -72,13 +72,14 @@ def main():
         config_params["connection_timeout"],
     )
 
-    Uploader(
-        uploader_config,
-        CommunicationConfig(
-            config_params["output_queue"],
-            config_params["rabbit_host"],
-        ),
-    ).run()
+    communication_config = CommunicationConfig(
+        None,
+        config_params["output_queue"],
+        config_params["rabbit_host"],
+        None,
+        None,
+    )
+    Uploader(uploader_config, communication_config).run()
 
 
 if __name__ == "__main__":

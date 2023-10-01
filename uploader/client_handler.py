@@ -1,8 +1,8 @@
 import socket
 import signal
 import logging
-import communication
-from communication import ClientDisconnected
+import protocol
+from protocol import ClientDisconnected
 
 
 class ClientHandler:
@@ -14,7 +14,7 @@ class ClientHandler:
         signal.signal(signal.SIGTERM, self.__stop)
 
     def handle_client(self):
-        buff = communication.CommunicationBuffer(self.client_sock)
+        buff = protocol.CommunicationBuffer(self.client_sock)
         while self.running == True:
             try:
                 client_message = buff.get_line()

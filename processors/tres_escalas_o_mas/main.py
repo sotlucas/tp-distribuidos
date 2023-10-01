@@ -1,4 +1,4 @@
-from filter import Filter, FilterConfig
+from processor import Processor
 from communication import Communication, CommunicationConfig
 import logging
 import os
@@ -7,8 +7,6 @@ import os
 def initialize_config():
     config_params = {}
     try:
-        config_params["input_fields"] = os.getenv("INPUT_FIELDS")
-        config_params["output_fields"] = os.getenv("OUTPUT_FIELDS")
         config_params["input_queue"] = os.getenv("INPUT_QUEUE")
         config_params["output_queue"] = os.getenv("OUTPUT_QUEUE")
         config_params["logging_level"] = os.getenv("LOGGING_LEVEL")
@@ -53,13 +51,8 @@ def main():
         config_params["output_type"],
     )
 
-    filter_config = FilterConfig(
-        config_params["input_fields"],
-        config_params["output_fields"],
-    )
-
-    filter = Filter(filter_config)
-    Communication(communication_config).run(filter.filter)
+    processor = Processor()
+    Communication(communication_config).run(processor.proccess)
 
 
 if __name__ == "__main__":
