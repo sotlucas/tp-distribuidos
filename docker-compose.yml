@@ -36,6 +36,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
     depends_on:
       - rabbitmq
@@ -52,6 +53,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_FIELDS=,legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
@@ -73,6 +75,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=startingAirport,destinationAirport,totalFare
@@ -94,6 +97,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
@@ -115,6 +119,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalTravelDistance
@@ -136,6 +141,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_QUEUE=vuelos_multiple
       - OUTPUT_QUEUE=vuelos_tres_escalas_o_mas
@@ -155,6 +161,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,segmentsArrivalAirportCode

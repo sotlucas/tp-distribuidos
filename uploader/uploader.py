@@ -1,5 +1,5 @@
 import logging
-from communication import Communication
+from commons.communication import Communication
 
 
 class Uploader:

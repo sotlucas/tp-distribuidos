@@ -1,9 +1,8 @@
 import logging
 import os
 from configparser import ConfigParser
-import time
 from server import Server, ServerConfig
-from communication import CommunicationConfig
+from commons.communication import CommunicationConfig
 
 
 def initialize_config():

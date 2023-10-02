@@ -1,5 +1,5 @@
 from processor import Processor
-from communication import Communication, CommunicationConfig
+from commons.communication import Communication, CommunicationConfig
 import logging
 import os
 
