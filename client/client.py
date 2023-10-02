@@ -14,6 +14,7 @@ class ClientConfig:
 class Client:
     def __init__(self, config):
         self.config = config
+        self.running = True
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.shutdown)
 
@@ -52,9 +53,13 @@ class Client:
                         bytes_to_send -= sent
                         bytes = bytes[sent:]
 
-                except OSError:
+                except OSError as e:
                     # When receiving SIGTERM, the socket is closed and a OSError is raised.
+                    # If not we want to raise the exception.
+                    if self.running:
+                        raise e
                     return
+
         logging.info("File sent")
         self.shutdown()
 
@@ -62,4 +67,5 @@ class Client:
         logging.info("Shutting down")
         self.sock.shutdown(socket.SHUT_WR)
         self.sock.close()
+        self.running = False
         logging.info("Shut down completed")
