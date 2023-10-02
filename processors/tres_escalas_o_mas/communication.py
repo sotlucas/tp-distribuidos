@@ -21,6 +21,10 @@ class Communication:
         )
         self.channel = self.connection.channel()
 
+        # Declare the output queue
+        if self.config.output_type == "QUEUE":
+            self.channel.queue_declare(queue=self.config.output_queue, durable=True)
+
     def run(self, input_callback):
         self.input_callback = input_callback
         if self.config.input_type == "PUBSUB":
@@ -65,7 +69,6 @@ class Communication:
             self.send_queue(message)
 
     def send_queue(self, message):
-        self.channel.queue_declare(queue=self.config.output_queue, durable=True)
         self.channel.basic_publish(
             exchange="",
             routing_key=self.config.output_queue,

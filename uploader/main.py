@@ -2,7 +2,7 @@ import logging
 import os
 from configparser import ConfigParser
 import time
-from uploader import Uploader, UploaderConfig
+from server import Server, ServerConfig
 from communication import CommunicationConfig
 
 
@@ -67,7 +67,7 @@ def main():
 
     initialize_log(logging_level)
 
-    uploader_config = UploaderConfig(
+    server_config = ServerConfig(
         config_params["server_port"],
         config_params["connection_timeout"],
     )
@@ -79,7 +79,7 @@ def main():
         None,
         None,
     )
-    Uploader(uploader_config, communication_config).run()
+    Server(server_config, communication_config).run()
 
 
 if __name__ == "__main__":

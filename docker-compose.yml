@@ -47,7 +47,7 @@ services:
 
   filter_general:
     deploy:
-      replicas: 1
+      replicas: 3
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
@@ -68,7 +68,7 @@ services:
 
   filter_avg_max:
     deploy:
-      replicas: 1
+      replicas: 3
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
@@ -89,7 +89,7 @@ services:
 
   filter_multiple:
     deploy:
-      replicas: 1
+      replicas: 3
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
@@ -110,7 +110,7 @@ services:
 
   filter_distancia:
     deploy:
-      replicas: 1
+      replicas: 3
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
