@@ -1,18 +1,24 @@
 import socket
 import signal
 import logging
-import protocol
-from protocol import ClientDisconnected
-from uploader import Uploader
+import commons.protocol as protocol
+from commons.protocol import PeerDisconnected
+from flights_uploader import FlightsUploader
+from results_uploader import ResultsUploader
 from multiprocessing import Queue, Process
 
 
 class ClientHandler:
     def __init__(self, client_sock, communication_config):
         self.client_sock = client_sock
-        self.uploader_queue = Queue()
-        self.uploader = Process(
-            target=Uploader(communication_config, self.uploader_queue).start
+        self.flights_uploader_queue = Queue()
+        self.flights_uploader = Process(
+            target=FlightsUploader(
+                communication_config, self.flights_uploader_queue
+            ).start
+        ).start()
+        self.results_uploader = Process(
+            target=ResultsUploader(communication_config, self.client_sock).start
         ).start()
         self.running = True
 
@@ -24,14 +30,14 @@ class ClientHandler:
         while self.running == True:
             try:
                 client_message = buff.get_line()
-                self.uploader_queue.put(client_message)
+                self.flights_uploader_queue.put(client_message)
             except OSError as e:
                 return
             except ValueError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
                 self.client_sock.close()
                 self.running = False
-            except ClientDisconnected as e:
+            except PeerDisconnected as e:
                 logging.info("action: client_disconected")
                 self.running = False
         self.client_sock.close()

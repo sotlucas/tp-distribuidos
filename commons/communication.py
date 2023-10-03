@@ -23,10 +23,12 @@ class Communication:
 
         # Declare the output queue
         if self.config.output_type == "QUEUE":
-            self.channel.queue_declare(queue=self.config.output_queue, durable=True)
+            self.channel.queue_declare(queue=self.config.output_queue)
 
-    def run(self, input_callback):
+    def run(self, input_callback=None, output_callback=None):
         self.input_callback = input_callback
+        # If no output callback is provided, we use the default one, which sends the message to the output rabbit queue.
+        self.output_callback = output_callback if output_callback else self.send_output
         if self.config.input_type == "PUBSUB":
             self.run_exchange()
         else:
@@ -35,7 +37,7 @@ class Communication:
         self.channel.start_consuming()
 
     def run_queue(self):
-        self.channel.queue_declare(queue=self.config.input_queue, durable=True)
+        self.channel.queue_declare(queue=self.config.input_queue)
         self.channel.basic_consume(
             queue=self.config.input_queue, on_message_callback=self.callback
         )
@@ -48,7 +50,7 @@ class Communication:
         # This is because the input queue name is used as the exchange name.
         # So we do this to replicate the filters and function as workers.
         result = self.channel.queue_declare(
-            queue=self.config.input_queue + self.config.output_queue, durable=True
+            queue=self.config.input_queue + self.config.output_queue
         )
         queue_name = result.method.queue
         self.channel.queue_bind(exchange=self.config.input_queue, queue=queue_name)
@@ -56,9 +58,12 @@ class Communication:
 
     def callback(self, ch, method, properties, body):
         logging.debug("Received {}".format(body))
-        output_message = self.input_callback(body.decode("utf-8"))
+        message = body.decode("utf-8")
+        output_message = (
+            self.input_callback(message) if self.input_callback else message
+        )
         if output_message:
-            self.send_output(output_message)
+            self.output_callback(output_message)
             logging.debug("Sent message")
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -74,7 +79,7 @@ class Communication:
             routing_key=self.config.output_queue,
             body=message,
             properties=pika.BasicProperties(
-                delivery_mode=2,  # make message persistent
+                delivery_mode=pika.DeliveryMode.Transient,
             ),
         )
 
@@ -84,6 +89,6 @@ class Communication:
             routing_key="",
             body=message,
             properties=pika.BasicProperties(
-                delivery_mode=2,  # make message persistent
+                delivery_mode=pika.DeliveryMode.Transient,
             ),
         )

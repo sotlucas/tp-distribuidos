@@ -20,9 +20,10 @@ services:
     entrypoint: python3 /main.py archivo.csv
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
     depends_on:
-      - uploader
+      - server
     restart: on-failure
     networks:
       - testing_net
@@ -30,9 +31,9 @@ services:
       - ./client/config.ini:/config.ini
       - ./temp/archivo.csv:/archivo.csv
   
-  uploader:
-    container_name: uploader
-    image: uploader:latest
+  server:
+    container_name: server
+    image: server:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
@@ -44,7 +45,7 @@ services:
     networks:
       - testing_net
     volumes:
-      - ./uploader/config.ini:/config.ini
+      - ./server/config.ini:/config.ini
 
   filter_general:
     deploy:

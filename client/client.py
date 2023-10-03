@@ -1,6 +1,13 @@
 import signal
 import socket
 import logging
+from multiprocessing import Process
+from commons.protocol import (
+    CommunicationBuffer,
+    PeerDisconnected,
+    END_OF_MESSAGE,
+    BUFFER_SIZE,
+)
 
 
 class ClientConfig:
@@ -25,7 +32,17 @@ class Client:
         self.sock.connect((self.config.server_ip, self.config.server_port))
         logging.info("Connected to server")
 
-        self.send_file()
+        # Start the process to send the file
+        self.file_sender = Process(target=self.send_file)
+        self.file_sender.start()
+        # Start the process to receive the results
+        self.results_receiver = Process(target=self.recieve_results)
+        self.results_receiver.start()
+
+        # Wait for the processes to finish
+        self.results_receiver.join()
+        self.file_sender.join()
+        self.shutdown()
 
     def send_file(self):
         """
@@ -44,7 +61,7 @@ class Client:
                 try:
                     bytes = line.rstrip().encode()
                     # Add the \r\n\r\n sequence to mark the end of the message
-                    bytes += b"\r\n\r\n"
+                    bytes += END_OF_MESSAGE
                     bytes_to_send = len(bytes)
 
                     while bytes_to_send > 0:
@@ -61,7 +78,30 @@ class Client:
                     return
 
         logging.info("File sent")
-        self.shutdown()
+
+    def recieve_results(self):
+        """
+        Receive the results from the server.
+        """
+        logging.info("Receiving results")
+        buffer = CommunicationBuffer(self.sock)
+        while self.running:
+            try:
+                data = buffer.get_line()
+                if not data:
+                    break
+                logging.info(f"Result received: {data}")
+            except PeerDisconnected:
+                logging.info("action: server_disconected")
+                self.running = False
+            except OSError as e:
+                # When receiving SIGTERM, the socket is closed and a OSError is raised.
+                # If not we want to raise the exception.
+                if self.running:
+                    raise e
+                return
+
+        logging.info("Results received")
 
     def shutdown(self):
         logging.info("Shutting down")

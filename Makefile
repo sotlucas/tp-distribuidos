@@ -2,7 +2,7 @@ SHELL := /bin/bash
 PWD := $(shell pwd)
 
 docker-image:
-	docker build -f ./uploader/Dockerfile -t "uploader:latest" .
+	docker build -f ./server/Dockerfile -t "server:latest" .
 	docker build -f ./client/Dockerfile -t "client:latest" .
 	docker build -f ./filter/Dockerfile -t "filter:latest" .
 	docker build -f ./processors/tres_escalas_o_mas/Dockerfile -t "tres_escalas_o_mas:latest" .

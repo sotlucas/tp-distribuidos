@@ -31,11 +31,20 @@ def initialize_config():
         config_params["connection_timeout"] = int(
             os.getenv("CONNECTION_TIMEOUT", config["DEFAULT"]["CONNECTION_TIMEOUT"])
         )
+        config_params["input_queue"] = os.getenv(
+            "INPUT_QUEUE", config["DEFAULT"]["INPUT_QUEUE"]
+        )
         config_params["output_queue"] = os.getenv(
             "OUTPUT_QUEUE", config["DEFAULT"]["OUTPUT_QUEUE"]
         )
         config_params["rabbit_host"] = os.getenv(
             "RABBIT_HOST", config["DEFAULT"]["RABBIT_HOST"]
+        )
+        config_params["output_type"] = os.getenv(
+            "OUTPUT_TYPE", config["DEFAULT"]["OUTPUT_TYPE"]
+        )
+        config_params["input_type"] = os.getenv(
+            "INPUT_TYPE", config["DEFAULT"]["INPUT_TYPE"]
         )
     except KeyError as e:
         raise KeyError("Key was not found. Error: {} .Aborting server".format(e))
@@ -72,11 +81,11 @@ def main():
     )
 
     communication_config = CommunicationConfig(
-        None,
+        config_params["input_queue"],
         config_params["output_queue"],
         config_params["rabbit_host"],
-        None,
-        None,
+        config_params["input_type"],
+        config_params["output_type"],
     )
     Server(server_config, communication_config).run()
 

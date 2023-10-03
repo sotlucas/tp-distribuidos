@@ -2,7 +2,7 @@ import logging
 from commons.communication import Communication
 
 
-class Uploader:
+class FlightsUploader:
     def __init__(self, communication_config, queue):
         self.queue = queue
         self.communication = Communication(communication_config)

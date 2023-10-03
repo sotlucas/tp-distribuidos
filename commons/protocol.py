@@ -11,11 +11,11 @@ class CommunicationBuffer:
         while END_OF_MESSAGE not in self.buffer:
             data = self.sock.recv(BUFFER_SIZE)
             if not data:  # socket is closed
-                raise ClientDisconnected
+                raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
         return line.decode()
 
 
-class ClientDisconnected(Exception):
+class PeerDisconnected(Exception):
     pass
