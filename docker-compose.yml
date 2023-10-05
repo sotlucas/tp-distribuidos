@@ -20,7 +20,6 @@ services:
     entrypoint: python3 /main.py archivo.csv
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
     depends_on:
       - server
@@ -37,7 +36,6 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_QUEUE=vuelos_tres_escala_o_mas_sink
       - OUTPUT_QUEUE=vuelos
@@ -54,13 +52,13 @@ services:
 
   filter_general:
     deploy:
-      replicas: 3
+      replicas: ${FILTER_GENERAL_REPLICAS}
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
       - INPUT_FIELDS=,legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - INPUT_QUEUE=vuelos
@@ -76,13 +74,13 @@ services:
 
   filter_avg_max:
     deploy:
-      replicas: 3
+      replicas: ${FILTER_AVG_MAX_REPLICAS}
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=startingAirport,destinationAirport,totalFare
       - INPUT_QUEUE=vuelos_filtered
@@ -98,13 +96,13 @@ services:
 
   filter_multiple:
     deploy:
-      replicas: 3
+      replicas: ${FILTER_MULTIPLE_REPLICAS}
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
       - INPUT_QUEUE=vuelos_filtered
@@ -120,13 +118,13 @@ services:
 
   filter_distancia:
     deploy:
-      replicas: 3
+      replicas: ${FILTER_DISTANCIA_REPLICAS}
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalTravelDistance
       - INPUT_QUEUE=vuelos_filtered
@@ -142,12 +140,11 @@ services:
 
   processor_tres_escalas_o_mas:
     deploy:
-      replicas: 1
+      replicas: ${PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS}
     image: tres_escalas_o_mas:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
       - INPUT_QUEUE=vuelos_multiple
       - OUTPUT_QUEUE=vuelos_tres_escalas_o_mas
@@ -162,13 +159,13 @@ services:
 
   filter_tres_escalas_o_mas:
     deploy:
-      replicas: 1
+      replicas: ${FILTER_TRES_ESCALAS_O_MAS_REPLICAS}
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,segmentsArrivalAirportCode
       - INPUT_QUEUE=vuelos_tres_escalas_o_mas
@@ -184,16 +181,36 @@ services:
 
   lat_long_uploader:
     deploy:
-      replicas: 1
+      replicas: ${LAT_LONG_UPLOADER_REPLICAS}
     image: lat_long_uploader:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
-      # - OUTPUT_FIELDS=AirportCode,AirportName,CityName,CountryName,CountryCode,Latitude,Longitude,WorldAreaCode,CityNamegeo_name_id,CountryNamegeo_name_id,coordinates
       - OUTPUT_QUEUE=lat&long
       - RABBIT_HOST=rabbitmq
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  filter_lat_long:
+    deploy:
+      replicas: ${FILTER_LAT_LONG_REPLICAS}
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - DELIMITER=;
+      - INPUT_FIELDS=AirportCode,AirportName,CityName,CountryName,CountryCode,Latitude,Longitude,WorldAreaCode,CityNamegeo_name_id,CountryNamegeo_name_id,coordinates
+      - OUTPUT_FIELDS=AirportCode,Latitude,Longitude
+      - INPUT_QUEUE=lat&long
+      - OUTPUT_QUEUE=lat&long_filtered
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
     depends_on:
       - rabbitmq

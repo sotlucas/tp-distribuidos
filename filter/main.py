@@ -14,6 +14,7 @@ def main():
         "rabbit_host": str,
         "output_type": str,
         "input_type": str,
+        "delimiter": str,
     }
     config_params = initialize_config(config_inputs)
 
@@ -31,6 +32,7 @@ def main():
     filter_config = FilterConfig(
         config_params["input_fields"],
         config_params["output_fields"],
+        config_params["delimiter"],
     )
 
     filter = Filter(filter_config)
