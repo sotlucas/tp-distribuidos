@@ -39,6 +39,11 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=vuelos_tres_escala_o_mas_sink
+      - OUTPUT_QUEUE=vuelos
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -170,6 +175,25 @@ services:
       - OUTPUT_QUEUE=vuelos_tres_escala_o_mas_sink
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  lat_long_uploader:
+    deploy:
+      replicas: 1
+    image: lat_long_uploader:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH="${PYTHONPATH}:commons/"
+      - LOGGING_LEVEL=DEBUG
+      # - OUTPUT_FIELDS=AirportCode,AirportName,CityName,CountryName,CountryCode,Latitude,Longitude,WorldAreaCode,CityNamegeo_name_id,CountryNamegeo_name_id,coordinates
+      - OUTPUT_QUEUE=lat&long
+      - RABBIT_HOST=rabbitmq
       - OUTPUT_TYPE=QUEUE
     depends_on:
       - rabbitmq

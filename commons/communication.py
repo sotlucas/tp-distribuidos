@@ -92,3 +92,6 @@ class Communication:
                 delivery_mode=pika.DeliveryMode.Transient,
             ),
         )
+
+    def close(self):
+        self.connection.close()
