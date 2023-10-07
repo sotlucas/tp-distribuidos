@@ -8,10 +8,21 @@ def test_processor_dos_mas_rapidos():
         "gf4,DFW,ATL,PT0H30M,ATL",
         "c68,LAX,BOS,PT1H30M,BOS",
     ]
-    processor = Processor()
+    processor = Processor(MockedCommunication())
     for vuelo in vuelos:
         processor.proccess(vuelo)
 
     assert 2 == len(processor.fastest)
     assert "gf4,DFW,ATL,PT0H30M,ATL" == processor.fastest[0]
     assert "9ca,ATL,BOS,PT1H20M,BOS" == processor.fastest[1]
+
+
+class MockedCommunication:
+    def run(self, input_callback, eof_callback):
+        pass
+
+    def send_output(self, message):
+        pass
+
+    def send_eof(self):
+        pass
