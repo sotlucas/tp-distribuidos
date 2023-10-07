@@ -10,7 +10,7 @@ class CommunicationBuffer:
     def get_line(self):
         while END_OF_MESSAGE not in self.buffer:
             data = self.sock.recv(BUFFER_SIZE)
-            if not data:  # socket is closed
+            if not data or data[-1] == 0:  # socket is closed
                 raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)

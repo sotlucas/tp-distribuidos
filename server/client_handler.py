@@ -16,10 +16,12 @@ class ClientHandler:
             target=FlightsUploader(
                 communication_config, self.flights_uploader_queue
             ).start
-        ).start()
+        )
+        self.flights_uploader.start()
         self.results_uploader = Process(
             target=ResultsUploader(communication_config, self.client_sock).start
-        ).start()
+        )
+        self.results_uploader.start()
         self.running = True
 
         # Register signal handler for SIGTERM
@@ -42,6 +44,8 @@ class ClientHandler:
                 self.running = False
         # Send EOF to queue to communicate that all the file has been sent.
         self.flights_uploader_queue.put(b"\0")
+        self.results_uploader.join()
+        self.flights_uploader.join()
         self.client_sock.close()
         logging.info(f"action: handle_client | result: complete")
 
