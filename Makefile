@@ -26,3 +26,7 @@ docker-compose-down:
 docker-compose-logs:
 	docker compose -f docker-compose.yml logs -f
 .PHONY: docker-compose-logs
+
+test:
+	python3 -m pytest -v
+.PHONY: test
