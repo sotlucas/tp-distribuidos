@@ -10,10 +10,16 @@ class ResultsUploader:
 
     def start(self):
         logging.info(f"action: results_uploader | result: success ")
-        self.communication.run(output_callback=self.output_callback)
+        self.communication.run(
+            output_callback=self.output_callback, eof_callback=self.handle_eof
+        )
 
     def output_callback(self, message):
         # Add the END_OF_MESSAGE sequence to mark the end of the message
         message_bytes = message.encode() + END_OF_MESSAGE
         self.socket.sendall(message_bytes)
         logging.info(f"action: result_upload | result: success")
+
+    def handle_eof(self):
+        # TODO: handle
+        pass

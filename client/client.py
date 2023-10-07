@@ -85,7 +85,8 @@ class Client:
         Receive the results from the server.
         """
         logging.info("Receiving results")
-        buffer = CommunicationBuffer(self.sock)
+        buffer = \
+            CommunicationBuffer(self.sock)
         while self.running:
             try:
                 data = buffer.get_line()
