@@ -14,8 +14,8 @@ class Processor:
         if len(self.fastest) < 2:
             self.fastest.append(message)
         else:
-            second_fastest = self.fastest[1].split(",")[TRAVEL_DURATION_INDEX]
-            if travel_duration < self.convert_travel_duration(second_fastest):
+            second_fastest = self.convert_message_to_travel_duration(self.fastest[1])
+            if travel_duration < second_fastest:
                 self.fastest[1] = message
         self.fastest.sort(key=self.convert_message_to_travel_duration)
 
