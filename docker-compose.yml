@@ -181,7 +181,7 @@ services:
 
   filter_dos_mas_rapidos:
     deploy:
-      replicas: 1
+      replicas: ${FILTER_DOS_MAS_RAPIDOS_REPLICAS}
     image: filter:latest
     entrypoint: python3 /main.py
     environment:
