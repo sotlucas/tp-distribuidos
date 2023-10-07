@@ -32,14 +32,16 @@ class ClientHandler:
                 client_message = buff.get_line()
                 self.flights_uploader_queue.put(client_message)
             except OSError as e:
-                return
+                logging.debug(f"action: receive_message | result: fail | error: {e}")
+                self.running = False
             except ValueError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
-                self.client_sock.close()
                 self.running = False
             except PeerDisconnected as e:
                 logging.info("action: client_disconected")
                 self.running = False
+        # Send EOF to queue to communicate that all the file has been sent.
+        self.flights_uploader_queue.put(b"\0")
         self.client_sock.close()
         logging.info(f"action: handle_client | result: complete")
 

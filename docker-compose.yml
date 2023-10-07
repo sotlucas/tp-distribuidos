@@ -29,7 +29,7 @@ services:
     volumes:
       - ./client/config.ini:/config.ini
       - ./temp/archivo.csv:/archivo.csv
-  
+
   server:
     container_name: server
     image: server:latest
@@ -66,6 +66,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=PUBSUB
+      - REPLICAS_COUNT=${FILTER_GENERAL_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -88,6 +89,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=PUBSUB
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_AVG_MAX_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -110,6 +112,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=PUBSUB
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_MULTIPLE_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -132,6 +135,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=PUBSUB
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_DISTANCIA_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -151,6 +155,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=PUBSUB
+      - REPLICAS_COUNT=${PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -173,6 +178,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=PUBSUB
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_TRES_ESCALAS_O_MAS_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -186,15 +192,36 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH="${PYTHONPATH}:commons/"
       - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,travelDuration,segmentsArrivalAirportCode
       - INPUT_QUEUE=vuelos_tres_escalas_o_mas
-      - OUTPUT_QUEUE=vuelos_dos_mas_rapidos_sink
+      - OUTPUT_QUEUE=vuelos_dos_mas_rapidos
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=PUBSUB
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_DOS_MAS_RAPIDOS_REPLICAS}
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  processor_dos_mas_rapidos:
+    deploy:
+      replicas: ${PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS}
+    image: dos_mas_rapidos:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=vuelos_dos_mas_rapidos
+      - OUTPUT_QUEUE=vuelos_dos_mas_rapidos_sink
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -212,6 +239,7 @@ services:
       - OUTPUT_QUEUE=lat&long
       - RABBIT_HOST=rabbitmq
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${LAT_LONG_UPLOADER_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
@@ -234,6 +262,7 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_LAT_LONG_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure

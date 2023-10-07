@@ -6,7 +6,7 @@ def test_processor_dos_mas_rapidos():
         "9ca,ATL,BOS,PT1H20M,BOS",
         "0e8,PHL,DFW,PT2H20M,DFW",
         "gf4,DFW,ATL,PT0H30M,ATL",
-        "c68,LAX,BOS,PT1H30M,BOS"
+        "c68,LAX,BOS,PT1H30M,BOS",
     ]
     processor = Processor()
     for vuelo in vuelos:

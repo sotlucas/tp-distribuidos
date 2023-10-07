@@ -31,6 +31,7 @@ def main():
         config_params["rabbit_host"],
         config_params["input_type"],
         config_params["output_type"],
+        1,
     )
     Server(server_config, communication_config).run()
 

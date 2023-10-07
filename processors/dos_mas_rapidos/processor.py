@@ -1,9 +1,16 @@
+import logging
+
 TRAVEL_DURATION_INDEX = 3
 
 
 class Processor:
-    def __init__(self):
+    def __init__(self, communication):
+        self.communication = communication
+        # TODO: group by trajectory
         self.fastest = []
+
+    def run(self):
+        self.communication.run(self.proccess, eof_callback=self.send_results)
 
     def proccess(self, message):
         """
@@ -38,3 +45,12 @@ class Processor:
         if "M" in travel_duration:
             minutes = int(travel_duration.split("M")[0].split("H")[1])
         return hours * 60 + minutes
+
+    def send_results(self):
+        """
+        Sends the fastest messages to the output queue
+        """
+        logging.info("Sending results")
+        for message in self.fastest:
+            self.communication.send_output(message)
+        self.communication.send_eof()

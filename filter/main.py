@@ -15,6 +15,7 @@ def main():
         "output_type": str,
         "input_type": str,
         "delimiter": str,
+        "replicas_count": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -27,6 +28,7 @@ def main():
         config_params["rabbit_host"],
         config_params["input_type"],
         config_params["output_type"],
+        config_params["replicas_count"],
     )
 
     filter_config = FilterConfig(
