@@ -29,6 +29,7 @@ services:
     volumes:
       - ./client/config.ini:/config.ini
       - ./temp/archivo.csv:/archivo.csv
+      - ./results:/results
 
   server:
     container_name: server

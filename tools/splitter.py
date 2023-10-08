@@ -32,7 +32,7 @@ class FileSplitter(object):
         except Exception:
             pass
 
-        file_name = "{}/{}_row_{}.csv".format(directory, self.file_settings.file_name, self.file_settings.row_size)
+        file_name = "{}/archivo_{}.csv".format(directory, self.file_settings.row_size)
         next(self.df).to_csv(file_name)
 
 

@@ -2,11 +2,11 @@ import signal
 import socket
 import logging
 from multiprocessing import Process
+from result_handler import ResultHandler
 from commons.protocol import (
     CommunicationBuffer,
     PeerDisconnected,
     END_OF_MESSAGE,
-    BUFFER_SIZE,
 )
 
 
@@ -36,7 +36,7 @@ class Client:
         self.file_sender = Process(target=self.send_file)
         self.file_sender.start()
         # Start the process to receive the results
-        self.results_receiver = Process(target=self.recieve_results)
+        self.results_receiver = Process(target=self.receive_results)
         self.results_receiver.start()
 
         # Wait for the processes to finish
@@ -80,19 +80,20 @@ class Client:
         self.sock.send(b"\0")
         logging.info("File sent")
 
-    def recieve_results(self):
+    def receive_results(self):
         """
         Receive the results from the server.
         """
         logging.info("Receiving results")
-        buffer = \
-            CommunicationBuffer(self.sock)
+        buffer = CommunicationBuffer(self.sock)
+        result_handler = ResultHandler()
         while self.running:
             try:
                 data = buffer.get_line()
                 if not data:
                     break
-                logging.info(f"Result received: {data}")
+                logging.debug(f"Result received: {data}")
+                result_handler.save_results(data)
             except PeerDisconnected:
                 logging.info("action: server_disconected")
                 self.running = False

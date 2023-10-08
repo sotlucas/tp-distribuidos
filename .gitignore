@@ -5,3 +5,5 @@ temp/
 *.csv
 __pycache__
 .pytest_cache
+*.swp
+results
