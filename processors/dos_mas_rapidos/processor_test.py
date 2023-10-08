@@ -53,6 +53,24 @@ def test_multiple_flights_single_trajectories():
     assert ["c68,LAX,BOS,PT1H30M,BOS"] == processor.trajectory['LAX-BOS']
 
 
+def test_duration_format():
+    duration = "PT1H30M"
+    processor = Processor(MockedCommunication())
+    assert 90 == processor.convert_travel_duration(duration)
+
+
+def test_duration_format_days():
+    duration = "P1DT8M"
+    processor = Processor(MockedCommunication())
+    assert 1448 == processor.convert_travel_duration(duration)
+
+
+def test_duration_format_only_day():
+    duration = "P2D"
+    processor = Processor(MockedCommunication())
+    assert 2880 == processor.convert_travel_duration(duration)
+
+
 class MockedCommunication:
     def run(self, input_callback, eof_callback):
         pass

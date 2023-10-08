@@ -1,4 +1,5 @@
 import logging
+import re
 
 STARTING_AIRPORT_INDEX = 1
 DESTINATION_AIRPORT_INDEX = 2
@@ -53,17 +54,20 @@ class Processor:
 
     def convert_travel_duration(self, travel_duration):
         """
-        Converts the travel duration to minutes.
-        The input format is PT1H30M and the output format is 90
+        Converts the travel duration from the ISO 8601 duration format to minutes.
+        Example:
+        PT1H30M -> 90
+        P1DT8M -> 1448
         """
-        # TODO: consider days
         hours = 0
         minutes = 0
-        if "H" in travel_duration:
-            hours = int(travel_duration.split("H")[0].split("T")[1])
-        if "M" in travel_duration:
-            minutes = int(travel_duration.split("M")[0].split("H")[1])
-        return hours * 60 + minutes
+        days = 0
+        duration_match = re.search(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?", travel_duration)
+        if duration_match:
+            days = int(duration_match.group(1) or 0)
+            hours = int(duration_match.group(2) or 0)
+            minutes = int(duration_match.group(3) or 0)
+        return days * 24 * 60 + hours * 60 + minutes
 
     def send_results(self):
         """
