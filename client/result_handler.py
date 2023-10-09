@@ -1,7 +1,7 @@
 import datetime
 
 
-class ResultHandler():
+class ResultHandler:
     def __init__(self):
         self.tstamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -9,11 +9,8 @@ class ResultHandler():
         """
         Saves the results in the corresponding file.
         """
-        if "TRES_ESCALAS" in data:
-            file_name = "tres_escalas"
-        elif "DOS_MAS_RAPIDOS" in data:
-            file_name = "dos_mas_rapidos"
-        else:
-            file_name = "results_general"
+        # get the tag between [] to identify the file
+        file_name = data.split("[")[1].split("]")[0].lower()
+
         with open(f"results/{self.tstamp}_{file_name}.txt", "a") as f:
             f.write(data + "\n")

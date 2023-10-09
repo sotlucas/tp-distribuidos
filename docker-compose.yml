@@ -60,7 +60,7 @@ services:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
       - DELIMITER=,
-      - INPUT_FIELDS=,legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
+      - INPUT_FIELDS=legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - INPUT_QUEUE=vuelos
       - OUTPUT_QUEUE=vuelos_filtered
@@ -285,6 +285,26 @@ services:
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
+  processor_distancias:
+    deploy:
+      replicas: ${PROCESSOR_DISTANCIAS_REPLICAS}
+    image: distancias:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=vuelos_distancia_joined
+      - OUTPUT_QUEUE=vuelos_distancias_sink
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${PROCESSOR_DISTANCIAS_REPLICAS}
     depends_on:
       - rabbitmq
     restart: on-failure
