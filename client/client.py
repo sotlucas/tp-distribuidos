@@ -77,7 +77,9 @@ class Client:
                         raise e
                     return
         # Send an empty message to mark the end of the file
-        self.sock.send(b"\0")
+        bytes = b"\0"
+        bytes += END_OF_MESSAGE
+        self.sock.send(bytes)
         logging.info("File sent")
 
     def receive_results(self):
