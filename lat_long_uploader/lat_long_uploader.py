@@ -24,4 +24,5 @@ class LatLongUploader:
                 line = line.rstrip()
                 self.communication.send_output(line)
             logging.info("Finished sending file")
+            self.communication.send_eof()
         self.communication.close()

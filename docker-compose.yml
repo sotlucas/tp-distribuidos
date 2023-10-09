@@ -270,6 +270,27 @@ services:
     networks:
       - testing_net
 
+  joiner:
+    deploy:
+      replicas: ${JOINER_REPLICAS}
+    image: joiner:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT_QUEUE=vuelos_distancia
+      - LAT_LONG_INPUT_QUEUE=lat&long_filtered
+      - OUTPUT_QUEUE=vuelos_distancia_joined
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - testing_net
+
   tagger_dos_mas_rapidos:
     deploy:
       replicas: ${TAGGER_DOS_MAS_RAPIDOS_REPLICAS}
