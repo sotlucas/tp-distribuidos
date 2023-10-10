@@ -32,15 +32,8 @@ class Joiner:
         starting_airport_lat_long = self.lat_long_airports[starting_airport]
         destination_airport_lat_long = self.lat_long_airports[destination_airport]
 
-        output_message = (
-            message
-            + ","
-            + starting_airport_lat_long[0]
-            + ","
-            + starting_airport_lat_long[1]
-            + ","
-            + destination_airport_lat_long[0]
-            + ","
-            + destination_airport_lat_long[1]
+        output_message = ",".join(
+            [message, *starting_airport_lat_long, *destination_airport_lat_long]
         )
+
         self.communication_distancia.send_output(output_message)
