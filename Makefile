@@ -11,7 +11,8 @@ docker-image:
 	docker build -f ./lat_long_uploader/Dockerfile -t "lat_long_uploader:latest" .
 	docker build -f ./tagger/Dockerfile -t "tagger:latest" .
 	docker build -f ./joiner/Dockerfile -t "joiner:latest" .
-	# Execute this command from time to time to clean up intermediate stages generated 
+	docker build -f ./grouper/Dockerfile -t "grouper:latest" .
+	# Execute this command from time to time to clean up intermediate stages generated
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you 
 	# want to avoid rebuilding client image every time the docker-compose-up command 
 	# is executed, even when client code has not changed
