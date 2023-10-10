@@ -9,6 +9,7 @@ docker-image:
 	docker build -f ./processors/dos_mas_rapidos/Dockerfile -t "dos_mas_rapidos:latest" .
 	docker build -f ./processors/distancias/Dockerfile -t "distancias:latest" .
 	docker build -f ./processors/media_general/Dockerfile -t "media_general:latest" .
+	docker build -f ./processors/max_avg/Dockerfile -t "max_avg:latest" .
 	docker build -f ./lat_long_uploader/Dockerfile -t "lat_long_uploader:latest" .
 	docker build -f ./tagger/Dockerfile -t "tagger:latest" .
 	docker build -f ./joiner/Dockerfile -t "joiner:latest" .

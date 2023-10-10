@@ -325,7 +325,7 @@ services:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
       - VUELOS_INPUT_QUEUE=vuelos_avg_max
-      - VUELOS_OUTPUT_QUEUE=vuelos_avg_mas_filtered
+      - VUELOS_OUTPUT_QUEUE=vuelos_max_avg_filtered
       - MEDIA_GENERAL_INPUT_QUEUE=media_general_sink
       - MEDIA_GENERAL_OUTPUT_QUEUE=media_general
       - RABBIT_HOST=rabbitmq
@@ -352,6 +352,26 @@ services:
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${PROCESSOR_MEDIA_GENERAL_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  processor_max_avg:
+    deploy:
+      replicas: ${PROCESSOR_MAX_AVG_REPLICAS}
+    image: max_avg:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=vuelos_max_avg_filtered
+      - OUTPUT_QUEUE=vuelos_max_avg_sink
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${PROCESSOR_MAX_AVG_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy

@@ -69,7 +69,7 @@ class Grouper:
             prices_filtered = self.filter_prices(prices, media_general)
             if prices_filtered:
                 self.communication_vuelos.send_output(
-                    "{},{}".format(route, ",".join(map(str, prices_filtered)))
+                    "{};{}".format(route, ",".join(map(str, prices_filtered)))
                 )
 
     def filter_prices(self, prices, media_general):
