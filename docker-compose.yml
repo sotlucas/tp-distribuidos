@@ -29,7 +29,6 @@ services:
       - LOGGING_LEVEL=DEBUG
     depends_on:
       - server
-    restart: on-failure
     networks:
       - testing_net
     volumes:
@@ -52,7 +51,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
     volumes:
@@ -78,7 +76,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -102,7 +99,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -126,7 +122,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -150,7 +145,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -171,7 +165,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -195,7 +188,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -219,7 +211,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -240,7 +231,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -259,7 +249,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -283,7 +272,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -305,7 +293,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -326,7 +313,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -348,7 +334,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -370,7 +355,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -392,7 +376,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
@@ -414,7 +397,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    restart: on-failure
     networks:
       - testing_net
 
