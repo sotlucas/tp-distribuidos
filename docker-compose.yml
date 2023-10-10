@@ -338,6 +338,26 @@ services:
     networks:
       - testing_net
 
+  processor_media_general:
+    deploy:
+      replicas: ${PROCESSOR_MEDIA_GENERAL_REPLICAS}
+    image: media_general:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=media_general
+      - OUTPUT_QUEUE=media_general_sink
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${PROCESSOR_MEDIA_GENERAL_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
   tagger_dos_mas_rapidos:
     deploy:
       replicas: ${TAGGER_DOS_MAS_RAPIDOS_REPLICAS}

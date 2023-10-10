@@ -22,8 +22,9 @@ class Grouper:
         self.routes = {}
 
     def run(self):
-        self.communication_vuelos.run(input_callback=self.process, eof_callback=self.send_results)
-        self.communication_media_general.run(input_callback=self.send_results_to_output)
+        self.communication_vuelos.run(
+            input_callback=self.process, eof_callback=self.send_results
+        )
 
     def process(self, message):
         # 1. Agrupa totalFare por route.
@@ -40,7 +41,10 @@ class Grouper:
 
     def get_route(self, message):
         message_split = message.split(",")
-        return "{}-{}".format(message_split[STARTING_AIRPORT_INDEX], message_split[DESTINATION_AIRPORT_INDEX])
+        return "{}-{}".format(
+            message_split[STARTING_AIRPORT_INDEX],
+            message_split[DESTINATION_AIRPORT_INDEX],
+        )
 
     def get_total_fare(self, message):
         message_split = message.split(",")
@@ -51,10 +55,11 @@ class Grouper:
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
         total_fare = 0
         amount = 0
-        for route, prices in self.routes.items():
+        for prices in self.routes.values():
             total_fare += sum(prices)
             amount += len(prices)
         self.communication_media_general.send_output("{},{}".format(total_fare, amount))
+        self.communication_media_general.run(input_callback=self.send_results_to_output)
 
     def send_results_to_output(self, message):
         # 4. Filtra los precios que estén por encima de la media general.
@@ -63,7 +68,9 @@ class Grouper:
         for route, prices in self.routes.items():
             prices_filtered = self.filter_prices(prices, media_general)
             if prices_filtered:
-                self.communication_vuelos.send_output("{},{}".format(route, ",".join(map(str, prices_filtered))))
+                self.communication_vuelos.send_output(
+                    "{},{}".format(route, ",".join(map(str, prices_filtered)))
+                )
 
     def filter_prices(self, prices, media_general):
         return list(filter(lambda price: price > media_general, prices))
