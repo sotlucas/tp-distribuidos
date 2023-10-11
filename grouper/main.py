@@ -1,5 +1,5 @@
 from grouper import Grouper
-from commons.communication import Communication, CommunicationConfig
+from commons.communication import CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 
@@ -15,7 +15,7 @@ def main():
         "input_type": str,
         "output_type": str,
         "replicas_count": int,
-        "replica_id": int
+        "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -28,9 +28,8 @@ def main():
         config_params["rabbit_host"],
         config_params["input_type"],
         config_params["output_type"],
-        1
+        1,
     )
-    communication_vuelos = Communication(communication_vuelos_config)
 
     communication_media_general_config = CommunicationConfig(
         config_params["media_general_input_queue"],
@@ -40,9 +39,12 @@ def main():
         config_params["output_type"],
         config_params["replicas_count"],
     )
-    communication_media_general = Communication(communication_media_general_config)
 
-    processor = Grouper(config_params["replica_id"], communication_vuelos, communication_media_general)
+    processor = Grouper(
+        config_params["replica_id"],
+        communication_vuelos_config,
+        communication_media_general_config,
+    )
     processor.run()
 
 

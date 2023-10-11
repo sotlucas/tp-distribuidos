@@ -1,4 +1,5 @@
 import logging
+from time import sleep
 
 
 class Processor:
@@ -20,9 +21,10 @@ class Processor:
         self.amount += int(amount)
         self.amount_received += 1
         if self.amount_received == self.grouper_replicas_count:
-            media_general = float(prices_sum) / int(amount)
+            media_general = self.price_sum / self.amount
             self.send_results(media_general)
 
     def send_results(self, media_general):
+        sleep(5)
         logging.info("Sending results")
         self.communication.send_output(str(media_general))

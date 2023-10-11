@@ -4,13 +4,13 @@ import logging
 
 class CommunicationConfig:
     def __init__(
-            self,
-            input_queue,
-            output_queue,
-            rabbit_host,
-            input_type,
-            output_type,
-            replicas_count,
+        self,
+        input_queue,
+        output_queue,
+        rabbit_host,
+        input_type,
+        output_type,
+        replicas_count,
     ):
         self.input_queue = input_queue
         self.output_queue = output_queue
@@ -35,11 +35,12 @@ class Communication:
             self.channel.queue_declare(queue=self.config.output_queue)
 
     def run(
-            self,
-            input_callback=None,
-            output_callback=None,
-            eof_callback=None,
-            routing_key="",
+        self,
+        input_callback=None,
+        output_callback=None,
+        eof_callback=None,
+        routing_key="",
+        prueba="",
     ):
         self.input_callback = input_callback
         # If no output callback is provided, we use the default one, which sends the message to the output rabbit queue.
@@ -47,7 +48,7 @@ class Communication:
         # If no eof callback is provided, we use the default one, which sends the eof to the output.
         self.eof_callback = eof_callback if eof_callback else self.send_eof
         if self.config.input_type == "PUBSUB":
-            self.run_exchange(routing_key)
+            self.run_exchange(routing_key, prueba)
         else:
             self.run_queue()
         self.channel.basic_qos(prefetch_count=1)
@@ -59,7 +60,7 @@ class Communication:
             queue=self.config.input_queue, on_message_callback=self.callback
         )
 
-    def run_exchange(self, routing_key):
+    def run_exchange(self, routing_key, prueba):
         exchange_type = "fanout" if routing_key == "" else "topic"
         self.channel.exchange_declare(
             exchange=self.config.input_queue, exchange_type=exchange_type
@@ -68,7 +69,7 @@ class Communication:
         # This is because the input queue name is used as the exchange name.
         # So we do this to replicate the filters and function as workers.
         input_queue_name = (
-                self.config.input_queue + self.config.output_queue + routing_key
+            self.config.input_queue + self.config.output_queue + routing_key + prueba
         )
         self.channel.queue_declare(queue=input_queue_name)
         self.channel.queue_bind(
