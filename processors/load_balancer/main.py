@@ -26,7 +26,7 @@ def main():
         config_params["rabbit_host"],
         config_params["input_type"],
         config_params["output_type"],
-        config_params["replicas_count"],
+        config_params["replicas_count"]
     )
 
     processor = Processor(config_params["grouper_replicas_count"], Communication(communication_config))

@@ -1,3 +1,5 @@
+import logging
+
 STARTING_AIRPORT_INDEX = 0
 DESTINATION_AIRPORT_INDEX = 1
 TOTAL_FARE_INDEX = 2
@@ -16,14 +18,16 @@ class Grouper:
     5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
     """
 
-    def __init__(self, communication_vuelos, communication_media_general):
+    def __init__(self, replica_id, communication_vuelos, communication_media_general):
+        self.replica_id = replica_id
+        logging.info(f"Starting grouper {self.replica_id}")
         self.communication_vuelos = communication_vuelos
         self.communication_media_general = communication_media_general
         self.routes = {}
 
     def run(self):
         self.communication_vuelos.run(
-            input_callback=self.process, eof_callback=self.send_results
+            input_callback=self.process, eof_callback=self.send_results, routing_key=str(self.replica_id)
         )
 
     def process(self, message):

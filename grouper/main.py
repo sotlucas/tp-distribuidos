@@ -15,6 +15,7 @@ def main():
         "input_type": str,
         "output_type": str,
         "replicas_count": int,
+        "replica_id": int
     }
     config_params = initialize_config(config_inputs)
 
@@ -27,7 +28,7 @@ def main():
         config_params["rabbit_host"],
         config_params["input_type"],
         config_params["output_type"],
-        config_params["replicas_count"],
+        1
     )
     communication_vuelos = Communication(communication_vuelos_config)
 
@@ -41,7 +42,7 @@ def main():
     )
     communication_media_general = Communication(communication_media_general_config)
 
-    processor = Grouper(communication_vuelos, communication_media_general)
+    processor = Grouper(config_params["replica_id"], communication_vuelos, communication_media_general)
     processor.run()
 
 
