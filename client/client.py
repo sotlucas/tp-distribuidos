@@ -40,9 +40,11 @@ class Client:
         self.results_receiver.start()
 
         # Wait for the processes to finish
+
         self.results_receiver.join()
         self.file_sender.join()
-        self.shutdown()
+        if self.running:
+            self.shutdown()
 
     def send_file(self):
         """
@@ -108,7 +110,7 @@ class Client:
 
         logging.info("Results received")
 
-    def shutdown(self):
+    def shutdown(self, signum=None, frame=None):
         logging.info("Shutting down")
         self.sock.shutdown(socket.SHUT_WR)
         self.sock.close()
