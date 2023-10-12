@@ -9,7 +9,7 @@ def test_multiple_flights_multiple_routes():
         "LAX,BOS,491.59",
         "DFW,ATL,118.4",
     ]
-    grouper = Grouper(MockedCommunication(), MockedCommunication())
+    grouper = Grouper(1, MockedCommunication(), MockedCommunication())
     for vuelo in vuelos:
         grouper.process(vuelo)
 
