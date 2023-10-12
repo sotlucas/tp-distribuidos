@@ -21,7 +21,7 @@ class CommunicationConfig:
 
 
 class Communication:
-    def __init__(self, config):
+    def __init__(self, config, routing_key="", input_queue_sufix=""):
         # reduce log level for pika
         logging.getLogger("pika").setLevel(logging.WARNING)
         self.config = config
@@ -29,60 +29,73 @@ class Communication:
             pika.ConnectionParameters(host=self.config.rabbit_host)
         )
         self.channel = self.connection.channel()
+        self.declare_queues(routing_key, input_queue_sufix)
 
-        # Declare the output queue
+    def declare_queues(self, routing_key, input_queue_sufix):
+        self.declare_input(routing_key, input_queue_sufix)
+        self.declare_output()
+
+    def declare_input(self, routing_key, input_queue_sufix):
+        if self.config.input_type == "QUEUE":
+            self.channel.queue_declare(queue=self.config.input_queue)
+
+        elif self.config.input_type == "PUBSUB":
+            exchange_type = "fanout" if routing_key == "" else "topic"
+            self.channel.exchange_declare(
+                exchange=self.config.input_queue, exchange_type=exchange_type
+            )
+            # To differentiate the queues for different exchange subscribers, we append the output queue name to the input queue name.
+            # And we also append the routing key & input queue sufix to the input queue name. For the same reason.
+            # This is because the input queue name is used as the exchange name.
+            # So we do this to replicate the filters and function as workers.
+            # TODO: Add an environment variable to solve this in a better way.
+            self.input_queue_name_exchange = (
+                self.config.input_queue
+                + self.config.output_queue
+                + routing_key
+                + input_queue_sufix
+            )
+            self.channel.queue_declare(queue=self.input_queue_name_exchange)
+            self.channel.queue_bind(
+                exchange=self.config.input_queue,
+                queue=self.input_queue_name_exchange,
+                routing_key=routing_key,
+            )
+            # Bind to EOF queue TODO: explicar
+            self.channel.queue_bind(
+                exchange=self.config.input_queue,
+                queue=self.input_queue_name_exchange,
+                routing_key="EOF",
+            )
+
+    def declare_output(self):
         if self.config.output_type == "QUEUE":
             self.channel.queue_declare(queue=self.config.output_queue)
+        elif self.config.output_type == "PUBSUB":
+            # TODO: check if we need to declare the exchange
+            pass
 
-    def run(
-        self,
-        input_callback=None,
-        output_callback=None,
-        eof_callback=None,
-        routing_key="",
-        prueba="",
-    ):
+    def run(self, input_callback=None, output_callback=None, eof_callback=None):
         self.input_callback = input_callback
         # If no output callback is provided, we use the default one, which sends the message to the output rabbit queue.
         self.output_callback = output_callback if output_callback else self.send_output
         # If no eof callback is provided, we use the default one, which sends the eof to the output.
         self.eof_callback = eof_callback if eof_callback else self.send_eof
         if self.config.input_type == "PUBSUB":
-            self.run_exchange(routing_key, prueba)
+            self.run_exchange()
         else:
             self.run_queue()
         self.channel.basic_qos(prefetch_count=1)
         self.channel.start_consuming()
 
     def run_queue(self):
-        self.channel.queue_declare(queue=self.config.input_queue)
         self.channel.basic_consume(
             queue=self.config.input_queue, on_message_callback=self.callback
         )
 
-    def run_exchange(self, routing_key, prueba):
-        exchange_type = "fanout" if routing_key == "" else "topic"
-        self.channel.exchange_declare(
-            exchange=self.config.input_queue, exchange_type=exchange_type
-        )
-        # To differentiate the queues for different filters, we append the output queue name to the input queue name.
-        # This is because the input queue name is used as the exchange name.
-        # So we do this to replicate the filters and function as workers.
-        input_queue_name = (
-            self.config.input_queue + self.config.output_queue + routing_key + prueba
-        )
-        self.channel.queue_declare(queue=input_queue_name)
-        self.channel.queue_bind(
-            exchange=self.config.input_queue,
-            queue=input_queue_name,
-            routing_key=routing_key,
-        )
-        # Bind to EOF queue TODO: explicar
-        self.channel.queue_bind(
-            exchange=self.config.input_queue, queue=input_queue_name, routing_key="EOF"
-        )
+    def run_exchange(self):
         self.channel.basic_consume(
-            queue=input_queue_name, on_message_callback=self.callback
+            queue=self.input_queue_name_exchange, on_message_callback=self.callback
         )
 
     def callback(self, ch, method, properties, body):

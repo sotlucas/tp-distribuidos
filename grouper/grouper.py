@@ -33,11 +33,11 @@ class Grouper:
         self.routes = {}
 
     def run(self):
-        self.communication_vuelos = Communication(self.communication_vuelos_config)
+        self.communication_vuelos = Communication(
+            self.communication_vuelos_config, routing_key=str(self.replica_id)
+        )
         self.communication_vuelos.run(
-            input_callback=self.process,
-            eof_callback=self.send_results,
-            routing_key=str(self.replica_id),
+            input_callback=self.process, eof_callback=self.send_results
         )
 
     def process(self, message):
@@ -70,7 +70,8 @@ class Grouper:
 
         # We init here because if not, the communication will be closed for inactivity. TODO: check if this is the best way to do it
         self.communication_media_general = Communication(
-            self.communication_media_general_config
+            self.communication_media_general_config,
+            input_queue_sufix=str(self.replica_id),
         )
 
         total_fare = 0
@@ -80,7 +81,7 @@ class Grouper:
             amount += len(prices)
         self.communication_media_general.send_output("{},{}".format(total_fare, amount))
         self.communication_media_general.run(
-            input_callback=self.send_results_to_output, prueba=str(self.replica_id)
+            input_callback=self.send_results_to_output,
         )
 
     def send_results_to_output(self, message):

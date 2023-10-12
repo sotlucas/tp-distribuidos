@@ -25,6 +25,5 @@ class Processor:
             self.send_results(media_general)
 
     def send_results(self, media_general):
-        sleep(5)
         logging.info("Sending results")
         self.communication.send_output(str(media_general))
