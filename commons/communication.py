@@ -99,10 +99,10 @@ class Communication:
         )
 
     def callback(self, ch, method, properties, body):
+        ch.basic_ack(delivery_tag=method.delivery_tag)
         logging.debug("Received {}".format(body))
         message = self.intercept(body)
         if not message:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
             return
         message = message.decode("utf-8")
         output_message = (
@@ -111,7 +111,6 @@ class Communication:
         if output_message:
             self.output_callback(output_message)
             logging.debug("Sent message")
-        ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def send_output(self, message, routing_key=""):
         """
