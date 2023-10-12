@@ -1,3 +1,7 @@
+import logging
+
+from commons.communication import Communication
+
 STARTING_AIRPORT_INDEX = 0
 DESTINATION_AIRPORT_INDEX = 1
 TOTAL_FARE_INDEX = 2
@@ -16,12 +20,22 @@ class Grouper:
     5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
     """
 
-    def __init__(self, communication_vuelos, communication_media_general):
-        self.communication_vuelos = communication_vuelos
-        self.communication_media_general = communication_media_general
+    def __init__(
+        self,
+        replica_id,
+        communication_vuelos_config,
+        communication_media_general_config,
+    ):
+        self.replica_id = replica_id
+        logging.info(f"Starting grouper {self.replica_id}")
+        self.communication_vuelos_config = communication_vuelos_config
+        self.communication_media_general_config = communication_media_general_config
         self.routes = {}
 
     def run(self):
+        self.communication_vuelos = Communication(
+            self.communication_vuelos_config, routing_key=str(self.replica_id)
+        )
         self.communication_vuelos.run(
             input_callback=self.process, eof_callback=self.send_results
         )
@@ -53,13 +67,22 @@ class Grouper:
     def send_results(self):
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
+
+        # We init here because if not, the communication will be closed for inactivity. TODO: check if this is the best way to do it
+        self.communication_media_general = Communication(
+            self.communication_media_general_config,
+            input_queue_sufix=str(self.replica_id),
+        )
+
         total_fare = 0
         amount = 0
         for prices in self.routes.values():
             total_fare += sum(prices)
             amount += len(prices)
         self.communication_media_general.send_output("{},{}".format(total_fare, amount))
-        self.communication_media_general.run(input_callback=self.send_results_to_output)
+        self.communication_media_general.run(
+            input_callback=self.send_results_to_output,
+        )
 
     def send_results_to_output(self, message):
         # 4. Filtra los precios que estén por encima de la media general.

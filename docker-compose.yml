@@ -316,22 +316,84 @@ services:
     networks:
       - testing_net
 
-  grouper:
-    deploy:
-      replicas: ${GROUPER_REPLICAS}
+  grouper_1:
     image: grouper:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - REPLICA_ID=1
       - LOGGING_LEVEL=DEBUG
-      - VUELOS_INPUT_QUEUE=vuelos_avg_max
+      - VUELOS_INPUT_QUEUE=vuelos_avg_max_balanced
       - VUELOS_OUTPUT_QUEUE=vuelos_max_avg_filtered
       - MEDIA_GENERAL_INPUT_QUEUE=media_general_sink
       - MEDIA_GENERAL_OUTPUT_QUEUE=media_general
       - RABBIT_HOST=rabbitmq
-      - INPUT_TYPE=QUEUE
+      - INPUT_TYPE=PUBSUB
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${GROUPER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  grouper_2:
+    image: grouper:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=2
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT_QUEUE=vuelos_avg_max_balanced
+      - VUELOS_OUTPUT_QUEUE=vuelos_max_avg_filtered
+      - MEDIA_GENERAL_INPUT_QUEUE=media_general_sink
+      - MEDIA_GENERAL_OUTPUT_QUEUE=media_general
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${GROUPER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  grouper_3:
+    image: grouper:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=3
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT_QUEUE=vuelos_avg_max_balanced
+      - VUELOS_OUTPUT_QUEUE=vuelos_max_avg_filtered
+      - MEDIA_GENERAL_INPUT_QUEUE=media_general_sink
+      - MEDIA_GENERAL_OUTPUT_QUEUE=media_general
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=PUBSUB
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${GROUPER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  load_balancer:
+    deploy:
+      replicas: ${LOAD_BALANCER_REPLICAS}
+    image: load_balancer:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT_QUEUE=vuelos_avg_max
+      - OUTPUT_QUEUE=vuelos_avg_max_balanced
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=PUBSUB
+      - REPLICAS_COUNT=${LOAD_BALANCER_REPLICAS}
+      - GROUPER_REPLICAS_COUNT=${GROUPER_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -350,8 +412,9 @@ services:
       - OUTPUT_QUEUE=media_general_sink
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
-      - OUTPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=PUBSUB
       - REPLICAS_COUNT=${PROCESSOR_MEDIA_GENERAL_REPLICAS}
+      - GROUPER_REPLICAS_COUNT=${GROUPER_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy
