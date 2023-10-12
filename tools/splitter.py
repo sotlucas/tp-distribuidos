@@ -26,7 +26,7 @@ class FileSplitter(object):
         self.df = pd.read_csv(self.file_settings.file_path,
                               chunksize=self.file_settings.row_size)
 
-    def run(self, directory="temp"):
+    def run(self, directory="data"):
         try:
             os.makedirs(directory)
         except Exception:
@@ -40,7 +40,7 @@ def main():
     file_path = sys.argv[1] if len(sys.argv) > 1 else "../itineraries.csv"
     row_size = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 
-    print(f"Splitting {file_path} into {row_size} rows per file")
+    print(f"Splitting {file_path} into a file with {row_size} rows")
 
     splitter = FileSplitter(FileSettings(
         file_path=file_path,

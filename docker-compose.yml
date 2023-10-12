@@ -33,7 +33,7 @@ services:
       - testing_net
     volumes:
       - ./client/config.ini:/config.ini
-      - ./temp/archivo.csv:/archivo.csv
+      - ./data/archivo.csv:/archivo.csv
       - ./results:/results
 
   server:
@@ -245,6 +245,8 @@ services:
         condition: service_healthy
     networks:
       - testing_net
+    volumes:
+      - ./data/airports-codepublic.csv:/airports-codepublic.csv
 
   filter_lat_long:
     deploy:
