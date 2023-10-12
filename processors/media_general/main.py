@@ -12,7 +12,6 @@ def main():
         "rabbit_host": str,
         "output_type": str,
         "input_type": str,
-        "replicas_count": int,
         "grouper_replicas_count": int,
     }
     config_params = initialize_config(config_inputs)
@@ -26,10 +25,12 @@ def main():
         config_params["rabbit_host"],
         config_params["input_type"],
         config_params["output_type"],
-        config_params["replicas_count"],
+        1,
     )
 
-    processor = Processor(config_params["grouper_replicas_count"], Communication(communication_config))
+    processor = Processor(
+        config_params["grouper_replicas_count"], Communication(communication_config)
+    )
     processor.run()
 
 

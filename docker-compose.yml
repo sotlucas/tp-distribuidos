@@ -215,8 +215,6 @@ services:
       - testing_net
 
   processor_dos_mas_rapidos:
-    deploy:
-      replicas: ${PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS}
     image: dos_mas_rapidos:latest
     entrypoint: python3 /main.py
     environment:
@@ -227,7 +225,6 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
-      - REPLICAS_COUNT=${PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -235,8 +232,6 @@ services:
       - testing_net
 
   lat_long_uploader:
-    deploy:
-      replicas: ${LAT_LONG_UPLOADER_REPLICAS}
     image: lat_long_uploader:latest
     entrypoint: python3 /main.py
     environment:
@@ -245,7 +240,6 @@ services:
       - OUTPUT_QUEUE=lat&long
       - RABBIT_HOST=rabbitmq
       - OUTPUT_TYPE=QUEUE
-      - REPLICAS_COUNT=${LAT_LONG_UPLOADER_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -401,8 +395,6 @@ services:
       - testing_net
 
   processor_media_general:
-    deploy:
-      replicas: ${PROCESSOR_MEDIA_GENERAL_REPLICAS}
     image: media_general:latest
     entrypoint: python3 /main.py
     environment:
@@ -413,7 +405,6 @@ services:
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=PUBSUB
-      - REPLICAS_COUNT=${PROCESSOR_MEDIA_GENERAL_REPLICAS}
       - GROUPER_REPLICAS_COUNT=${GROUPER_REPLICAS}
     depends_on:
       rabbitmq:

@@ -12,7 +12,6 @@ def main():
         "rabbit_host": str,
         "output_type": str,
         "logging_level": str,
-        "replicas_count": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -28,7 +27,7 @@ def main():
         config_params["rabbit_host"],
         None,
         config_params["output_type"],
-        config_params["replicas_count"],
+        1,
     )
     LatLongUploader(lat_long_uploader_config, communication_config).run()
 
