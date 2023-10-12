@@ -21,7 +21,7 @@ class CommunicationConfig:
 
 
 class Communication:
-    def __init__(self, config):
+    def __init__(self, config, routing_key="", input_queue_sufix=""):
         # reduce log level for pika
         logging.getLogger("pika").setLevel(logging.WARNING)
         self.config = config
@@ -29,10 +29,51 @@ class Communication:
             pika.ConnectionParameters(host=self.config.rabbit_host)
         )
         self.channel = self.connection.channel()
+        self.declare_queues(routing_key, input_queue_sufix)
 
-        # Declare the output queue
+    def declare_queues(self, routing_key, input_queue_sufix):
+        self.declare_input(routing_key, input_queue_sufix)
+        self.declare_output()
+
+    def declare_input(self, routing_key, input_queue_sufix):
+        if self.config.input_type == "QUEUE":
+            self.channel.queue_declare(queue=self.config.input_queue)
+
+        elif self.config.input_type == "PUBSUB":
+            exchange_type = "fanout" if routing_key == "" else "topic"
+            self.channel.exchange_declare(
+                exchange=self.config.input_queue, exchange_type=exchange_type
+            )
+            # To differentiate the queues for different exchange subscribers, we append the output queue name to the input queue name.
+            # And we also append the routing key & input queue sufix to the input queue name. For the same reason.
+            # This is because the input queue name is used as the exchange name.
+            # So we do this to replicate the filters and function as workers.
+            # TODO: Add an environment variable to solve this in a better way.
+            self.input_queue_name_exchange = (
+                self.config.input_queue
+                + self.config.output_queue
+                + routing_key
+                + input_queue_sufix
+            )
+            self.channel.queue_declare(queue=self.input_queue_name_exchange)
+            self.channel.queue_bind(
+                exchange=self.config.input_queue,
+                queue=self.input_queue_name_exchange,
+                routing_key=routing_key,
+            )
+            # Bind to EOF queue TODO: explicar
+            self.channel.queue_bind(
+                exchange=self.config.input_queue,
+                queue=self.input_queue_name_exchange,
+                routing_key="EOF",
+            )
+
+    def declare_output(self):
         if self.config.output_type == "QUEUE":
             self.channel.queue_declare(queue=self.config.output_queue)
+        elif self.config.output_type == "PUBSUB":
+            # TODO: check if we need to declare the exchange
+            pass
 
     def run(self, input_callback=None, output_callback=None, eof_callback=None):
         self.input_callback = input_callback
@@ -48,31 +89,18 @@ class Communication:
         self.channel.start_consuming()
 
     def run_queue(self):
-        self.channel.queue_declare(queue=self.config.input_queue)
         self.channel.basic_consume(
             queue=self.config.input_queue, on_message_callback=self.callback
         )
 
     def run_exchange(self):
-        self.channel.exchange_declare(
-            exchange=self.config.input_queue, exchange_type="fanout"
-        )
-        # To differentiate the queues for different filters, we append the output queue name to the input queue name.
-        # This is because the input queue name is used as the exchange name.
-        # So we do this to replicate the filters and function as workers.
-        input_queue_name = self.config.input_queue + self.config.output_queue
-        self.channel.queue_declare(queue=input_queue_name)
-        self.channel.queue_bind(
-            exchange=self.config.input_queue, queue=input_queue_name
-        )
         self.channel.basic_consume(
-            queue=input_queue_name, on_message_callback=self.callback
+            queue=self.input_queue_name_exchange, on_message_callback=self.callback
         )
 
     def callback(self, ch, method, properties, body):
         logging.debug("Received {}".format(body))
         message = self.intercept(body)
-        # TODO: revisar
         if not message:
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
@@ -85,12 +113,12 @@ class Communication:
             logging.debug("Sent message")
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    def send_output(self, message):
+    def send_output(self, message, routing_key=""):
         """
         Sends the messages to the output depending on its type PUBSUB or QUEUE
         """
         if self.config.output_type == "PUBSUB":
-            self.send_exchange(message)
+            self.send_exchange(message, routing_key)
         else:
             self.send_queue(message)
 
@@ -104,10 +132,10 @@ class Communication:
             ),
         )
 
-    def send_exchange(self, message):
+    def send_exchange(self, message, routing_key):
         self.channel.basic_publish(
             exchange=self.config.output_queue,
-            routing_key="",
+            routing_key=routing_key,
             body=message,
             properties=pika.BasicProperties(
                 delivery_mode=pika.DeliveryMode.Transient,
@@ -149,6 +177,7 @@ class Communication:
         """
         message = b"\0" + ttl.to_bytes(4, "big")
 
+        # Requeue the EOF to our own queue instead of the exchange to avoid sending it to the other instances
         input_queue_name = (
             self.config.input_queue
             if self.config.input_type == "QUEUE"
@@ -168,4 +197,4 @@ class Communication:
         Function to send the EOF to propagate through the distributed system.
         """
         message = b"\0"
-        self.send_output(message)
+        self.send_output(message, "EOF")
