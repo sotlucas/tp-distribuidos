@@ -1,13 +1,13 @@
 from processor import Processor
-from commons.communication import Communication, CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.communication_initializer import initialize_receiver, initialize_sender
 
 
 def main():
     config_inputs = {
-        "input_queue": str,
-        "output_queue": str,
+        "input": str,
+        "output": str,
         "logging_level": str,
         "rabbit_host": str,
         "output_type": str,
@@ -20,16 +20,19 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    communication_config = CommunicationConfig(
-        config_params["input_queue"],
-        config_params["output_queue"],
+    receiver = initialize_receiver(
         config_params["rabbit_host"],
+        config_params["input"],
+        config_params["replicas_count"],
         config_params["input_type"],
+    )
+    sender = initialize_sender(
+        config_params["rabbit_host"],
+        config_params["output"],
         config_params["output_type"],
-        config_params["replicas_count"]
     )
 
-    processor = Processor(config_params["grouper_replicas_count"], Communication(communication_config))
+    processor = Processor(config_params["grouper_replicas_count"], receiver, sender)
     processor.run()
 
 

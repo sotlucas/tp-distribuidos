@@ -9,17 +9,15 @@ from multiprocessing import Queue, Process
 
 
 class ClientHandler:
-    def __init__(self, client_sock, communication_config):
+    def __init__(self, client_sock, receiver, sender):
         self.client_sock = client_sock
         self.flights_uploader_queue = Queue()
         self.flights_uploader = Process(
-            target=FlightsUploader(
-                communication_config, self.flights_uploader_queue
-            ).start
+            target=FlightsUploader(sender, self.flights_uploader_queue).start
         )
         self.flights_uploader.start()
         self.results_uploader = Process(
-            target=ResultsUploader(communication_config, self.client_sock).start
+            target=ResultsUploader(receiver, self.client_sock).start
         )
         self.results_uploader.start()
         self.running = True
@@ -50,7 +48,7 @@ class ClientHandler:
         logging.info(f"action: handle_client | result: complete")
 
     def handle_client_message(self, client_message):
-        self.communication.send_output(client_message)
+        self.communication.send(client_message)
         logging.info(f"action: receive_message_request | result: success")
 
     def __stop(self, *args):

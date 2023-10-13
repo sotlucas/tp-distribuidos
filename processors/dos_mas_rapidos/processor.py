@@ -7,12 +7,13 @@ TRAVEL_DURATION_INDEX = 3
 
 
 class Processor:
-    def __init__(self, communication):
-        self.communication = communication
+    def __init__(self, receiver, sender):
+        self.receiver = receiver
+        self.sender = sender
         self.trajectory = {}
 
     def run(self):
-        self.communication.run(self.proccess, eof_callback=self.send_results)
+        self.receiver.run(self.proccess, eof_callback=self.send_results)
 
     def proccess(self, message):
         """
@@ -62,7 +63,9 @@ class Processor:
         hours = 0
         minutes = 0
         days = 0
-        duration_match = re.search(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?", travel_duration)
+        duration_match = re.search(
+            r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?", travel_duration
+        )
         if duration_match:
             days = int(duration_match.group(1) or 0)
             hours = int(duration_match.group(2) or 0)
@@ -76,5 +79,5 @@ class Processor:
         logging.info("Sending results")
         for trajectory in self.trajectory:
             for message in self.trajectory[trajectory]:
-                self.communication.send_output(message)
-        self.communication.send_eof()
+                self.sender.send(message)
+        self.sender.send_eof()

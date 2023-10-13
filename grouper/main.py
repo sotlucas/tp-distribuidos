@@ -1,15 +1,15 @@
 from grouper import Grouper
-from commons.communication import CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.communication_initializer import initialize_receiver, initialize_sender
 
 
 def main():
     config_inputs = {
-        "vuelos_input_queue": str,
-        "vuelos_output_queue": str,
-        "media_general_input_queue": str,
-        "media_general_output_queue": str,
+        "vuelos_input": str,
+        "vuelos_output": str,
+        "media_general_input": str,
+        "media_general_output": str,
         "logging_level": str,
         "rabbit_host": str,
         "input_type": str,
@@ -22,28 +22,37 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    communication_vuelos_config = CommunicationConfig(
-        config_params["vuelos_input_queue"],
-        config_params["vuelos_output_queue"],
+    vuelos_receiver = initialize_receiver(
         config_params["rabbit_host"],
+        config_params["vuelos_input"],
+        config_params["replicas_count"],
         config_params["input_type"],
+        routing_key=str(config_params["replica_id"]),
+    )
+    vuelos_sender = initialize_sender(
+        config_params["rabbit_host"],
+        config_params["vuelos_output"],
         config_params["output_type"],
-        1,
     )
 
-    communication_media_general_config = CommunicationConfig(
-        config_params["media_general_input_queue"],
-        config_params["media_general_output_queue"],
+    media_general_receiver = initialize_receiver(
         config_params["rabbit_host"],
-        config_params["input_type"],
-        config_params["output_type"],
+        config_params["media_general_input"],
         config_params["replicas_count"],
+        config_params["input_type"],
+    )
+    media_general_sender = initialize_sender(
+        config_params["rabbit_host"],
+        config_params["media_general_output"],
+        config_params["output_type"],
     )
 
     processor = Grouper(
         config_params["replica_id"],
-        communication_vuelos_config,
-        communication_media_general_config,
+        vuelos_receiver,
+        vuelos_sender,
+        media_general_receiver,
+        media_general_sender,
     )
     processor.run()
 

@@ -4,14 +4,14 @@ from commons.protocol import END_OF_MESSAGE
 
 
 class ResultsUploader:
-    def __init__(self, communication_config, socket):
+    def __init__(self, receiver, socket):
         self.socket = socket
-        self.communication = Communication(communication_config)
+        self.receiver = receiver
 
     def start(self):
         logging.info(f"action: results_uploader | result: success ")
-        self.communication.run(
-            output_callback=self.output_callback, eof_callback=self.handle_eof
+        self.receiver.run(
+            input_callback=self.output_callback, eof_callback=self.handle_eof
         )
 
     def output_callback(self, message):

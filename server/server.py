@@ -11,9 +11,10 @@ class ServerConfig:
 
 
 class Server:
-    def __init__(self, config, communication_config):
+    def __init__(self, config, server_receiver, server_sender):
         self.config = config
-        self.communication_config = communication_config
+        self.server_receiver = server_receiver
+        self.server_sender = server_sender
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(("", config.port))
@@ -27,7 +28,9 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(self.config.connection_timeout)
-                ClientHandler(client_sock, self.communication_config).handle_client()
+                ClientHandler(
+                    client_sock, self.server_receiver, self.server_sender
+                ).handle_client()
             except OSError as e:
                 logging.error(f"Error: {e}")
                 return

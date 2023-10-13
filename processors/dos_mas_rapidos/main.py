@@ -1,13 +1,16 @@
 from processor import Processor
-from commons.communication import Communication, CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.communication_initializer import initialize_receiver, initialize_sender
+
+# TODO: Ver si se pueden replicar de alguna manera este processor
+DOS_MAS_RAPIDOS_REPLICAS_COUNT = 1
 
 
 def main():
     config_inputs = {
-        "input_queue": str,
-        "output_queue": str,
+        "input": str,
+        "output": str,
         "logging_level": str,
         "rabbit_host": str,
         "output_type": str,
@@ -18,16 +21,19 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    communication_config = CommunicationConfig(
-        config_params["input_queue"],
-        config_params["output_queue"],
+    sender = initialize_sender(
         config_params["rabbit_host"],
-        config_params["input_type"],
+        config_params["output"],
         config_params["output_type"],
-        1,
+    )
+    receiver = initialize_receiver(
+        config_params["rabbit_host"],
+        config_params["input"],
+        DOS_MAS_RAPIDOS_REPLICAS_COUNT,
+        config_params["input_type"],
     )
 
-    processor = Processor(Communication(communication_config))
+    processor = Processor(receiver, sender)
     processor.run()
 
 

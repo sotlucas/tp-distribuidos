@@ -9,8 +9,13 @@ class FilterConfig:
 
 
 class Filter:
-    def __init__(self, config):
+    def __init__(self, config, communication_receiver, communication_sender):
         self.config = config
+        self.communication_receiver = communication_receiver
+        self.communication_sender = communication_sender
+
+    def run(self):
+        self.communication_receiver.run(self.filter, self.communication_sender.send_eof)
 
     def filter(self, message):
         input_fields = self.config.input_fields.split(",")
@@ -20,4 +25,5 @@ class Filter:
         for row in reader:
             output_fields = self.config.output_fields.split(",")
             filtered_row = [row[key] for key in output_fields]
-            return ",".join(filtered_row)
+
+            self.communication_sender.send(",".join(filtered_row))

@@ -1,9 +1,12 @@
 class Processor:
-    def __init__(self, communication):
-        self.communication = communication
+    def __init__(self, receiver, sender):
+        self.receiver = receiver
+        self.sender = sender
 
     def run(self):
-        self.communication.run(input_callback=self.process)
+        self.receiver.run(
+            input_callback=self.process, eof_callback=self.sender.send_eof
+        )
 
     def process(self, message):
         # input message: route;prices
@@ -17,7 +20,7 @@ class Processor:
         max_price = self.get_max(prices)
 
         # 2. Envía el resultado al procesador de salida.
-        self.communication.send_output("{},{},{}".format(route, avg, max_price))
+        self.sender.send("{},{},{}".format(route, avg, max_price))
 
     def get_avg(self, prices):
         return sum(prices) / len(prices)

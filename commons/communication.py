@@ -7,7 +7,8 @@ class Communication:
     Abstract class to be used by the CommunicationSender and CommunicationReceiver classes
     """
 
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         # reduce log level for pika
         logging.getLogger("pika").setLevel(logging.WARNING)
         self.connection = pika.BlockingConnection(
@@ -34,29 +35,12 @@ class CommunicationReceiverConfig:
         The input where the messages will be received, it can be a queue or an exchange
     - replicas_count : int
         The number of replicas of the receiver that will be running
-    - input_callback : function
-        The function that will be called when a message is received
-    - output_callback : function
-        The function that will be called when a message is sent
-    - eof_callback : function
-        The function that will be called when the EOF is received
     """
 
-    def __init__(
-        self,
-        rabbit_host,
-        input,
-        replicas_count,
-        input_callback,
-        output_callback,
-        eof_callback,
-    ):
+    def __init__(self, rabbit_host, input, replicas_count):
         self.rabbit_host = rabbit_host
         self.input = input
         self.replicas_count = replicas_count
-        self.input_callback = input_callback
-        self.output_callback = output_callback
-        self.eof_callback = eof_callback
 
 
 class CommunicationReceiver(Communication):
@@ -64,17 +48,23 @@ class CommunicationReceiver(Communication):
     Abstract class to be used by the CommunicationReceiver classes
     """
 
-    def __init__(self):
-        super().__init__()
+    def run(self, input_callback, eof_callback):
+        """
+        Starts the receiver
+
+        ### Parameters
+        - input_callback : function
+            Function to be called when a message is received
+        - eof_callback : function
+            Function to be called when the EOF is received
+        """
+        self.input_callback = input_callback
+        self.eof_callback = eof_callback
+
         self.channel.basic_consume(
             queue=self.input_queue, on_message_callback=self.callback
         )
         self.channel.basic_qos(prefetch_count=1)
-
-    def run(self):
-        """
-        Starts the receiver
-        """
         self.channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
@@ -89,7 +79,7 @@ class CommunicationReceiver(Communication):
             return
         # TODO: Crear un parser para los mensajes
         message = message.decode("utf-8")
-        self.config.input_callback(message)
+        self.input_callback(message)
 
     def intercept(self, message):
         """
@@ -113,7 +103,7 @@ class CommunicationReceiver(Communication):
             self.requeue(message)
         else:
             # The EOF has finished propagating, so we call the callback
-            self.config.eof_callback()
+            self.eof_callback()
 
     def requeue(self, message):
         """
@@ -132,19 +122,23 @@ class CommunicationReceiver(Communication):
 
 
 class CommunicationReceiverExchange(CommunicationReceiver):
-    def __init__(self, config, routing_key=""):
-        self.config = config
-        self.declare_input(routing_key)
-        super().__init__()
+    def __init__(self, config, routing_key="", output=""):
+        super().__init__(config)
+        self.declare_input(routing_key, output)
 
-    def declare_input(self, routing_key):
+    def declare_input(self, routing_key, output):
         """
         Declares the input exchange and binds the input queue to it.
 
         If the routing_key is empty, it is a fanout exchange, so the messages are sent to all the subscribers.
         """
-        # Create a random queue to differentiate the queues for different exchange subscribers
-        input_queue = self.channel.queue_declare(queue="")
+        # To differentiate the queues for different exchange subscribers, we append the output queue name to the input queue name.
+        # And we also append the routing key & input queue sufix to the input queue name. For the same reason.
+        # This is because the input queue name is used as the exchange name.
+        # So we do this to replicate the filters and function as workers.
+        # TODO: See if adding an environment variable to solve this in a better way.
+        input_queue_name = self.config.input + output + routing_key
+        input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue
 
         exchange_type = "fanout" if routing_key == "" else "topic"
@@ -167,9 +161,8 @@ class CommunicationReceiverExchange(CommunicationReceiver):
 
 class CommunicationReceiverQueue(CommunicationReceiver):
     def __init__(self, config):
-        self.config = config
+        super().__init__(config)
         self.declare_input()
-        super().__init__()
 
     def declare_input(self):
         self.input_queue = self.config.input
@@ -200,8 +193,8 @@ class CommunicationSender(Communication):
     Abstract class to be used by the CommunicationSender classes
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config):
+        super().__init__(config)
 
 
 class CommunicationSenderExchange(CommunicationSender):
@@ -210,9 +203,8 @@ class CommunicationSenderExchange(CommunicationSender):
     """
 
     def __init__(self, config):
-        self.config = config
+        super().__init__(config)
         self.declare_output()
-        super().__init__()
 
     def declare_output(self):
         # TODO: check if we need to declare the exchange
@@ -246,9 +238,8 @@ class CommunicationSenderQueue(CommunicationSender):
     """
 
     def __init__(self, config):
-        self.config = config
+        super().__init__(config)
         self.declare_output()
-        super().__init__()
 
     def declare_output(self):
         self.channel.queue_declare(queue=self.config.output)
