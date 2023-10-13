@@ -2,189 +2,230 @@ import pika
 import logging
 
 
-class CommunicationConfig:
-    def __init__(
-        self,
-        input_queue,
-        output_queue,
-        rabbit_host,
-        input_type,
-        output_type,
-        replicas_count,
-    ):
-        self.input_queue = input_queue
-        self.output_queue = output_queue
-        self.rabbit_host = rabbit_host
-        self.input_type = input_type  # PUBSUB or QUEUE
-        self.output_type = output_type  # PUBSUB or QUEUE
-        self.replicas_count = replicas_count
-
-
 class Communication:
-    def __init__(self, config, routing_key="", input_queue_sufix=""):
+    """
+    Abstract class to be used by the CommunicationSender and CommunicationReceiver classes
+    """
+
+    def __init__(self):
         # reduce log level for pika
         logging.getLogger("pika").setLevel(logging.WARNING)
-        self.config = config
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=self.config.rabbit_host)
         )
         self.channel = self.connection.channel()
-        self.declare_queues(routing_key, input_queue_sufix)
-
-    def declare_queues(self, routing_key, input_queue_sufix):
-        self.declare_input(routing_key, input_queue_sufix)
-        self.declare_output()
-
-    def declare_input(self, routing_key, input_queue_sufix):
-        if self.config.input_type == "QUEUE":
-            self.channel.queue_declare(queue=self.config.input_queue)
-
-        elif self.config.input_type == "PUBSUB":
-            exchange_type = "fanout" if routing_key == "" else "topic"
-            self.channel.exchange_declare(
-                exchange=self.config.input_queue, exchange_type=exchange_type
-            )
-            # To differentiate the queues for different exchange subscribers, we append the output queue name to the input queue name.
-            # And we also append the routing key & input queue sufix to the input queue name. For the same reason.
-            # This is because the input queue name is used as the exchange name.
-            # So we do this to replicate the filters and function as workers.
-            # TODO: Add an environment variable to solve this in a better way.
-            self.input_queue_name_exchange = (
-                self.config.input_queue
-                + self.config.output_queue
-                + routing_key
-                + input_queue_sufix
-            )
-            self.channel.queue_declare(queue=self.input_queue_name_exchange)
-            self.channel.queue_bind(
-                exchange=self.config.input_queue,
-                queue=self.input_queue_name_exchange,
-                routing_key=routing_key,
-            )
-            # Bind to EOF queue TODO: explicar
-            self.channel.queue_bind(
-                exchange=self.config.input_queue,
-                queue=self.input_queue_name_exchange,
-                routing_key="EOF",
-            )
-
-    def declare_output(self):
-        if self.config.output_type == "QUEUE":
-            self.channel.queue_declare(queue=self.config.output_queue)
-        elif self.config.output_type == "PUBSUB":
-            # TODO: check if we need to declare the exchange
-            pass
-
-    def run(self, input_callback=None, output_callback=None, eof_callback=None):
-        self.input_callback = input_callback
-        # If no output callback is provided, we use the default one, which sends the message to the output rabbit queue.
-        self.output_callback = output_callback if output_callback else self.send_output
-        # If no eof callback is provided, we use the default one, which sends the eof to the output.
-        self.eof_callback = eof_callback if eof_callback else self.send_eof
-        if self.config.input_type == "PUBSUB":
-            self.run_exchange()
-        else:
-            self.run_queue()
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.start_consuming()
-
-    def run_queue(self):
-        self.channel.basic_consume(
-            queue=self.config.input_queue, on_message_callback=self.callback
-        )
-
-    def run_exchange(self):
-        self.channel.basic_consume(
-            queue=self.input_queue_name_exchange, on_message_callback=self.callback
-        )
-
-    def callback(self, ch, method, properties, body):
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        logging.debug("Received {}".format(body))
-        message = self.intercept(body)
-        if not message:
-            return
-        message = message.decode("utf-8")
-        output_message = (
-            self.input_callback(message) if self.input_callback else message
-        )
-        if output_message:
-            self.output_callback(output_message)
-            logging.debug("Sent message")
-
-    def send_output(self, message, routing_key=""):
-        """
-        Sends the messages to the output depending on its type PUBSUB or QUEUE
-        """
-        if self.config.output_type == "PUBSUB":
-            self.send_exchange(message, routing_key)
-        else:
-            self.send_queue(message)
-
-    def send_queue(self, message):
-        self.channel.basic_publish(
-            exchange="",
-            routing_key=self.config.output_queue,
-            body=message,
-            properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Transient,
-            ),
-        )
-
-    def send_exchange(self, message, routing_key):
-        self.channel.basic_publish(
-            exchange=self.config.output_queue,
-            routing_key=routing_key,
-            body=message,
-            properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Transient,
-            ),
-        )
 
     def close(self):
         """
         Closes the connection sending all messages waiting on the buffer
-
         This should be called always to ensure all messages have been sent
         """
         self.connection.close()
+
+
+class CommunicationReceiverConfig:
+    """
+    Class to configure the CommunicationReceiver classes
+
+    ### Attributes
+    - rabbit_host : str
+        The rabbit host to connect to
+    - input : str
+        The input where the messages will be received, it can be a queue or an exchange
+    - replicas_count : int
+        The number of replicas of the receiver that will be running
+    - input_callback : function
+        The function that will be called when a message is received
+    - output_callback : function
+        The function that will be called when a message is sent
+    - eof_callback : function
+        The function that will be called when the EOF is received
+    """
+
+    def __init__(
+        self,
+        rabbit_host,
+        input,
+        replicas_count,
+        input_callback,
+        output_callback,
+        eof_callback,
+    ):
+        self.rabbit_host = rabbit_host
+        self.input = input
+        self.replicas_count = replicas_count
+        self.input_callback = input_callback
+        self.output_callback = output_callback
+        self.eof_callback = eof_callback
+
+
+class CommunicationReceiver(Communication):
+    """
+    Abstract class to be used by the CommunicationReceiver classes
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.channel.basic_consume(
+            queue=self.input_queue, on_message_callback=self.callback
+        )
+        self.channel.basic_qos(prefetch_count=1)
+
+    def run(self):
+        """
+        Starts the receiver
+        """
+        self.channel.start_consuming()
+
+    def callback(self, ch, method, properties, body):
+        """
+        Callback to be called when a message is received, it calls the input_callback function with the message as parameter
+        """
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        logging.debug("Received {}".format(body))
+        message = self.intercept(body)
+        # TODO: revisar
+        if not message:
+            return
+        # TODO: Crear un parser para los mensajes
+        message = message.decode("utf-8")
+        self.config.input_callback(message)
 
     def intercept(self, message):
         """
         Detects if the message is an EOF message and if it is requeues it for the other instances to process it.
         """
-        if message[0] == 0:
-            if len(message) == 1:
-                # It means is the real EOF, so we add the TTL to the message to finish all the workers before continuing
-                ttl = self.config.replicas_count - 1
-            else:
-                ttl = int.from_bytes(message[1:5], "big")
-
-            if ttl > 0:
-                # Decrease the TTL and requeue
-                ttl_nuevo = ttl - 1
-                self.requeue(ttl_nuevo)
-            else:
-                # The EOF has finished propagating, so we call the callback
-                self.eof_callback()
-        else:
+        if not message[0] == 0:
             return message
+        # Message is an EOF
 
-    def requeue(self, ttl):
+        if len(message) == 1:
+            # It means it is the first EOF, so we add the TTL to the message to finish all the workers before continuing
+            ttl = self.config.replicas_count - 1
+        else:
+            # It means it is a requeued EOF, so we get the TTL from the message
+            ttl = int.from_bytes(message[1:5], "big")
+
+        if ttl > 0:
+            # Decrease the TTL and requeue
+            ttl_nuevo = ttl - 1
+            message = b"\0" + ttl_nuevo.to_bytes(4, "big")
+            self.requeue(message)
+        else:
+            # The EOF has finished propagating, so we call the callback
+            self.config.eof_callback()
+
+    def requeue(self, message):
         """
         Requeues the EOF decreasing its TTL by 1.
-        """
-        message = b"\0" + ttl.to_bytes(4, "big")
 
-        # Requeue the EOF to our own queue instead of the exchange to avoid sending it to the other instances
-        input_queue_name = (
-            self.config.input_queue
-            if self.config.input_type == "QUEUE"
-            else self.config.input_queue + self.config.output_queue
-        )
+        The EOF is requeued to the input queue, so it is sent to the other instances.
+        """
         self.channel.basic_publish(
             exchange="",
-            routing_key=input_queue_name,
+            routing_key=self.input_queue,
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=pika.DeliveryMode.Transient,
+            ),
+        )
+
+
+class CommunicationReceiverExchange(CommunicationReceiver):
+    def __init__(self, config, routing_key=""):
+        self.config = config
+        self.declare_input(routing_key)
+        super().__init__()
+
+    def declare_input(self, routing_key):
+        """
+        Declares the input exchange and binds the input queue to it.
+
+        If the routing_key is empty, it is a fanout exchange, so the messages are sent to all the subscribers.
+        """
+        # Create a random queue to differentiate the queues for different exchange subscribers
+        input_queue = self.channel.queue_declare(queue="")
+        self.input_queue = input_queue.method.queue
+
+        exchange_type = "fanout" if routing_key == "" else "topic"
+        self.channel.exchange_declare(
+            exchange=self.config.input, exchange_type=exchange_type
+        )
+
+        self.channel.queue_bind(
+            exchange=self.config.input,
+            queue=self.input_queue,
+            routing_key=routing_key,
+        )
+        # Bind to EOF queue TODO: explicar
+        self.channel.queue_bind(
+            exchange=self.config.input,
+            queue=self.input_queue,
+            routing_key="EOF",
+        )
+
+
+class CommunicationReceiverQueue(CommunicationReceiver):
+    def __init__(self, config):
+        self.config = config
+        self.declare_input()
+        super().__init__()
+
+    def declare_input(self):
+        self.input_queue = self.config.input
+        self.channel.queue_declare(queue=self.input_queue)
+
+
+# ===================================================================================================================================================================================
+
+
+class CommunicationSenderConfig:
+    """
+    Class to configure the CommunicationSender classes
+
+    ### Attributes
+    - rabbit_host : str
+        The rabbit host to connect to
+    - output : str
+        The output where the messages will be sent, it can be a queue or an exchange
+    """
+
+    def __init__(self, rabbit_host, output):
+        self.rabbit_host = rabbit_host
+        self.output = output
+
+
+class CommunicationSender(Communication):
+    """
+    Abstract class to be used by the CommunicationSender classes
+    """
+
+    def __init__(self):
+        super().__init__()
+
+
+class CommunicationSenderExchange(CommunicationSender):
+    """
+    Class to send messages to an exchange
+    """
+
+    def __init__(self, config):
+        self.config = config
+        self.declare_output()
+        super().__init__()
+
+    def declare_output(self):
+        # TODO: check if we need to declare the exchange
+        pass
+
+    def send(self, message, routing_key=""):
+        """
+        Sends a message to the output exchange with the routing_key.
+        If no routing_key is specified, it is sent to all the subscribers of the exchange.
+        """
+        self.channel.basic_publish(
+            exchange=self.config.output,
+            routing_key=routing_key,
             body=message,
             properties=pika.BasicProperties(
                 delivery_mode=pika.DeliveryMode.Transient,
@@ -196,4 +237,38 @@ class Communication:
         Function to send the EOF to propagate through the distributed system.
         """
         message = b"\0"
-        self.send_output(message, "EOF")
+        self.send(message, "EOF")
+
+
+class CommunicationSenderQueue(CommunicationSender):
+    """
+    Class to send messages to a queue
+    """
+
+    def __init__(self, config):
+        self.config = config
+        self.declare_output()
+        super().__init__()
+
+    def declare_output(self):
+        self.channel.queue_declare(queue=self.config.output)
+
+    def send(self, message):
+        """
+        Sends a message to the output queue.
+        """
+        self.channel.basic_publish(
+            exchange="",
+            routing_key=self.config.output,
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=pika.DeliveryMode.Transient,
+            ),
+        )
+
+    def send_eof(self):
+        """
+        Function to send the EOF to propagate through the distributed system.
+        """
+        message = b"\0"
+        self.send(message)
