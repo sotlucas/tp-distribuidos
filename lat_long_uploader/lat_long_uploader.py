@@ -1,4 +1,3 @@
-from commons.communication import Communication
 import logging
 
 
@@ -9,8 +8,8 @@ class LatLongUploaderConfig:
 
 
 class LatLongUploader:
-    def __init__(self, config, communication_config):
-        self.communication = Communication(communication_config)
+    def __init__(self, config, sender):
+        self.sender = sender
         self.config = config
 
     def run(self):
@@ -22,7 +21,7 @@ class LatLongUploader:
             logging.info("Sending file")
             for line in f:
                 line = line.rstrip()
-                self.communication.send_output(line)
+                self.sender.send(line)
             logging.info("Finished sending file")
-            self.communication.send_eof()
-        self.communication.close()
+            self.sender.send_eof()
+        self.sender.close()

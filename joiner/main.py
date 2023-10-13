@@ -1,14 +1,14 @@
 from joiner import Joiner
-from commons.communication import Communication, CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.communication_initializer import CommunicationInitializer
 
 
 def main():
     config_inputs = {
-        "lat_long_input_queue": str,
-        "vuelos_input_queue": str,
-        "output_queue": str,
+        "lat_long_input": str,
+        "vuelos_input": str,
+        "output": str,
         "logging_level": str,
         "rabbit_host": str,
         "output_type": str,
@@ -20,27 +20,30 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    communication_lat_long_config = CommunicationConfig(
-        config_params["lat_long_input_queue"],
-        None,
-        config_params["rabbit_host"],
+    lat_long_communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"]
+    )
+    lat_long_receiver = lat_long_communication_initializer.initialize_receiver(
+        config_params["lat_long_input"],
         config_params["input_type"],
-        None,
         config_params["replicas_count"],
+        output=config_params["output"],
     )
 
-    communication_distancia_config = CommunicationConfig(
-        config_params["vuelos_input_queue"],
-        config_params["output_queue"],
-        config_params["rabbit_host"],
-        config_params["input_type"],
-        config_params["output_type"],
-        config_params["replicas_count"],
+    vuelos_communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"]
     )
-    communication_lat_long = Communication(communication_lat_long_config)
-    communication_distancia = Communication(communication_distancia_config)
+    vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
+        config_params["vuelos_input"],
+        config_params["input_type"],
+        config_params["replicas_count"],
+        output=config_params["output"],
+    )
+    vuelos_sender = vuelos_communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
+    )
 
-    joiner = Joiner(communication_lat_long, communication_distancia)
+    joiner = Joiner(lat_long_receiver, vuelos_receiver, vuelos_sender)
     joiner.run()
 
 

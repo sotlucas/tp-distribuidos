@@ -5,9 +5,9 @@ EOF = b"\0"
 
 
 class FlightsUploader:
-    def __init__(self, communication_config, queue):
+    def __init__(self, sender, queue):
         self.queue = queue
-        self.communication = Communication(communication_config)
+        self.sender = sender
         self.running = True
 
     def start(self):
@@ -16,11 +16,11 @@ class FlightsUploader:
             if client_message == EOF:
                 self.finish_sending()
             else:
-                self.communication.send_output(client_message)
+                self.sender.send(client_message)
                 logging.info(f"action: message_upload | result: success")
-        self.communication.close()
+        self.sender.close()
 
     def finish_sending(self):
         logging.info("Sending EOF")
         self.running = False
-        self.communication.send_eof()
+        self.sender.send_eof()

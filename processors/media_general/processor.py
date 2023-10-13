@@ -3,16 +3,17 @@ from time import sleep
 
 
 class Processor:
-    def __init__(self, grouper_replicas_count, communication):
+    def __init__(self, grouper_replicas_count, receiver, sender):
         self.grouper_replicas_count = grouper_replicas_count
-        self.communication = communication
+        self.receiver = receiver
+        self.sender = sender
         self.amount_received = 0  # Number of groupers that have sent their results
         self.price_sum = 0
         self.amount = 0
         self.media_general = 0
 
     def run(self):
-        self.communication.run(input_callback=self.process)
+        self.receiver.run(input_callback=self.process, eof_callback=self.send_results)
 
     def process(self, message):
         # message = sum,amount
@@ -26,4 +27,4 @@ class Processor:
 
     def send_results(self, media_general):
         logging.info("Sending results")
-        self.communication.send_output(str(media_general))
+        self.sender.send(str(media_general))

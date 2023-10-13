@@ -2,13 +2,14 @@ import logging
 
 
 class Joiner:
-    def __init__(self, communication_lat_long, communication_distancia):
-        self.communication_lat_long = communication_lat_long
-        self.communication_distancia = communication_distancia
+    def __init__(self, lat_long_receiver, vuelos_receiver, vuelos_sender):
+        self.lat_long_receiver = lat_long_receiver
+        self.vuelos_receiver = vuelos_receiver
+        self.vuelos_sender = vuelos_sender
         self.lat_long_airports = {}
 
     def run(self):
-        self.communication_lat_long.run(
+        self.lat_long_receiver.run(
             input_callback=self.save_lat_long_airport, eof_callback=self.start_joining
         )
 
@@ -19,7 +20,10 @@ class Joiner:
 
     def start_joining(self):
         logging.info("Starting joining")
-        self.communication_distancia.run(input_callback=self.join_lat_long_airport)
+        self.vuelos_receiver.run(
+            input_callback=self.join_lat_long_airport,
+            eof_callback=self.vuelos_sender.send_eof,
+        )
 
     def join_lat_long_airport(self, message):
         # message fields: legId,startingAirport,destinationAirport,totalTravelDistance
@@ -36,4 +40,4 @@ class Joiner:
             [message, *starting_airport_lat_long, *destination_airport_lat_long]
         )
 
-        self.communication_distancia.send_output(output_message)
+        self.vuelos_sender.send(output_message)

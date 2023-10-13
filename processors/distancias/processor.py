@@ -2,11 +2,14 @@ from geopy.distance import geodesic
 
 
 class Processor:
-    def __init__(self, communication):
-        self.communication = communication
+    def __init__(self, receiver, sender):
+        self.receiver = receiver
+        self.sender = sender
 
     def run(self):
-        self.communication.run(input_callback=self.process)
+        self.receiver.run(
+            input_callback=self.process, eof_callback=self.sender.send_eof
+        )
 
     def process(self, message):
         # input message: legId,startingAirport,destinationAirport,totalTravelDistance,startingLatitude,startingLongitude,destinationLatitude,destinationLongitude
@@ -33,4 +36,4 @@ class Processor:
             # If total distance is null in the database, we don't send the message
             return
         if float(total_distance) > 4 * distance_between_airports:
-            self.communication.send_output(message)
+            self.sender.send(message)

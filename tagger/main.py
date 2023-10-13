@@ -1,13 +1,13 @@
 from tagger import Tagger
-from commons.communication import Communication, CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.communication_initializer import CommunicationInitializer
 
 
 def main():
     config_inputs = {
-        "input_queue": str,
-        "output_queue": str,
+        "input": str,
+        "output": str,
         "logging_level": str,
         "rabbit_host": str,
         "output_type": str,
@@ -20,17 +20,17 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    communication_config = CommunicationConfig(
-        config_params["input_queue"],
-        config_params["output_queue"],
-        config_params["rabbit_host"],
+    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    receiver = communication_initializer.initialize_receiver(
+        config_params["input"],
         config_params["input_type"],
-        config_params["output_type"],
         config_params["replicas_count"],
     )
+    sender = communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
+    )
 
-    tagger = Tagger(config_params["tag_name"])
-    Communication(communication_config).run(tagger.tag_message)
+    Tagger(config_params["tag_name"], receiver, sender).run()
 
 
 if __name__ == "__main__":

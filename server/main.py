@@ -1,7 +1,9 @@
 from server import Server, ServerConfig
-from commons.communication import CommunicationConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.communication_initializer import CommunicationInitializer
+
+SERVER_REPLICAS_COUNT = 1
 
 
 def main():
@@ -9,8 +11,8 @@ def main():
         "server_port": int,
         "logging_level": str,
         "connection_timeout": int,
-        "input_queue": str,
-        "output_queue": str,
+        "input": str,
+        "output": str,
         "rabbit_host": str,
         "output_type": str,
         "input_type": str,
@@ -20,20 +22,23 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
+    vuelos_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    vuelos_receiver = vuelos_initializer.initialize_receiver(
+        config_params["input"],
+        config_params["input_type"],
+        SERVER_REPLICAS_COUNT,
+    )
+
+    resultados_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    resultados_sender = resultados_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
+    )
+
     server_config = ServerConfig(
         config_params["server_port"],
         config_params["connection_timeout"],
     )
-
-    communication_config = CommunicationConfig(
-        config_params["input_queue"],
-        config_params["output_queue"],
-        config_params["rabbit_host"],
-        config_params["input_type"],
-        config_params["output_type"],
-        1,
-    )
-    Server(server_config, communication_config).run()
+    Server(server_config, vuelos_receiver, resultados_sender).run()
 
 
 if __name__ == "__main__":

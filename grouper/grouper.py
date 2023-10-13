@@ -23,21 +23,23 @@ class Grouper:
     def __init__(
         self,
         replica_id,
-        communication_vuelos_config,
-        communication_media_general_config,
+        vuelos_receiver,
+        vuelos_sender,
+        media_general_receiver,
+        media_general_sender,
     ):
         self.replica_id = replica_id
+        self.vuelos_receiver = vuelos_receiver
+        self.vuelos_sender = vuelos_sender
+        self.media_general_receiver = media_general_receiver
+        self.media_general_sender = media_general_sender
         logging.info(f"Starting grouper {self.replica_id}")
-        self.communication_vuelos_config = communication_vuelos_config
-        self.communication_media_general_config = communication_media_general_config
         self.routes = {}
 
     def run(self):
-        self.communication_vuelos = Communication(
-            self.communication_vuelos_config, routing_key=str(self.replica_id)
-        )
-        self.communication_vuelos.run(
-            input_callback=self.process, eof_callback=self.send_results
+        self.vuelos_receiver.run(
+            input_callback=self.process,
+            eof_callback=self.send_results,
         )
 
     def process(self, message):
@@ -67,21 +69,17 @@ class Grouper:
     def send_results(self):
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
-
-        # We init here because if not, the communication will be closed for inactivity. TODO: check if this is the best way to do it
-        self.communication_media_general = Communication(
-            self.communication_media_general_config,
-            input_queue_sufix=str(self.replica_id),
-        )
-
         total_fare = 0
         amount = 0
         for prices in self.routes.values():
             total_fare += sum(prices)
             amount += len(prices)
-        self.communication_media_general.send_output("{},{}".format(total_fare, amount))
-        self.communication_media_general.run(
+
+        # TODO: Do we need to init here because if not, the communication will be closed for inactivity? Check if this is the best way to do it
+        self.media_general_sender.send("{},{}".format(total_fare, amount))
+        self.media_general_receiver.run(
             input_callback=self.send_results_to_output,
+            eof_callback=lambda: logging.info("Media general EOF received"),
         )
 
     def send_results_to_output(self, message):
@@ -91,7 +89,7 @@ class Grouper:
         for route, prices in self.routes.items():
             prices_filtered = self.filter_prices(prices, media_general)
             if prices_filtered:
-                self.communication_vuelos.send_output(
+                self.vuelos_sender.send(
                     "{};{}".format(route, ",".join(map(str, prices_filtered)))
                 )
 
