@@ -1,7 +1,7 @@
 from joiner import Joiner
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
-from commons.communication_initializer import initialize_receiver, initialize_sender
+from commons.communication_initializer import CommunicationInitializer
 
 
 def main():
@@ -20,24 +20,27 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    lat_long_receiver = initialize_receiver(
-        config_params["rabbit_host"],
+    lat_long_communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"]
+    )
+    lat_long_receiver = lat_long_communication_initializer.initialize_receiver(
         config_params["lat_long_input"],
-        config_params["replicas_count"],
         config_params["input_type"],
+        config_params["replicas_count"],
+        output=config_params["output"],
     )
 
-    vuelos_receiver = initialize_receiver(
-        config_params["rabbit_host"],
+    vuelos_communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"]
+    )
+    vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
-        config_params["replicas_count"],
         config_params["input_type"],
+        config_params["replicas_count"],
+        output=config_params["output"],
     )
-
-    vuelos_sender = initialize_sender(
-        config_params["rabbit_host"],
-        config_params["output"],
-        config_params["output_type"],
+    vuelos_sender = vuelos_communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
     )
 
     joiner = Joiner(lat_long_receiver, vuelos_receiver, vuelos_sender)

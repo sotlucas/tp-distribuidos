@@ -2,18 +2,48 @@ import pika
 import logging
 
 
-class Communication:
+class CommunicationConnection:
     """
-    Abstract class to be used by the CommunicationSender and CommunicationReceiver classes
+    Class to wrap the connection to the RabbitMQ server
+
+    It is not thread safe, so it should be used only by one thread
     """
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, rabbit_host):
         # reduce log level for pika
         logging.getLogger("pika").setLevel(logging.WARNING)
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=self.config.rabbit_host)
+            pika.ConnectionParameters(host=rabbit_host)
         )
+
+    def channel(self):
+        """
+        Returns a channel to the RabbitMQ server
+        """
+        return self.connection.channel()
+
+    def close(self):
+        """
+        Closes the connection sending all messages waiting on the buffer
+        This should be called always to ensure all messages have been sent
+        """
+        self.connection.close()
+
+
+class Communication:
+    """
+    Abstract class to be used by the Communication classes
+
+    ### Parameters
+    - config : CommunicationSenderConfig
+        The config for the sender
+    - connection : CommunicationConnection
+        The connection to the RabbitMQ server
+    """
+
+    def __init__(self, config, connection):
+        self.config = config
+        self.connection = connection
         self.channel = self.connection.channel()
 
     def close(self):
@@ -29,24 +59,33 @@ class CommunicationReceiverConfig:
     Class to configure the CommunicationReceiver classes
 
     ### Attributes
-    - rabbit_host : str
-        The rabbit host to connect to
     - input : str
         The input where the messages will be received, it can be a queue or an exchange
     - replicas_count : int
         The number of replicas of the receiver that will be running
+
+    ### Optional attributes
+    - routing_key : str
+        The routing key to bind the input queue to the input exchange
+    - output : str
+        The output used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
     """
 
-    def __init__(self, rabbit_host, input, replicas_count):
-        self.rabbit_host = rabbit_host
+    def __init__(self, input, replicas_count, routing_key="", output=""):
         self.input = input
         self.replicas_count = replicas_count
+        self.routing_key = routing_key
+        self.output = output
 
 
 class CommunicationReceiver(Communication):
     """
     Abstract class to be used by the CommunicationReceiver classes
     """
+
+    def __init__(self, config, connection):
+        super().__init__(config, connection)
+        self.declare_input()
 
     def run(self, input_callback, eof_callback):
         """
@@ -122,11 +161,7 @@ class CommunicationReceiver(Communication):
 
 
 class CommunicationReceiverExchange(CommunicationReceiver):
-    def __init__(self, config, routing_key="", output=""):
-        super().__init__(config)
-        self.declare_input(routing_key, output)
-
-    def declare_input(self, routing_key, output):
+    def declare_input(self):
         """
         Declares the input exchange and binds the input queue to it.
 
@@ -137,11 +172,13 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # This is because the input queue name is used as the exchange name.
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
-        input_queue_name = self.config.input + output + routing_key
+        input_queue_name = (
+            self.config.input + self.config.output + self.config.routing_key
+        )
         input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue
 
-        exchange_type = "fanout" if routing_key == "" else "topic"
+        exchange_type = "fanout" if self.config.routing_key == "" else "topic"
         self.channel.exchange_declare(
             exchange=self.config.input, exchange_type=exchange_type
         )
@@ -149,7 +186,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         self.channel.queue_bind(
             exchange=self.config.input,
             queue=self.input_queue,
-            routing_key=routing_key,
+            routing_key=self.config.routing_key,
         )
         # Bind to EOF queue TODO: explicar
         self.channel.queue_bind(
@@ -160,10 +197,6 @@ class CommunicationReceiverExchange(CommunicationReceiver):
 
 
 class CommunicationReceiverQueue(CommunicationReceiver):
-    def __init__(self, config):
-        super().__init__(config)
-        self.declare_input()
-
     def declare_input(self):
         self.input_queue = self.config.input
         self.channel.queue_declare(queue=self.input_queue)
@@ -177,14 +210,11 @@ class CommunicationSenderConfig:
     Class to configure the CommunicationSender classes
 
     ### Attributes
-    - rabbit_host : str
-        The rabbit host to connect to
     - output : str
         The output where the messages will be sent, it can be a queue or an exchange
     """
 
-    def __init__(self, rabbit_host, output):
-        self.rabbit_host = rabbit_host
+    def __init__(self, output):
         self.output = output
 
 
@@ -193,18 +223,15 @@ class CommunicationSender(Communication):
     Abstract class to be used by the CommunicationSender classes
     """
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, connection):
+        super().__init__(config, connection)
+        self.declare_output()
 
 
 class CommunicationSenderExchange(CommunicationSender):
     """
     Class to send messages to an exchange
     """
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.declare_output()
 
     def declare_output(self):
         # TODO: check if we need to declare the exchange
@@ -236,10 +263,6 @@ class CommunicationSenderQueue(CommunicationSender):
     """
     Class to send messages to a queue
     """
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.declare_output()
 
     def declare_output(self):
         self.channel.queue_declare(queue=self.config.output)

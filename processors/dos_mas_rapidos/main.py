@@ -1,7 +1,7 @@
 from processor import Processor
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
-from commons.communication_initializer import initialize_receiver, initialize_sender
+from commons.communication_initializer import CommunicationInitializer
 
 # TODO: Ver si se pueden replicar de alguna manera este processor
 DOS_MAS_RAPIDOS_REPLICAS_COUNT = 1
@@ -21,16 +21,14 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    sender = initialize_sender(
-        config_params["rabbit_host"],
-        config_params["output"],
-        config_params["output_type"],
-    )
-    receiver = initialize_receiver(
-        config_params["rabbit_host"],
+    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    receiver = communication_initializer.initialize_receiver(
         config_params["input"],
-        DOS_MAS_RAPIDOS_REPLICAS_COUNT,
         config_params["input_type"],
+        DOS_MAS_RAPIDOS_REPLICAS_COUNT,
+    )
+    sender = communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
     )
 
     processor = Processor(receiver, sender)

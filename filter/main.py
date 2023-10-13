@@ -1,5 +1,5 @@
 from filter import Filter, FilterConfig
-from commons.communication_initializer import initialize_receiver, initialize_sender
+from commons.communication_initializer import CommunicationInitializer
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 
@@ -22,17 +22,15 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    communication_receiver = initialize_receiver(
-        config_params["rabbit_host"],
+    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    receiver = communication_initializer.initialize_receiver(
         config_params["input"],
-        config_params["replicas_count"],
         config_params["input_type"],
+        config_params["replicas_count"],
         output=config_params["output"],
     )
-    communication_sender = initialize_sender(
-        config_params["rabbit_host"],
-        config_params["output"],
-        config_params["output_type"],
+    sender = communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
     )
 
     filter_config = FilterConfig(
@@ -40,7 +38,7 @@ def main():
         config_params["output_fields"],
         config_params["delimiter"],
     )
-    Filter(filter_config, communication_receiver, communication_sender).run()
+    Filter(filter_config, receiver, sender).run()
 
 
 if __name__ == "__main__":

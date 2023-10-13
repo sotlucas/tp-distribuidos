@@ -1,7 +1,7 @@
 from tagger import Tagger
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
-from commons.communication_initializer import initialize_receiver, initialize_sender
+from commons.communication_initializer import CommunicationInitializer
 
 
 def main():
@@ -20,16 +20,14 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    receiver = initialize_receiver(
-        config_params["rabbit_host"],
+    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    receiver = communication_initializer.initialize_receiver(
         config_params["input"],
-        config_params["replicas_count"],
         config_params["input_type"],
+        config_params["replicas_count"],
     )
-    sender = initialize_sender(
-        config_params["rabbit_host"],
-        config_params["output"],
-        config_params["output_type"],
+    sender = communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
     )
 
     Tagger(config_params["tag_name"], receiver, sender).run()

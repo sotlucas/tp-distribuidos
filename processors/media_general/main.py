@@ -1,7 +1,7 @@
 from processor import Processor
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
-from commons.communication_initializer import initialize_receiver, initialize_sender
+from commons.communication_initializer import CommunicationInitializer
 
 MEDIA_GENERAL_REPLICAS_COUNT = 1
 
@@ -21,16 +21,14 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
-    receiver = initialize_receiver(
-        config_params["rabbit_host"],
+    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    receiver = communication_initializer.initialize_receiver(
         config_params["input"],
-        MEDIA_GENERAL_REPLICAS_COUNT,
         config_params["input_type"],
+        MEDIA_GENERAL_REPLICAS_COUNT,
     )
-    sender = initialize_sender(
-        config_params["rabbit_host"],
-        config_params["output"],
-        config_params["output_type"],
+    sender = communication_initializer.initialize_sender(
+        config_params["output"], config_params["output_type"]
     )
 
     processor = Processor(config_params["grouper_replicas_count"], receiver, sender)
