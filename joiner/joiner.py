@@ -9,9 +9,10 @@ class Joiner:
         self.lat_long_airports = {}
 
     def run(self):
-        self.lat_long_receiver.run(
+        self.lat_long_receiver.bind(
             input_callback=self.save_lat_long_airport, eof_callback=self.start_joining
         )
+        self.lat_long_receiver.start()
 
     def save_lat_long_airport(self, message):
         # message fields: AirportCode,Latitude,Longitude
@@ -20,10 +21,11 @@ class Joiner:
 
     def start_joining(self):
         logging.info("Starting joining")
-        self.vuelos_receiver.run(
+        self.vuelos_receiver.bind(
             input_callback=self.join_lat_long_airport,
             eof_callback=self.vuelos_sender.send_eof,
         )
+        self.vuelos_receiver.start()
 
     def join_lat_long_airport(self, message):
         # message fields: legId,startingAirport,destinationAirport,totalTravelDistance

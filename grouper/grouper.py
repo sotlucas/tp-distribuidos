@@ -1,7 +1,5 @@
 import logging
 
-from commons.communication import Communication
-
 STARTING_AIRPORT_INDEX = 0
 DESTINATION_AIRPORT_INDEX = 1
 TOTAL_FARE_INDEX = 2
@@ -37,10 +35,8 @@ class Grouper:
         self.routes = {}
 
     def run(self):
-        self.vuelos_receiver.run(
-            input_callback=self.process,
-            eof_callback=self.send_results,
-        )
+        self.vuelos_receiver.bind(self.process, self.send_results)
+        self.vuelos_receiver.start()
 
     def process(self, message):
         # 1. Agrupa totalFare por route.
@@ -69,18 +65,17 @@ class Grouper:
     def send_results(self):
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
+        self.media_general_receiver.bind(
+            self.send_results_to_output, self.media_general_receiver.stop
+        )
         total_fare = 0
         amount = 0
         for prices in self.routes.values():
             total_fare += sum(prices)
             amount += len(prices)
 
-        # TODO: Do we need to init here because if not, the communication will be closed for inactivity? Check if this is the best way to do it
         self.media_general_sender.send("{},{}".format(total_fare, amount))
-        self.media_general_receiver.run(
-            input_callback=self.send_results_to_output,
-            eof_callback=lambda: logging.info("Media general EOF received"),
-        )
+        self.media_general_receiver.start()
 
     def send_results_to_output(self, message):
         # 4. Filtra los precios que estén por encima de la media general.
@@ -92,6 +87,7 @@ class Grouper:
                 self.vuelos_sender.send(
                     "{};{}".format(route, ",".join(map(str, prices_filtered)))
                 )
+        self.vuelos_sender.send_eof()
 
     def filter_prices(self, prices, media_general):
         return list(filter(lambda price: price > media_general, prices))

@@ -4,9 +4,10 @@ class Processor:
         self.sender = sender
 
     def run(self):
-        self.receiver.run(
+        self.receiver.bind(
             input_callback=self.process, eof_callback=self.sender.send_eof
         )
+        self.receiver.start()
 
     def process(self, message):
         # input message: route;prices

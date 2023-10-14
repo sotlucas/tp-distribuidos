@@ -7,9 +7,10 @@ class Processor:
         self.sender = sender
 
     def run(self):
-        self.receiver.run(
+        self.receiver.bind(
             input_callback=self.proccess, eof_callback=self.sender.send_eof
         )
+        self.receiver.start()
 
     def proccess(self, message):
         params = message.split(",")

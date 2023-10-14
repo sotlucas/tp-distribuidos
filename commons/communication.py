@@ -7,13 +7,22 @@ class CommunicationConnection:
     Class to wrap the connection to the RabbitMQ server
 
     It is not thread safe, so it should be used only by one thread
+
+    To use it, first call the `connect` method, then the `channel` method to get a channel to the RabbitMQ server
+    and finally the close method to `close` the connection sending all messages waiting on the buffer
     """
 
     def __init__(self, rabbit_host):
+        self.rabbit_host = rabbit_host
         # reduce log level for pika
         logging.getLogger("pika").setLevel(logging.WARNING)
+
+    def connect(self):
+        """
+        Connects to the RabbitMQ server
+        """
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=rabbit_host)
+            pika.ConnectionParameters(host=self.rabbit_host)
         )
 
     def channel(self):
@@ -44,7 +53,6 @@ class Communication:
     def __init__(self, config, connection):
         self.config = config
         self.connection = connection
-        self.channel = self.connection.channel()
 
     def close(self):
         """
@@ -81,15 +89,14 @@ class CommunicationReceiverConfig:
 class CommunicationReceiver(Communication):
     """
     Abstract class to be used by the CommunicationReceiver classes
+
+    To use it, first call the `bind` method to bind the receiver to the input queue or exchange
+    and then the `start` method to start receiving messages
     """
 
-    def __init__(self, config, connection):
-        super().__init__(config, connection)
-        self.declare_input()
-
-    def run(self, input_callback, eof_callback):
+    def bind(self, input_callback, eof_callback):
         """
-        Starts the receiver
+        Binds the receiver to the input queue or exchange
 
         ### Parameters
         - input_callback : function
@@ -97,6 +104,11 @@ class CommunicationReceiver(Communication):
         - eof_callback : function
             Function to be called when the EOF is received
         """
+        # We connect here because if we connect in the __init__ it it can be closed by the connection for inactivity
+        self.connection.connect()
+        self.channel = self.connection.channel()
+        self.declare_input()
+
         self.input_callback = input_callback
         self.eof_callback = eof_callback
 
@@ -104,7 +116,19 @@ class CommunicationReceiver(Communication):
             queue=self.input_queue, on_message_callback=self.callback
         )
         self.channel.basic_qos(prefetch_count=1)
+
+    def start(self):
+        """
+        Starts the receiver
+        """
         self.channel.start_consuming()
+
+    def stop(self):
+        """
+        Stops the receiver
+        """
+        self.channel.stop_consuming()
+        self.close()
 
     def callback(self, ch, method, properties, body):
         """
@@ -225,7 +249,15 @@ class CommunicationSender(Communication):
 
     def __init__(self, config, connection):
         super().__init__(config, connection)
-        self.declare_output()
+        self.active = False
+
+    def activate(self):
+        if not self.active:
+            # We connect here because if we connect in the __init__ it it can be closed by the connection for inactivity
+            self.connection.connect()
+            self.channel = self.connection.channel()
+            self.declare_output()
+            self.active = True
 
 
 class CommunicationSenderExchange(CommunicationSender):
@@ -242,6 +274,7 @@ class CommunicationSenderExchange(CommunicationSender):
         Sends a message to the output exchange with the routing_key.
         If no routing_key is specified, it is sent to all the subscribers of the exchange.
         """
+        self.activate()
         self.channel.basic_publish(
             exchange=self.config.output,
             routing_key=routing_key,
@@ -271,6 +304,7 @@ class CommunicationSenderQueue(CommunicationSender):
         """
         Sends a message to the output queue.
         """
+        self.activate()
         self.channel.basic_publish(
             exchange="",
             routing_key=self.config.output,

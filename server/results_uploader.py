@@ -10,9 +10,8 @@ class ResultsUploader:
 
     def start(self):
         logging.info(f"action: results_uploader | result: success ")
-        self.receiver.run(
-            input_callback=self.output_callback, eof_callback=self.handle_eof
-        )
+        self.receiver.bind(self.output_callback, self.handle_eof)
+        self.receiver.start()
 
     def output_callback(self, message):
         # Add the END_OF_MESSAGE sequence to mark the end of the message

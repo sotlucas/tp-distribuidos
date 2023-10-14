@@ -15,7 +15,10 @@ class Filter:
         self.communication_sender = communication_sender
 
     def run(self):
-        self.communication_receiver.run(self.filter, self.communication_sender.send_eof)
+        self.communication_receiver.bind(
+            self.filter, self.communication_sender.send_eof
+        )
+        self.communication_receiver.start()
 
     def filter(self, message):
         input_fields = self.config.input_fields.split(",")

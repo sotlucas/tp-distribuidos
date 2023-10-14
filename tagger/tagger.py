@@ -5,9 +5,10 @@ class Tagger:
         self.sender = sender
 
     def run(self):
-        self.receiver.run(
+        self.receiver.bind(
             input_callback=self.tag_message, eof_callback=self.sender.send_eof
         )
+        self.receiver.start()
 
     def tag_message(self, message):
         """
