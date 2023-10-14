@@ -75,15 +75,15 @@ class CommunicationReceiverConfig:
     ### Optional attributes
     - routing_key : str
         The routing key to bind the input queue to the input exchange
-    - output : str
-        The output used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
+    - input_diff_name : str
+        The input_diff_name used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
     """
 
-    def __init__(self, input, replicas_count, routing_key="", output=""):
+    def __init__(self, input, replicas_count, routing_key="", input_diff_name=""):
         self.input = input
         self.replicas_count = replicas_count
         self.routing_key = routing_key
-        self.output = output
+        self.output = input_diff_name
 
 
 class CommunicationReceiver(Communication):

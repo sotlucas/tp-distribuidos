@@ -27,7 +27,6 @@ def main():
         config_params["lat_long_input"],
         config_params["input_type"],
         config_params["replicas_count"],
-        output=config_params["output"],
     )
 
     vuelos_communication_initializer = CommunicationInitializer(
@@ -37,7 +36,6 @@ def main():
         config_params["vuelos_input"],
         config_params["input_type"],
         config_params["replicas_count"],
-        output=config_params["output"],
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]

@@ -27,7 +27,7 @@ def main():
         config_params["input"],
         config_params["input_type"],
         config_params["replicas_count"],
-        output=config_params["output"],
+        input_diff_name=config_params["output"],
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]

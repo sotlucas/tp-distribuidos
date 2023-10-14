@@ -43,7 +43,7 @@ def main():
             config_params["media_general_input"],
             config_params["input_type"],
             config_params["replicas_count"],
-            output=str(config_params["replica_id"]),
+            input_diff_name=str(config_params["replica_id"]),
         )
     )
     media_general_sender = media_general_communication_initializer.initialize_sender(
