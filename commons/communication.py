@@ -112,7 +112,7 @@ class CommunicationReceiver(Communication):
         self.input_callback = input_callback
         self.eof_callback = eof_callback
 
-        self.channel.basic_qos(prefetch_count=1)
+        self.channel.basic_qos(prefetch_count=100)
         self.channel.basic_consume(
             queue=self.input_queue, on_message_callback=self.callback
         )
