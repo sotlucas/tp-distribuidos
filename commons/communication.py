@@ -94,6 +94,12 @@ class CommunicationReceiver(Communication):
     and then the `start` method to start receiving messages
     """
 
+    def __init__(self, config, connection):
+        super().__init__(config, connection)
+        # A receiver is not active if it has received an EOF, until it it receives a message again.
+        # This is to avoid receiving the EOF multiple times.
+        self.active = True
+
     def bind(self, input_callback, eof_callback):
         """
         Binds the receiver to the input queue or exchange
@@ -149,8 +155,15 @@ class CommunicationReceiver(Communication):
         Detects if the message is an EOF message and if it is requeues it for the other instances to process it.
         """
         if not message[0] == 0:
+            self.active = True
             return message
         # Message is an EOF
+        if not self.active:
+            # It means the EOF has already been received, so we requeue it
+            self.requeue(message)
+            return
+        # It means it is the first EOF, so we deactivate the receiver and call the callback
+        self.active = False
 
         if len(message) == 1:
             # It means it is the first EOF, so we add the TTL to the message to finish all the workers before continuing
