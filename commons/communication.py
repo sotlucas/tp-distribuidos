@@ -1,3 +1,5 @@
+import time
+
 import pika
 import logging
 
@@ -141,6 +143,7 @@ class CommunicationReceiver(Communication):
         Callback to be called when a message is received, it calls the input_callback function with the message as parameter
         """
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        start_time = time.time()
         logging.debug("Received {}".format(body))
         message = self.intercept(body)
         # TODO: revisar
@@ -148,7 +151,9 @@ class CommunicationReceiver(Communication):
             return
         # TODO: Crear un parser para los mensajes
         message = message.decode("utf-8")
-        self.input_callback(message)
+        for line in message.split("\n"):
+            self.input_callback(line)
+        logging.debug("Processed in {} seconds".format(time.time() - start_time))
 
     def intercept(self, message):
         """
@@ -187,6 +192,7 @@ class CommunicationReceiver(Communication):
 
         The EOF is requeued to the input queue, so it is sent to the other instances.
         """
+        logging.debug(f"Requeueing EOF in {self.input_queue}")
         self.channel.basic_publish(
             exchange="",
             routing_key=self.input_queue,
@@ -210,7 +216,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-            self.config.input + self.config.output + self.config.routing_key
+                self.config.input + self.config.output + self.config.routing_key
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue
@@ -301,6 +307,7 @@ class CommunicationSenderExchange(CommunicationSender):
         """
         Function to send the EOF to propagate through the distributed system.
         """
+        logging.debug("EXCHANGE::Sending EOF")
         message = b"\0"
         self.send(message, "EOF")
 
@@ -331,5 +338,6 @@ class CommunicationSenderQueue(CommunicationSender):
         """
         Function to send the EOF to propagate through the distributed system.
         """
+        logging.debug("QUEUE::Sending EOF")
         message = b"\0"
         self.send(message)

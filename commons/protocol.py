@@ -1,3 +1,5 @@
+import logging
+
 BUFFER_SIZE = 8192  # 8 KiB
 END_OF_MESSAGE = b"\r\n\r\n"
 
@@ -14,6 +16,7 @@ class CommunicationBuffer:
                 raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
+        logging.debug(f"Received: {line}")
         if line == b"\0":
             raise PeerDisconnected
         return line.decode()

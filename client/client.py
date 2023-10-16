@@ -11,11 +11,12 @@ from commons.protocol import (
 
 
 class ClientConfig:
-    def __init__(self, server_ip, server_port, file_path, remove_file_header) -> None:
+    def __init__(self, server_ip, server_port, file_path, remove_file_header, batch_size):
         self.server_ip = server_ip
         self.server_port = server_port
         self.file_path = file_path
         self.remove_file_header = remove_file_header
+        self.batch_size = batch_size
 
 
 class Client:
@@ -52,37 +53,26 @@ class Client:
 
         Each line represents a flight with all the columns separated by commas.
         """
-
         logging.info("Sending file")
+        for batch in self.next_batch(self.config.batch_size):
+            self.sock.sendall(batch.encode() + END_OF_MESSAGE)
+        self.sock.sendall(b"\0" + END_OF_MESSAGE)
+        logging.info("File sent")
+
+    def next_batch(self, batch_size):
+        """
+        Gets a batch of flights from the file.
+        """
+        batch = []
         with open(self.config.file_path, "r") as f:
             if self.config.remove_file_header:
                 # Skip the header
                 next(f)
-
             for line in f:
-                try:
-                    bytes = line.rstrip().encode()
-                    # Add the \r\n\r\n sequence to mark the end of the message
-                    bytes += END_OF_MESSAGE
-                    bytes_to_send = len(bytes)
-
-                    while bytes_to_send > 0:
-                        # Send the data
-                        sent = self.sock.send(bytes)
-                        bytes_to_send -= sent
-                        bytes = bytes[sent:]
-
-                except OSError as e:
-                    # When receiving SIGTERM, the socket is closed and a OSError is raised.
-                    # If not we want to raise the exception.
-                    if self.running:
-                        raise e
-                    return
-        # Send an empty message to mark the end of the file
-        bytes = b"\0"
-        bytes += END_OF_MESSAGE
-        self.sock.send(bytes)
-        logging.info("File sent")
+                batch.append(line)
+                if len(batch) == batch_size:
+                    yield "".join(batch)
+                    batch = []
 
     def receive_results(self):
         """

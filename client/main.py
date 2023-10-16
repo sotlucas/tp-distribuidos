@@ -16,6 +16,7 @@ def main(arcv):
         "server_port": int,
         "logging_level": str,
         "remove_file_header": bool,
+        "batch_size": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -27,6 +28,7 @@ def main(arcv):
         config_params["server_port"],
         file_path,
         config_params["remove_file_header"],
+        config_params["batch_size"],
     )
     Client(config).run()
 
