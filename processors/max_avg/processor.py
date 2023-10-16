@@ -9,7 +9,16 @@ class Processor:
         )
         self.receiver.start()
 
-    def process(self, message):
+    def process(self, messages):
+        processed_messages = []
+        for message in messages:
+            processed_message = self.process_single(message)
+            if processed_message:
+                processed_messages.append(processed_message)
+        if len(processed_messages) > 0:
+            self.sender.send("\n".join(processed_messages))
+
+    def process_single(self, message):
         # input message: route;prices
         # output message: route,avg,max_price
 
@@ -20,8 +29,8 @@ class Processor:
         avg = self.get_avg(prices)
         max_price = self.get_max(prices)
 
-        # 2. Envía el resultado al procesador de salida.
-        self.sender.send("{},{},{}".format(route, avg, max_price))
+        # 2. Formateo el resultado de salida.
+        return "{},{},{}".format(route, avg, max_price)
 
     def get_avg(self, prices):
         return sum(prices) / len(prices)
