@@ -28,4 +28,4 @@ class Filter:
             output_fields = self.config.output_fields.split(",")
             filtered_row = [row[key] for key in output_fields]
             rows.append(",".join(filtered_row))
-        self.communication_sender.send("\n".join(rows))
+        self.communication_sender.send_all(rows)

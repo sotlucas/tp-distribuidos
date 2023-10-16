@@ -12,7 +12,7 @@ class Tagger:
 
     def tag_messages(self, messages):
         tagged_messages = [self.tag_message(message) for message in messages]
-        self.sender.send("\n".join(tagged_messages))
+        self.sender.send_all(tagged_messages)
 
     def tag_message(self, message):
         """

@@ -23,7 +23,7 @@ class Processor:
             processed_messages[queue_id].append(message)
         for queue_id, messages_to_send in processed_messages.items():
             if len(messages_to_send) > 0:
-                self.sender.send("\n".join(messages_to_send), str(queue_id))
+                self.sender.send_all(messages_to_send, str(queue_id))
 
     def process_single(self, message):
         """

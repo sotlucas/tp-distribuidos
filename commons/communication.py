@@ -303,6 +303,12 @@ class CommunicationSenderExchange(CommunicationSender):
             ),
         )
 
+    def send_all(self, messages, routing_key=""):
+        """
+        Sends a batch of messages to the output
+        """
+        self.send("\n".join(messages), routing_key)
+
     def send_eof(self):
         """
         Function to send the EOF to propagate through the distributed system.
@@ -333,6 +339,12 @@ class CommunicationSenderQueue(CommunicationSender):
                 delivery_mode=pika.DeliveryMode.Transient,
             ),
         )
+
+    def send_all(self, messages):
+        """
+        Sends a batch of messages to the output
+        """
+        self.send("\n".join(messages))
 
     def send_eof(self):
         """

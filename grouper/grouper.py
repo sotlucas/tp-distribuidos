@@ -85,7 +85,7 @@ class Grouper:
         for message in messages:
             results = self.send_results_to_output_single(message)
             if results:
-                self.vuelos_sender.send("\n".join(results))
+                self.vuelos_sender.send_all(results)
         self.vuelos_sender.send_eof()
 
     def send_results_to_output_single(self, message):

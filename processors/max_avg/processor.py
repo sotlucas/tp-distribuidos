@@ -16,7 +16,7 @@ class Processor:
             if processed_message:
                 processed_messages.append(processed_message)
         if len(processed_messages) > 0:
-            self.sender.send("\n".join(processed_messages))
+            self.sender.send_all(processed_messages)
 
     def process_single(self, message):
         # input message: route;prices
