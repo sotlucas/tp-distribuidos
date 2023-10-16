@@ -10,9 +10,13 @@ class Joiner:
 
     def run(self):
         self.lat_long_receiver.bind(
-            input_callback=self.save_lat_long_airport, eof_callback=self.start_joining
+            input_callback=self.save_lat_long_airports, eof_callback=self.start_joining
         )
         self.lat_long_receiver.start()
+
+    def save_lat_long_airports(self, messages):
+        for message in messages:
+            self.save_lat_long_airport(message)
 
     def save_lat_long_airport(self, message):
         # message fields: AirportCode,Latitude,Longitude
@@ -22,10 +26,17 @@ class Joiner:
     def start_joining(self):
         logging.info("Starting joining")
         self.vuelos_receiver.bind(
-            input_callback=self.join_lat_long_airport,
+            input_callback=self.join_lat_long_airports,
             eof_callback=self.vuelos_sender.send_eof,
         )
         self.vuelos_receiver.start()
+
+    def join_lat_long_airports(self, messages):
+        joined_messages = []
+        for message in messages:
+            joined_messages.append(self.join_lat_long_airport(message))
+        if len(joined_messages) > 0:
+            self.vuelos_sender.send("\n".join(joined_messages))
 
     def join_lat_long_airport(self, message):
         # message fields: legId,startingAirport,destinationAirport,totalTravelDistance
@@ -38,8 +49,6 @@ class Joiner:
         starting_airport_lat_long = self.lat_long_airports[starting_airport]
         destination_airport_lat_long = self.lat_long_airports[destination_airport]
 
-        output_message = ",".join(
+        return ",".join(
             [message, *starting_airport_lat_long, *destination_airport_lat_long]
         )
-
-        self.vuelos_sender.send(output_message)
