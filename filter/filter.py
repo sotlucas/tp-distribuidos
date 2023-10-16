@@ -16,17 +16,16 @@ class Filter:
 
     def run(self):
         self.communication_receiver.bind(
-            self.filter, self.communication_sender.send_eof
+            input_callback=self.filter, eof_callback=self.communication_sender.send_eof
         )
         self.communication_receiver.start()
 
-    def filter(self, message):
+    def filter(self, messages):
         input_fields = self.config.input_fields.split(",")
-        reader = csv.DictReader(
-            [message], fieldnames=input_fields, delimiter=self.config.delimiter
-        )
+        reader = csv.DictReader(messages, fieldnames=input_fields, delimiter=self.config.delimiter)
+        rows = []
         for row in reader:
             output_fields = self.config.output_fields.split(",")
             filtered_row = [row[key] for key in output_fields]
-
-            self.communication_sender.send(",".join(filtered_row))
+            rows.append(",".join(filtered_row))
+        self.communication_sender.send_all(rows)

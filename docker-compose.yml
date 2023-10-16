@@ -242,7 +242,7 @@ services:
       - OUTPUT_TYPE=QUEUE
     depends_on:
       rabbitmq:
-          condition: service_healthy
+        condition: service_healthy
       joiner_1:
         condition: service_started
       joiner_2:

@@ -16,7 +16,11 @@ class Processor:
         self.receiver.bind(input_callback=self.process, eof_callback=self.send_results)
         self.receiver.start()
 
-    def process(self, message):
+    def process(self, messages):
+        for message in messages:
+            self.process_single(message)
+
+    def process_single(self, message):
         # message = sum,amount
         prices_sum, amount = message.split(",")
         self.price_sum += float(prices_sum)

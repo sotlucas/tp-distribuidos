@@ -12,7 +12,16 @@ class Processor:
         )
         self.receiver.start()
 
-    def process(self, message):
+    def process(self, messages):
+        processed_messages = []
+        for message in messages:
+            processed_message = self.process_single(message)
+            if processed_message:
+                processed_messages.append(processed_message)
+        if len(processed_messages) > 0:
+            self.sender.send_all(processed_messages)
+
+    def process_single(self, message):
         # input message: legId,startingAirport,destinationAirport,totalTravelDistance,startingLatitude,startingLongitude,destinationLatitude,destinationLongitude
         # output message: legId,startingAirport,destinationAirport,totalTravelDistance
 
@@ -35,6 +44,6 @@ class Processor:
         if not total_distance:
             # TODO: Verificar si hay que "skipear" los mensajes que no tienen distancia
             # If total distance is null in the database, we don't send the message
-            return
+            return None
         if float(total_distance) > 4 * distance_between_airports:
-            self.sender.send(message)
+            return message

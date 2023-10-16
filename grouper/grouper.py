@@ -19,12 +19,12 @@ class Grouper:
     """
 
     def __init__(
-        self,
-        replica_id,
-        vuelos_receiver,
-        vuelos_sender,
-        media_general_receiver,
-        media_general_sender,
+            self,
+            replica_id,
+            vuelos_receiver,
+            vuelos_sender,
+            media_general_receiver,
+            media_general_sender,
     ):
         self.replica_id = replica_id
         self.vuelos_receiver = vuelos_receiver
@@ -38,7 +38,11 @@ class Grouper:
         self.vuelos_receiver.bind(self.process, self.send_results)
         self.vuelos_receiver.start()
 
-    def process(self, message):
+    def process(self, messages):
+        for message in messages:
+            self.process_single(message)
+
+    def process_single(self, message):
         # 1. Agrupa totalFare por route.
         self.group_prices_by_route(message)
 
@@ -77,17 +81,23 @@ class Grouper:
         self.media_general_sender.send("{},{}".format(total_fare, amount))
         self.media_general_receiver.start()
 
-    def send_results_to_output(self, message):
+    def send_results_to_output(self, messages):
+        for message in messages:
+            results = self.send_results_to_output_single(message)
+            if results:
+                self.vuelos_sender.send_all(results)
+        self.vuelos_sender.send_eof()
+
+    def send_results_to_output_single(self, message):
         # 4. Filtra los precios que estén por encima de la media general.
         # 5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
         media_general = float(message)
+        result = []
         for route, prices in self.routes.items():
             prices_filtered = self.filter_prices(prices, media_general)
             if prices_filtered:
-                self.vuelos_sender.send(
-                    "{};{}".format(route, ",".join(map(str, prices_filtered)))
-                )
-        self.vuelos_sender.send_eof()
+                result.append("{};{}".format(route, ",".join(map(str, prices_filtered))))
+        return result
 
     def filter_prices(self, prices, media_general):
         return list(filter(lambda price: price > media_general, prices))

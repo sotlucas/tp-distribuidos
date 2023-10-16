@@ -1,0 +1,306 @@
+version: "3.4"
+name: tp1
+
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 50s
+    networks:
+      - testing_net
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  client:
+    container_name: client
+    image: client:latest
+    entrypoint: python3 /main.py archivo.csv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    depends_on:
+      - server
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./data/archivo.csv:/archivo.csv
+      - ./results:/results
+
+  server:
+    container_name: server
+    image: server:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT=vuelos_resultados
+      - OUTPUT=vuelos
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+    volumes:
+      - ./server/config.ini:/config.ini
+
+  filter_general:
+    deploy:
+      replicas: ${FILTER_GENERAL_REPLICAS}
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
+      - INPUT_FIELDS=legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
+      - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
+      - INPUT=vuelos
+      - OUTPUT=vuelos_filtered
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=EXCHANGE
+      - REPLICAS_COUNT=${FILTER_GENERAL_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  filter_distancia:
+    deploy:
+      replicas: ${FILTER_DISTANCIA_REPLICAS}
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - DELIMITER=,
+      - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
+      - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalTravelDistance
+      - INPUT=vuelos_filtered
+      - OUTPUT=vuelos_distancia
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=EXCHANGE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${FILTER_DISTANCIA_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  lat_long_uploader:
+    image: lat_long_uploader:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - OUTPUT=lat&long
+      - RABBIT_HOST=rabbitmq
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      joiner_1:
+        condition: service_started
+      joiner_2:
+        condition: service_started
+      joiner_3:
+        condition: service_started
+      joiner_4:
+        condition: service_started
+      joiner_5:
+        condition: service_started
+    networks:
+      - testing_net
+    volumes:
+      - ./data/airports-codepublic.csv:/airports-codepublic.csv
+
+  filter_lat_long:
+    deploy:
+      replicas: ${FILTER_LAT_LONG_REPLICAS}
+    image: filter:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - DELIMITER=;
+      - INPUT_FIELDS=AirportCode,AirportName,CityName,CountryName,CountryCode,Latitude,Longitude,WorldAreaCode,CityNamegeo_name_id,CountryNamegeo_name_id,coordinates
+      - OUTPUT_FIELDS=AirportCode,Latitude,Longitude
+      - INPUT=lat&long
+      - OUTPUT=lat&long_filtered
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=EXCHANGE
+      - REPLICAS_COUNT=${FILTER_LAT_LONG_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  joiner_1:
+    image: joiner:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=1
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT=vuelos_distancia
+      - LAT_LONG_INPUT=lat&long_filtered
+      - OUTPUT=vuelos_distancia_joined
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE_LAT_LONG=EXCHANGE
+      - INPUT_TYPE_VUELOS=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  joiner_2:
+    image: joiner:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=2
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT=vuelos_distancia
+      - LAT_LONG_INPUT=lat&long_filtered
+      - OUTPUT=vuelos_distancia_joined
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE_LAT_LONG=EXCHANGE
+      - INPUT_TYPE_VUELOS=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  joiner_3:
+    image: joiner:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=3
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT=vuelos_distancia
+      - LAT_LONG_INPUT=lat&long_filtered
+      - OUTPUT=vuelos_distancia_joined
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE_LAT_LONG=EXCHANGE
+      - INPUT_TYPE_VUELOS=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  joiner_4:
+    image: joiner:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=4
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT=vuelos_distancia
+      - LAT_LONG_INPUT=lat&long_filtered
+      - OUTPUT=vuelos_distancia_joined
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE_LAT_LONG=EXCHANGE
+      - INPUT_TYPE_VUELOS=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  joiner_5:
+    image: joiner:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REPLICA_ID=5
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT=vuelos_distancia
+      - LAT_LONG_INPUT=lat&long_filtered
+      - OUTPUT=vuelos_distancia_joined
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE_LAT_LONG=EXCHANGE
+      - INPUT_TYPE_VUELOS=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${JOINER_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  processor_distancias:
+    deploy:
+      replicas: ${PROCESSOR_DISTANCIAS_REPLICAS}
+    image: distancias:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT=vuelos_distancia_joined
+      - OUTPUT=vuelos_distancias_sink
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${PROCESSOR_DISTANCIAS_REPLICAS}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  tagger_distancias:
+    deploy:
+      replicas: ${TAGGER_DISTANCIAS_REPLICAS}
+    image: tagger:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - INPUT=vuelos_distancias_sink
+      - OUTPUT=vuelos_resultados
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+      - REPLICAS_COUNT=${TAGGER_DISTANCIAS_REPLICAS}
+      - TAG_NAME=DISTANCIAS
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24
