@@ -14,8 +14,8 @@ class ResultsUploader:
         self.receiver.start()
 
     def output_callback(self, messages):
-        for message in messages:
-            self.output_single(message)
+        message_batch = "\n".join(messages)
+        self.output_single(message_batch)
 
     def output_single(self, message):
         # Add the END_OF_MESSAGE sequence to mark the end of the message
