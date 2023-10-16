@@ -8,16 +8,25 @@ class Processor:
 
     def run(self):
         self.receiver.bind(
-            input_callback=self.proccess, eof_callback=self.sender.send_eof
+            input_callback=self.process, eof_callback=self.sender.send_eof
         )
         self.receiver.start()
 
-    def proccess(self, message):
+    def process(self, messages):
+        processed = []
+        for message in messages:
+            processed_message = self.process_single(message)
+            if processed_message:
+                processed.append(processed_message)
+        if len(processed) > 0:
+            self.sender.send("\n".join(processed))
+
+    def process_single(self, message):
         params = message.split(",")
         segmentsArrivalAirportCode = params[SEGMENTS_ARRIVAL_AIRPORT_CODE_INDEX]
         arrivals = segmentsArrivalAirportCode.split("||")
         stopover = len(arrivals) - 1  # -1 because the last arrival is the destination
         if stopover >= 3:
-            self.sender.send(message)
+            return message
         else:
             return None

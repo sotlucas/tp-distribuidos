@@ -151,8 +151,8 @@ class CommunicationReceiver(Communication):
             return
         # TODO: Crear un parser para los mensajes
         message = message.decode("utf-8")
-        for line in message.split("\n"):
-            self.input_callback(line)
+        messages = message.split("\n")
+        self.input_callback(messages)
         logging.debug("Processed in {} seconds".format(time.time() - start_time))
 
     def intercept(self, message):

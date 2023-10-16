@@ -6,12 +6,16 @@ class Tagger:
 
     def run(self):
         self.receiver.bind(
-            input_callback=self.tag_message, eof_callback=self.sender.send_eof
+            input_callback=self.tag_messages, eof_callback=self.sender.send_eof
         )
         self.receiver.start()
+
+    def tag_messages(self, messages):
+        tagged_messages = [self.tag_message(message) for message in messages]
+        self.sender.send("\n".join(tagged_messages))
 
     def tag_message(self, message):
         """
         Adds the tag name to the beginning of the message and sends it to the output.
         """
-        self.sender.send(f"[{self.tag_name}]{message}")
+        return f"[{self.tag_name}]{message}"

@@ -13,7 +13,11 @@ class ResultsUploader:
         self.receiver.bind(self.output_callback, self.handle_eof)
         self.receiver.start()
 
-    def output_callback(self, message):
+    def output_callback(self, messages):
+        for message in messages:
+            self.output_single(message)
+
+    def output_single(self, message):
         # Add the END_OF_MESSAGE sequence to mark the end of the message
         message_bytes = message.encode() + END_OF_MESSAGE
         self.socket.sendall(message_bytes)

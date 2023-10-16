@@ -13,10 +13,14 @@ class Processor:
         self.trajectory = {}
 
     def run(self):
-        self.receiver.bind(self.proccess, eof_callback=self.send_results)
+        self.receiver.bind(self.process, eof_callback=self.send_results)
         self.receiver.start()
 
-    def proccess(self, message):
+    def process(self, messages):
+        for message in messages:
+            self.process_single(message)
+
+    def process_single(self, message):
         """
         Checks if the travel duration is one of the two fastest and if it is,
         it adds the message to the fastest list
@@ -78,6 +82,7 @@ class Processor:
         Sends the fastest messages to the output queue
         """
         logging.info("Sending results")
+        # TODO: send in batch
         for trajectory in self.trajectory:
             for message in self.trajectory[trajectory]:
                 self.sender.send(message)
