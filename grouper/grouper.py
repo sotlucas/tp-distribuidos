@@ -79,6 +79,7 @@ class Grouper:
             amount += len(prices)
 
         self.media_general_sender.send("{},{}".format(total_fare, amount))
+        self.routes.clear()
         self.media_general_receiver.start()
 
     def send_results_to_output(self, messages):
