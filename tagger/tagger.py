@@ -6,7 +6,9 @@ class Tagger:
 
     def run(self):
         self.receiver.bind(
-            input_callback=self.tag_messages, eof_callback=self.sender.send_eof
+            input_callback=self.tag_messages,
+            eof_callback=self.handle_eof,
+            sender=self.sender,
         )
         self.receiver.start()
 
@@ -19,3 +21,7 @@ class Tagger:
         Adds the tag name to the beginning of the message and sends it to the output.
         """
         return f"[{self.tag_name}]{message}"
+
+    def handle_eof(self):
+        # TODO: See if we need to do anything with the EOF here.
+        pass

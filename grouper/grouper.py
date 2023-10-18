@@ -19,12 +19,12 @@ class Grouper:
     """
 
     def __init__(
-            self,
-            replica_id,
-            vuelos_receiver,
-            vuelos_sender,
-            media_general_receiver,
-            media_general_sender,
+        self,
+        replica_id,
+        vuelos_receiver,
+        vuelos_sender,
+        media_general_receiver,
+        media_general_sender,
     ):
         self.replica_id = replica_id
         self.vuelos_receiver = vuelos_receiver
@@ -35,7 +35,7 @@ class Grouper:
         self.routes = {}
 
     def run(self):
-        self.vuelos_receiver.bind(self.process, self.send_results)
+        self.vuelos_receiver.bind(self.process, self.send_results, self.vuelos_sender)
         self.vuelos_receiver.start()
 
     def process(self, messages):
@@ -70,7 +70,9 @@ class Grouper:
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
         self.media_general_receiver.bind(
-            self.send_results_to_output, self.media_general_receiver.stop
+            self.send_results_to_output,
+            self.media_general_receiver.stop,
+            self.media_general_sender,
         )
         total_fare = 0
         amount = 0
@@ -96,7 +98,9 @@ class Grouper:
         for route, prices in self.routes.items():
             prices_filtered = self.filter_prices(prices, media_general)
             if prices_filtered:
-                result.append("{};{}".format(route, ",".join(map(str, prices_filtered))))
+                result.append(
+                    "{};{}".format(route, ",".join(map(str, prices_filtered)))
+                )
         return result
 
     def filter_prices(self, prices, media_general):

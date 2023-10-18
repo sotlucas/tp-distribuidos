@@ -13,7 +13,11 @@ class Processor:
         self.media_general = 0
 
     def run(self):
-        self.receiver.bind(input_callback=self.process, eof_callback=self.send_results)
+        self.receiver.bind(
+            input_callback=self.process,
+            eof_callback=self.send_results,
+            sender=self.sender,
+        )
         self.receiver.start()
 
     def process(self, messages):

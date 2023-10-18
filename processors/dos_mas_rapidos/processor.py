@@ -13,7 +13,9 @@ class Processor:
         self.trajectory = {}
 
     def run(self):
-        self.receiver.bind(self.process, eof_callback=self.send_results)
+        self.receiver.bind(
+            self.process, eof_callback=self.send_results, sender=self.sender
+        )
         self.receiver.start()
 
     def process(self, messages):
