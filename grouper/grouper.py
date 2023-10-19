@@ -19,12 +19,12 @@ class Grouper:
     """
 
     def __init__(
-        self,
-        replica_id,
-        vuelos_receiver,
-        vuelos_sender,
-        media_general_receiver,
-        media_general_sender,
+            self,
+            replica_id,
+            vuelos_receiver,
+            vuelos_sender,
+            media_general_receiver,
+            media_general_sender,
     ):
         self.replica_id = replica_id
         self.vuelos_receiver = vuelos_receiver
@@ -81,7 +81,6 @@ class Grouper:
             amount += len(prices)
 
         self.media_general_sender.send("{},{}".format(total_fare, amount))
-        self.routes.clear()
         self.media_general_receiver.start()
 
     def send_results_to_output(self, messages):
@@ -89,6 +88,7 @@ class Grouper:
             results = self.send_results_to_output_single(message)
             if results:
                 self.vuelos_sender.send_all(results)
+        self.routes.clear()
         # self.vuelos_sender.send_eof()
 
     def send_results_to_output_single(self, message):
