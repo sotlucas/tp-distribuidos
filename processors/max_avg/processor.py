@@ -5,7 +5,9 @@ class Processor:
 
     def run(self):
         self.receiver.bind(
-            input_callback=self.process, eof_callback=self.sender.send_eof
+            input_callback=self.process,
+            eof_callback=self.sender.send_eof,
+            sender=self.sender,
         )
         self.receiver.start()
 

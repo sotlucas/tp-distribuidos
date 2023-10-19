@@ -13,7 +13,11 @@ class Processor:
         self.media_general = 0
 
     def run(self):
-        self.receiver.bind(input_callback=self.process, eof_callback=self.send_results)
+        self.receiver.bind(
+            input_callback=self.process,
+            eof_callback=self.send_results,
+            sender=self.sender,
+        )
         self.receiver.start()
 
     def process(self, messages):
@@ -33,4 +37,4 @@ class Processor:
     def send_results(self, media_general):
         logging.info("Sending results")
         self.sender.send(str(media_general))
-        self.sender.send_eof()
+        # self.sender.send_eof()

@@ -18,7 +18,13 @@ class CommunicationInitializer:
         self.connection = CommunicationConnection(self.rabbit_host)
 
     def initialize_receiver(
-        self, input, input_type, replicas_count, routing_key="", input_diff_name=""
+        self,
+        input,
+        input_type,
+        replicas_count,
+        routing_key="",
+        input_diff_name="",
+        replica_id=1,
     ):
         """
         Initialize the receiver based on the input type
@@ -28,6 +34,7 @@ class CommunicationInitializer:
             replicas_count,
             routing_key=routing_key,
             input_diff_name=input_diff_name,
+            replica_id=replica_id,
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(

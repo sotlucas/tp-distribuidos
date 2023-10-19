@@ -28,6 +28,7 @@ class Joiner:
         self.vuelos_receiver.bind(
             input_callback=self.join_lat_long_airports,
             eof_callback=self.vuelos_sender.send_eof,
+            sender=self.vuelos_sender,
         )
         self.vuelos_receiver.start()
 

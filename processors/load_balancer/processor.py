@@ -10,7 +10,9 @@ class Processor:
 
     def run(self):
         self.receiver.bind(
-            input_callback=self.process, eof_callback=self.sender.send_eof
+            input_callback=self.process,
+            eof_callback=self.send_eof_wrapper,
+            sender=self.sender,
         )
         self.receiver.start()
 
@@ -38,3 +40,7 @@ class Processor:
     def get_route(self, message):
         starting_airport, destination_airport, _ = message.split(",")
         return f"{starting_airport}-{destination_airport}"
+
+    def send_eof_wrapper(self):
+        queue_id = 1  # send eof to the first grouper
+        self.sender.send_eof(str(queue_id))
