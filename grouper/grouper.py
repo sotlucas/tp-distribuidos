@@ -88,7 +88,7 @@ class Grouper:
             results = self.send_results_to_output_single(message)
             if results:
                 self.vuelos_sender.send_all(results)
-        self.vuelos_sender.send_eof()
+        # self.vuelos_sender.send_eof()
 
     def send_results_to_output_single(self, message):
         # 4. Filtra los precios que estén por encima de la media general.

@@ -3,10 +3,6 @@ from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 
-# Because they are working as an exchange, they do not share the same as the other groupers
-# TODO: See if this can be changed
-GROUPER_REPLICA_COUNT = 1
-
 
 def main():
     config_inputs = {
@@ -32,8 +28,9 @@ def main():
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
         config_params["input_type"],
-        GROUPER_REPLICA_COUNT,
+        config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
+        replica_id=config_params["replica_id"],
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["vuelos_output"], config_params["output_type"]
@@ -46,7 +43,7 @@ def main():
         media_general_communication_initializer.initialize_receiver(
             config_params["media_general_input"],
             config_params["input_type"],
-            GROUPER_REPLICA_COUNT,
+            config_params["replicas_count"],
             input_diff_name=str(config_params["replica_id"]),
         )
     )

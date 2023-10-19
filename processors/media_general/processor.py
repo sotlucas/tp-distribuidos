@@ -37,4 +37,4 @@ class Processor:
     def send_results(self, media_general):
         logging.info("Sending results")
         self.sender.send(str(media_general))
-        self.sender.send_eof()
+        # self.sender.send_eof()
