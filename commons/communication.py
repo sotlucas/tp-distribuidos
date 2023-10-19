@@ -194,6 +194,7 @@ class CommunicationReceiver(Communication):
 
         0     1     5                   13              21                     29
         | EOF | TTL | remaining_messages | messages_sent | messages_sent_sender |
+        \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0f\xa5\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00.\xe0
 
         Special topic exchange EOF:
         - First byte is 0
@@ -267,9 +268,7 @@ class CommunicationReceiver(Communication):
                     )
                 else:
                     # We are in a topic exchange, so we requeue the original EOF to the next replica
-                    self.requeue_topic(
-                        ttl, remaining_messages, messages_sent, sender_messages_sent
-                    )
+                    self.requeue_original_eof_topic(sender_messages_sent)
 
     def get_new_eof_parameters(self, message):
         FIRST_EOF_LENGTH = 9
@@ -333,7 +332,7 @@ class CommunicationReceiver(Communication):
 
         The EOF is requeued to the input queue, so it is sent to the other instances.
         """
-        logging.debug(f"Requeueing EOF in {self.input_queue}")
+        logging.debug(f"Requeueing topic EOF in {self.input_queue}")
 
         message = (
             b"\0"
@@ -342,6 +341,23 @@ class CommunicationReceiver(Communication):
             + messages_sent.to_bytes(8, "big")
             + sender_messages_sent.to_bytes(8, "big")
         )
+        next_replica = str((self.config.replica_id % self.config.replicas_count) + 1)
+        self.channel.basic_publish(
+            exchange=self.config.input,
+            routing_key=next_replica,
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=pika.DeliveryMode.Transient,
+            ),
+        )
+
+    def requeue_original_eof_topic(self, sender_messages_sent):
+        """
+        Requeues the original EOF to the next replica.
+        """
+        logging.debug(f"Requeueing original EOF in {self.input_queue}")
+
+        message = b"\0" + sender_messages_sent.to_bytes(8, "big")
         next_replica = str((self.config.replica_id % self.config.replicas_count) + 1)
         self.channel.basic_publish(
             exchange=self.config.input,
