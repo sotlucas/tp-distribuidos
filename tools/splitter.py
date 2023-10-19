@@ -33,7 +33,7 @@ class FileSplitter(object):
             pass
 
         file_name = "{}/archivo_{}.csv".format(directory, self.file_settings.row_size)
-        next(self.df).to_csv(file_name)
+        next(self.df).to_csv(file_name, index=False)
 
 
 def main():
