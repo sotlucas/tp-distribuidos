@@ -20,8 +20,7 @@ class Processor:
             processed_message = self.process_single(message)
             if processed_message:
                 processed.append(processed_message)
-        if len(processed) > 0:
-            self.sender.send_all(processed)
+        self.sender.send_all(processed)
 
     def process_single(self, message):
         params = message.split(",")

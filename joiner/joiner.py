@@ -36,8 +36,7 @@ class Joiner:
         joined_messages = []
         for message in messages:
             joined_messages.append(self.join_lat_long_airport(message))
-        if len(joined_messages) > 0:
-            self.vuelos_sender.send_all(joined_messages)
+        self.vuelos_sender.send_all(joined_messages)
 
     def join_lat_long_airport(self, message):
         # message fields: legId,startingAirport,destinationAirport,totalTravelDistance
