@@ -5,6 +5,7 @@ class Processor:
     def __init__(self, receiver, sender):
         self.receiver = receiver
         self.sender = sender
+        self.cache = {}
 
     def run(self):
         self.receiver.bind(
@@ -34,10 +35,7 @@ class Processor:
 
         starting_airport = (starting_latitude, starting_longitude)
         destination_airport = (destination_latitude, destination_longitude)
-
-        distance_between_airports = geodesic(
-            starting_airport, destination_airport
-        ).miles
+        distance_between_airports = self.distance(destination_airport, starting_airport)
 
         # We only send flights whose total distance is 4 times greater than the distance between airports
         total_distance = split_message[3]
@@ -47,3 +45,20 @@ class Processor:
             return None
         if float(total_distance) > 4 * distance_between_airports:
             return message
+
+    def distance(self, destination_airport, starting_airport):
+        """
+        Calculates the distance between two airports
+        """
+        # First we check if we already have the distance between the airports in the cache
+        if (starting_airport, destination_airport) in self.cache:
+            distance_between_airports = self.cache[
+                (starting_airport, destination_airport)
+            ]
+        else:
+            # If we don't have it, we calculate it and add it to the cache
+            distance_between_airports = geodesic(
+                starting_airport, destination_airport
+            ).miles
+            self.cache[(starting_airport, destination_airport)] = distance_between_airports
+        return distance_between_airports
