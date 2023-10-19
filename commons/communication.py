@@ -194,7 +194,7 @@ class CommunicationReceiver(Communication):
 
         0     1     5                   13              21                     29
         | EOF | TTL | remaining_messages | messages_sent | messages_sent_sender |
-        \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0f\xa5\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00.\xe0
+
 
         Special topic exchange EOF:
         - First byte is 0
