@@ -1,0 +1,66 @@
+version: "3.4"
+name: tp1
+
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 50s
+    networks:
+      - testing_net
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  client:
+    container_name: client
+    image: client:latest
+    entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    depends_on:
+      - server
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./data/archivo.csv:/archivo.csv
+      - ./data/airports-codepublic.csv:/airports-codepublic.csv
+      - ./results:/results
+
+  server:
+    container_name: server
+    image: server:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - VUELOS_INPUT=vuelos_resultados
+      - VUELOS_OUTPUT=vuelos
+      - LAT_LONG_OUTPUT=lat&long
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=QUEUE
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+    volumes:
+      - ./server/config.ini:/config.ini
+
+networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24

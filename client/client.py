@@ -11,10 +11,11 @@ from commons.protocol import (
 
 
 class ClientConfig:
-    def __init__(self, server_ip, server_port, file_path, remove_file_header, batch_size):
+    def __init__(self, server_ip, server_port, flights_file_path, airports_file_path, remove_file_header, batch_size):
         self.server_ip = server_ip
         self.server_port = server_port
-        self.file_path = file_path
+        self.flights_file_path = flights_file_path
+        self.airports_file_path = airports_file_path
         self.remove_file_header = remove_file_header
         self.batch_size = batch_size
 
@@ -33,44 +34,57 @@ class Client:
         self.sock.connect((self.config.server_ip, self.config.server_port))
         logging.info("Connected to server")
 
-        # Start the process to send the file
-        self.file_sender = Process(target=self.send_file)
-        self.file_sender.start()
+        # Start the process to send the airports
+        self.airports_sender = Process(target=self.send_file(type="airport", file_path=self.config.airports_file_path))
+        self.airports_sender.start()
+        # Start the process to send the flights
+        self.flights_sender = Process(target=self.send_file(type="flight", file_path=self.config.flights_file_path))
+        self.flights_sender.start()
         # Start the process to receive the results
         self.results_receiver = Process(target=self.receive_results)
         self.results_receiver.start()
 
         # Wait for the processes to finish
-
         self.results_receiver.join()
-        self.file_sender.join()
+        self.flights_sender.join()
+        self.airports_sender.join()
         if self.running:
             self.shutdown()
 
-    def send_file(self):
+    def send_file(self, type, file_path):
         """
         Send the csv file line by line to the server.
 
         Each line represents a flight with all the columns separated by commas.
         """
+        # TODO: move this to the protocol serializer
+        # Add the type of message to the beginning of the line
+        if type == "airport":
+            type_bytes = int.to_bytes(1, 1, byteorder="big")
+        elif type == "flight":
+            type_bytes = int.to_bytes(2, 1, byteorder="big")
+
         logging.info("Sending file")
-        for batch in self.next_batch(self.config.batch_size):
-            self.sock.sendall(batch.encode() + END_OF_MESSAGE)
-        self.sock.sendall(b"\0" + END_OF_MESSAGE)
+        for batch in self.next_batch(file_path, self.config.batch_size):
+            message = type_bytes + batch.encode() + END_OF_MESSAGE
+            self.sock.sendall(message)
+        # Send message to indicate that the file has ended
+        message = type_bytes + b"\0" + END_OF_MESSAGE
+        self.sock.sendall(message)
         logging.info("File sent")
 
-    def next_batch(self, batch_size):
+    def next_batch(self, file_path, batch_size):
         """
-        Gets a batch of flights from the file.
+        Gets a batch of rows from the file.
         """
         batch = []
-        with open(self.config.file_path, "r") as f:
+        with open(file_path, "r") as f:
             if self.config.remove_file_header:
                 # Skip the header
                 next(f)
             for line in f:
                 batch.append(line)
-                if len(batch) == batch_size:
+                if len(batch) == batch_size or not line:
                     yield "".join(batch)
                     batch = []
 
@@ -84,10 +98,10 @@ class Client:
         while self.running:
             try:
                 data = buffer.get_line()
-                if not data:
-                    break
-                logging.debug(f"Result received: {data}")
-                result_handler.save_results(data)
+                # if not data:
+                # break
+                logging.debug(f"Result received: {data.message_type} | {data.message}")
+                result_handler.save_results(data.message.decode())
             except PeerDisconnected:
                 logging.info("action: server_disconected")
                 self.running = False

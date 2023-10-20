@@ -6,10 +6,11 @@ from commons.config_initializer import initialize_config
 
 
 def main(arcv):
-    if len(arcv) != 2:
-        logging.error("Invalid arguments, usage: python main.py <file_path>")
+    if len(arcv) != 3:
+        logging.error("Invalid arguments, usage: python main.py <flights_file_path> <airports_file_path>")
         return
-    file_path = arcv[1]
+    flights_file_path = arcv[1]
+    airports_file_path = arcv[2]
 
     config_inputs = {
         "server_ip": str,
@@ -26,7 +27,8 @@ def main(arcv):
     config = ClientConfig(
         config_params["server_ip"],
         config_params["server_port"],
-        file_path,
+        flights_file_path,
+        airports_file_path,
         config_params["remove_file_header"],
         config_params["batch_size"],
     )

@@ -1,5 +1,4 @@
 import logging
-from commons.communication import Communication
 from commons.protocol import END_OF_MESSAGE
 
 
@@ -25,4 +24,5 @@ class ResultsUploader:
 
     def handle_eof(self):
         # TODO: handle
+        logging.info(f"RECIBI EOF LOCO")
         pass
