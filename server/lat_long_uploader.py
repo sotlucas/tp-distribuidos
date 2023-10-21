@@ -8,9 +8,9 @@ class LatLongUploader:
 
     def send(self, client_message):
         self.sender.send(client_message)
-        logging.info(f"action: message_upload | result: success")
+        logging.debug(f"action: message_upload | result: success")
 
     def finish_sending(self):
-        logging.info("Sending EOF")
+        logging.info("LATLONG UPLOADER::Sending EOF")
         self.sender.send_eof()
         self.sender.close()

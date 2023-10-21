@@ -31,23 +31,9 @@ class ClientHandler:
         while self.running:
             try:
                 client_message = buff.get_line()
-
-                if client_message.message_type == "airport":
-                    if client_message.message == b"\0":
-                        # Send EOF to queue to communicate that all the file has been sent.
-                        self.lat_long_uploader.finish_sending()
-                    else:
-                        logging.info(f"Sending airport: {client_message.message}")
-                        self.lat_long_uploader.send(client_message.message)
-                elif client_message.message_type == "flight":
-                    if client_message.message == b"\0":
-                        # Send EOF to queue to communicate that all the file has been sent.
-                        self.flights_uploader.finish_sending()
-                    else:
-                        logging.info(f"Sending flight: {client_message.message}")
-                        self.flights_uploader.send(client_message.message)
+                self.__handle_message(client_message)
             except OSError as e:
-                logging.debug(f"action: receive_message | result: fail | error: {e}")
+                logging.error(f"action: receive_message | result: fail | error: {e}")
                 self.running = False
             except ValueError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
@@ -55,10 +41,28 @@ class ClientHandler:
             except PeerDisconnected as e:
                 logging.info("action: client_disconected")
                 self.running = False
-        # TODO: parece que no se espera aca
+        # Send EOF to queue to communicate that all the file has been sent.
+        self.flights_uploader.finish_sending()
         self.results_uploader.join()
         self.client_sock.close()
         logging.info(f"action: handle_client | result: complete")
+
+    def __handle_message(self, message):
+        """
+        Handles a specific message received from the client.
+        """
+        if message.type == "airport":
+            if message.content == b"\0":
+                # Send EOF to queue to communicate that all the file has been sent.
+                self.lat_long_uploader.finish_sending()
+            else:
+                self.lat_long_uploader.send(message.content)
+        elif message.type == "flight":
+            if message.content == b"\0":
+                # Send EOF to queue to communicate that all the file has been sent.
+                self.lat_long_uploader.finish_sending()
+            else:
+                self.flights_uploader.send(message.content)
 
     def __stop(self, *args):
         """

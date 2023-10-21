@@ -5,9 +5,9 @@ END_OF_MESSAGE = b"\r\n\r\n"
 
 
 class Message:
-    def __init__(self, message_type, message):
-        self.message_type = message_type
-        self.message = message
+    def __init__(self, type, content):
+        self.type = type
+        self.content = content
 
 
 class CommunicationBuffer:
@@ -22,8 +22,7 @@ class CommunicationBuffer:
                 raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
-        logging.debug(f"Received: {line}")
-        if line == b"\0":
+        if line == b"\2\0":
             raise PeerDisconnected
         return self.__parse_message(line)
 

@@ -8,7 +8,7 @@ class ResultsUploader:
         self.receiver = receiver
 
     def start(self):
-        logging.info(f"action: results_uploader | result: success ")
+        logging.info(f"action: results_uploader | result: started")
         self.receiver.bind(self.output_callback, self.handle_eof)
         self.receiver.start()
 
@@ -20,9 +20,8 @@ class ResultsUploader:
         # Add the END_OF_MESSAGE sequence to mark the end of the message
         message_bytes = message.encode() + END_OF_MESSAGE
         self.socket.sendall(message_bytes)
-        logging.info(f"action: result_upload | result: success")
+        logging.debug(f"action: result_upload | result: success")
 
     def handle_eof(self):
         # TODO: handle
-        logging.info(f"RECIBI EOF LOCO")
         pass

@@ -35,10 +35,10 @@ class Client:
         logging.info("Connected to server")
 
         # Start the process to send the airports
-        self.airports_sender = Process(target=self.send_file(type="airport", file_path=self.config.airports_file_path))
+        self.airports_sender = Process(target=self.send_file, args=("airport", self.config.airports_file_path))
         self.airports_sender.start()
         # Start the process to send the flights
-        self.flights_sender = Process(target=self.send_file(type="flight", file_path=self.config.flights_file_path))
+        self.flights_sender = Process(target=self.send_file, args=("flight", self.config.flights_file_path))
         self.flights_sender.start()
         # Start the process to receive the results
         self.results_receiver = Process(target=self.receive_results)
@@ -64,14 +64,14 @@ class Client:
         elif type == "flight":
             type_bytes = int.to_bytes(2, 1, byteorder="big")
 
-        logging.info("Sending file")
+        logging.info(f"Sending file: {file_path}")
         for batch in self.next_batch(file_path, self.config.batch_size):
             message = type_bytes + batch.encode() + END_OF_MESSAGE
             self.sock.sendall(message)
         # Send message to indicate that the file has ended
         message = type_bytes + b"\0" + END_OF_MESSAGE
         self.sock.sendall(message)
-        logging.info("File sent")
+        logging.info(f"File sent: {file_path}")
 
     def next_batch(self, file_path, batch_size):
         """
@@ -97,11 +97,11 @@ class Client:
         result_handler = ResultHandler()
         while self.running:
             try:
-                data = buffer.get_line()
-                # if not data:
-                # break
-                logging.debug(f"Result received: {data.message_type} | {data.message}")
-                result_handler.save_results(data.message.decode())
+                message = buffer.get_line()
+                if not message:
+                    break
+                logging.debug(f"Result received: {message.type} | {message.content}")
+                result_handler.save_results(message.content.decode())
             except PeerDisconnected:
                 logging.info("action: server_disconected")
                 self.running = False
