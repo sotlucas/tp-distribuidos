@@ -1,8 +1,11 @@
 import logging
 
 
-# TODO: this is the same as FlightsUploader
-class LatLongUploader:
+class MessageUploader:
+    """
+    Sends messages to a queue.
+    """
+
     def __init__(self, sender):
         self.sender = sender
 
@@ -11,6 +14,6 @@ class LatLongUploader:
         logging.debug(f"action: message_upload | result: success")
 
     def finish_sending(self):
-        logging.info("LATLONG UPLOADER::Sending EOF")
+        logging.info("Sending EOF")
         self.sender.send_eof()
         self.sender.close()

@@ -1,19 +1,19 @@
 import socket
 import signal
 import logging
+from multiprocessing import Process
+
 import commons.protocol as protocol
 from commons.protocol import PeerDisconnected
-from flights_uploader import FlightsUploader
+from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
-from lat_long_uploader import LatLongUploader
-from multiprocessing import Process
 
 
 class ClientHandler:
     def __init__(self, client_sock, receiver, flights_sender, lat_long_sender):
         self.client_sock = client_sock
-        self.flights_uploader = FlightsUploader(flights_sender)
-        self.lat_long_uploader = LatLongUploader(lat_long_sender)
+        self.flights_uploader = MessageUploader(flights_sender)
+        self.lat_long_uploader = MessageUploader(lat_long_sender)
         self.results_uploader = Process(
             target=ResultsUploader(receiver, self.client_sock).start
         )
