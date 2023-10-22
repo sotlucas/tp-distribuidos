@@ -1,5 +1,6 @@
 BUFFER_SIZE = 8192  # 8 KiB
 END_OF_MESSAGE = b"\r\n\r\n"
+EOF = b"\0"
 
 
 class Message:
@@ -26,9 +27,6 @@ class CommunicationBuffer:
                 raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
-        message = parse_message(line)
-        if message.type == "flight" and message.content == b"\0":
-            raise PeerDisconnected
         return parse_message(line)
 
 
@@ -64,7 +62,7 @@ def serialize_eof(type):
     """
     Serialize an EOF message to be sent through the socket.
     """
-    return serialize_message(type, b"\0")
+    return serialize_message(type, EOF)
 
 
 class PeerDisconnected(Exception):

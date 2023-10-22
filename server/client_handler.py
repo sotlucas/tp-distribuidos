@@ -41,8 +41,6 @@ class ClientHandler:
             except PeerDisconnected as e:
                 logging.info("action: client_disconected")
                 self.running = False
-        # Send EOF to queue to communicate that all the file has been sent.
-        self.flights_uploader.finish_sending()
         self.results_uploader.join()
         self.client_sock.close()
         logging.info(f"action: handle_client | result: complete")
@@ -51,18 +49,15 @@ class ClientHandler:
         """
         Handles a specific message received from the client.
         """
-        if message.type == "airport":
-            if message.content == b"\0":
-                # Send EOF to queue to communicate that all the file has been sent.
-                self.lat_long_uploader.finish_sending()
-            else:
-                self.lat_long_uploader.send(message.content)
-        elif message.type == "flight":
-            if message.content == b"\0":
-                # Send EOF to queue to communicate that all the file has been sent.
-                self.lat_long_uploader.finish_sending()
-            else:
-                self.flights_uploader.send(message.content)
+        uploader = self.flights_uploader if message.type == "flight" else self.lat_long_uploader
+        if message.content == protocol.EOF:
+            # Send EOF to queue to communicate that all the file has been sent.
+            uploader.finish_sending()
+            if message.type == "flight" and message.content == protocol.EOF:
+                # The client will not send any more messages
+                raise PeerDisconnected
+        else:
+            uploader.send(message.content)
 
     def __stop(self, *args):
         """
