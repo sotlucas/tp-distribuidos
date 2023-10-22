@@ -1,6 +1,6 @@
 import logging
 
-from commons.protocol import END_OF_MESSAGE
+from commons.protocol import serialize_eof, Message
 
 
 class FileUploader:
@@ -17,19 +17,12 @@ class FileUploader:
 
         Each line represents a flight with all the columns separated by commas.
         """
-        # TODO: move this to the protocol serializer
-        # Add the type of message to the beginning of the line
-        if self.type == "airport":
-            type_bytes = int.to_bytes(1, 1, byteorder="big")
-        elif self.type == "flight":
-            type_bytes = int.to_bytes(2, 1, byteorder="big")
-
         logging.info(f"Sending file: {self.file_path}")
         for batch in self.__next_batch(self.file_path, self.batch_size):
-            message = type_bytes + batch.encode() + END_OF_MESSAGE
-            self.sock.sendall(message)
+            message = Message(self.type, batch)
+            self.sock.sendall(message.serialize())
         # Send message to indicate that the file has ended
-        message = type_bytes + b"\0" + END_OF_MESSAGE
+        message = serialize_eof(self.type)
         self.sock.sendall(message)
         logging.info(f"File sent: {self.file_path}")
 
