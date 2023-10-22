@@ -1,5 +1,3 @@
-import logging
-
 BUFFER_SIZE = 8192  # 8 KiB
 END_OF_MESSAGE = b"\r\n\r\n"
 

@@ -161,8 +161,12 @@ class CommunicationReceiver(Communication):
         # TODO: Crear un parser para los mensajes
         message = message.decode("utf-8")
         messages = message.split("\n")
-        self.input_callback(messages)
-        logging.debug("Processed in {} seconds".format(time.time() - start_time))
+        try:
+            self.input_callback(messages)
+            logging.debug("Processed in {} seconds".format(time.time() - start_time))
+        except Exception as e:
+            logging.info(f"Message: {message}")
+            logging.exception(f"Error processing message: {e}")
 
     def intercept(self, message):
         """

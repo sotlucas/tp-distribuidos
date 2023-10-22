@@ -1,3 +1,6 @@
+import logging
+
+
 class Tagger:
     def __init__(self, tag_name, receiver, sender):
         self.tag_name = tag_name
@@ -24,4 +27,5 @@ class Tagger:
 
     def handle_eof(self):
         # TODO: See if we need to do anything with the EOF here.
+        logging.info(f"action: tagger | result: complete")
         pass
