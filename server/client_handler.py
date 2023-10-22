@@ -30,7 +30,7 @@ class ClientHandler:
         buff = protocol.CommunicationBuffer(self.client_sock)
         while self.running:
             try:
-                client_message = buff.get_line()
+                client_message = buff.get_message()
                 self.__handle_message(client_message)
             except OSError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")

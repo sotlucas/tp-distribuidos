@@ -20,19 +20,19 @@ class CommunicationBuffer:
         self.sock = sock
         self.buffer = b""
 
-    def get_line(self):
+    def get_message(self):
         while END_OF_MESSAGE not in self.buffer:
             data = self.sock.recv(BUFFER_SIZE)
             if not data:  # socket is closed
                 raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
-        return parse_message(line)
+        return deserialize_message(line)
 
 
-def parse_message(line):
+def deserialize_message(line):
     """
-    Parse the message received through the socket.
+    Deserialize the message received through the socket.
     """
     if line[0] == 1:
         message_type = "airport"

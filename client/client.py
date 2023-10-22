@@ -66,7 +66,7 @@ class Client:
         result_handler = ResultHandler()
         while self.running:
             try:
-                message = buffer.get_line()
+                message = buffer.get_message()
                 if not message:
                     break
                 logging.debug(f"Result received: {message.type} | {message.content}")
