@@ -55,6 +55,8 @@ def serialize_message(type, content_bytes):
         type_bytes = int.to_bytes(1, 1, byteorder="big")
     elif type == "flight":
         type_bytes = int.to_bytes(2, 1, byteorder="big")
+    else:
+        type_bytes = b""
     return type_bytes + content_bytes + END_OF_MESSAGE
 
 

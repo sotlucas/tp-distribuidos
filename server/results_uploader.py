@@ -1,5 +1,5 @@
 import logging
-from commons.protocol import END_OF_MESSAGE
+from commons.protocol import Message
 
 
 class ResultsUploader:
@@ -16,10 +16,9 @@ class ResultsUploader:
         message_batch = "\n".join(messages)
         self.output_single(message_batch)
 
-    def output_single(self, message):
-        # Add the END_OF_MESSAGE sequence to mark the end of the message
-        message_bytes = message.encode() + END_OF_MESSAGE
-        self.socket.sendall(message_bytes)
+    def output_single(self, content):
+        message = Message(None, content)
+        self.socket.sendall(message.serialize())
         logging.debug(f"action: result_upload | result: success")
 
     def handle_eof(self):
