@@ -31,20 +31,18 @@ class Client:
         # Connect to the server
         self.sock.connect((self.config.server_ip, self.config.server_port))
         logging.info("Connected to server")
+        self.buff = CommunicationBuffer(self.sock)
 
         # Start the process to send the airports
         self.airports_sender = Process(
             target=FileUploader("airport", self.config.airports_file_path, self.config.remove_file_header,
-                                self.config.batch_size, self.sock).start)
+                                self.config.batch_size, self.buff).start)
         self.airports_sender.start()
-        # We wait for the airports to be sent before sending the flights
-        # TODO: fix concurrency in send to parallelize
-        self.airports_sender.join()
 
         # Start the process to send the flights
         self.flights_sender = Process(
             target=FileUploader("flight", self.config.flights_file_path, self.config.remove_file_header,
-                                self.config.batch_size, self.sock).start)
+                                self.config.batch_size, self.buff).start)
         self.flights_sender.start()
 
         # Start the process to receive the results
@@ -52,6 +50,7 @@ class Client:
         self.results_receiver.start()
 
         # Wait for the processes to finish
+        self.airports_sender.join()
         self.flights_sender.join()
         self.results_receiver.join()
         if self.running:
@@ -62,11 +61,10 @@ class Client:
         Receive the results from the server.
         """
         logging.info("Receiving results")
-        buffer = CommunicationBuffer(self.sock)
         result_handler = ResultHandler()
         while self.running:
             try:
-                message = buffer.get_message()
+                message = self.buff.get_message()
                 if not message:
                     break
                 logging.debug(f"Result received: {message.type} | {message.content}")

@@ -1,3 +1,5 @@
+import multiprocessing
+
 BUFFER_SIZE = 8192  # 8 KiB
 END_OF_MESSAGE = b"\r\n\r\n"
 EOF = b"\0"
@@ -19,8 +21,12 @@ class CommunicationBuffer:
     def __init__(self, sock):
         self.sock = sock
         self.buffer = b""
+        self.lock = multiprocessing.Lock()
 
     def get_message(self):
+        """
+        Get a message from the socket.
+        """
         while END_OF_MESSAGE not in self.buffer:
             data = self.sock.recv(BUFFER_SIZE)
             if not data:  # socket is closed
@@ -28,6 +34,20 @@ class CommunicationBuffer:
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
         return deserialize_message(line)
+
+    def send_message(self, message):
+        """
+        Send a message through the socket.
+        """
+        with self.lock:
+            self.sock.sendall(message.serialize())
+
+    def send_eof(self, type):
+        """
+        Send an EOF message through the socket.
+        """
+        message = Message(type, EOF.decode())
+        self.send_message(message)
 
 
 def deserialize_message(line):
@@ -58,13 +78,6 @@ def serialize_message(type, content_bytes):
     else:
         type_bytes = b""
     return type_bytes + content_bytes + END_OF_MESSAGE
-
-
-def serialize_eof(type):
-    """
-    Serialize an EOF message to be sent through the socket.
-    """
-    return serialize_message(type, EOF)
 
 
 class PeerDisconnected(Exception):
