@@ -33,7 +33,7 @@ class Processor:
         route = self.get_route(message)
         message_hash = hashlib.md5(route.encode()).hexdigest()
         queue_id = (int(message_hash, 16) % self.grouper_replicas_count) + 1
-        logging.info(f"Forwarding message to queue {queue_id}")
+        logging.debug(f"Forwarding message to queue {queue_id}")
         return message, queue_id
 
     def get_route(self, message):

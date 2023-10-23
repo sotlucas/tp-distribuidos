@@ -11,10 +11,11 @@ class ServerConfig:
 
 
 class Server:
-    def __init__(self, config, server_receiver, server_sender):
+    def __init__(self, config, server_receiver, flights_sender, lat_long_sender):
         self.config = config
         self.server_receiver = server_receiver
-        self.server_sender = server_sender
+        self.flights_sender = flights_sender
+        self.lat_long_sender = lat_long_sender
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(("", config.port))
@@ -29,7 +30,7 @@ class Server:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(self.config.connection_timeout)
                 ClientHandler(
-                    client_sock, self.server_receiver, self.server_sender
+                    client_sock, self.server_receiver, self.flights_sender, self.lat_long_sender
                 ).handle_client()
             except OSError as e:
                 logging.error(f"Error: {e}")

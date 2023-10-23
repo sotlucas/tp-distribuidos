@@ -11,8 +11,9 @@ def main():
         "server_port": int,
         "logging_level": str,
         "connection_timeout": int,
-        "input": str,
-        "output": str,
+        "vuelos_input": str,
+        "vuelos_output": str,
+        "lat_long_output": str,
         "rabbit_host": str,
         "output_type": str,
         "input_type": str,
@@ -24,21 +25,26 @@ def main():
 
     vuelos_initializer = CommunicationInitializer(config_params["rabbit_host"])
     vuelos_receiver = vuelos_initializer.initialize_receiver(
-        config_params["input"],
+        config_params["vuelos_input"],
         config_params["input_type"],
         SERVER_REPLICAS_COUNT,
     )
 
     resultados_initializer = CommunicationInitializer(config_params["rabbit_host"])
     resultados_sender = resultados_initializer.initialize_sender(
-        config_params["output"], config_params["output_type"]
+        config_params["vuelos_output"], config_params["output_type"]
+    )
+
+    lat_long_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    lat_long_sender = lat_long_initializer.initialize_sender(
+        config_params["lat_long_output"], config_params["output_type"]
     )
 
     server_config = ServerConfig(
         config_params["server_port"],
         config_params["connection_timeout"],
     )
-    Server(server_config, vuelos_receiver, resultados_sender).run()
+    Server(server_config, vuelos_receiver, resultados_sender, lat_long_sender).run()
 
 
 if __name__ == "__main__":

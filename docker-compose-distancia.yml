@@ -23,7 +23,7 @@ services:
   client:
     container_name: client
     image: client:latest
-    entrypoint: python3 /main.py archivo.csv
+    entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
@@ -34,6 +34,7 @@ services:
     volumes:
       - ./client/config.ini:/config.ini
       - ./data/archivo.csv:/archivo.csv
+      - ./data/airports-codepublic.csv:/airports-codepublic.csv
       - ./results:/results
 
   server:
@@ -43,8 +44,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
-      - INPUT=vuelos_resultados
-      - OUTPUT=vuelos
+      - VUELOS_INPUT=vuelos_resultados
+      - VUELOS_OUTPUT=vuelos
+      - LAT_LONG_OUTPUT=lat&long
       - RABBIT_HOST=rabbitmq
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
@@ -102,33 +104,6 @@ services:
     networks:
       - testing_net
 
-  lat_long_uploader:
-    image: lat_long_uploader:latest
-    entrypoint: python3 /main.py
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
-      - OUTPUT=lat&long
-      - RABBIT_HOST=rabbitmq
-      - OUTPUT_TYPE=QUEUE
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      joiner_1:
-        condition: service_started
-      joiner_2:
-        condition: service_started
-      joiner_3:
-        condition: service_started
-      joiner_4:
-        condition: service_started
-      joiner_5:
-        condition: service_started
-    networks:
-      - testing_net
-    volumes:
-      - ./data/airports-codepublic.csv:/airports-codepublic.csv
-
   filter_lat_long:
     deploy:
       replicas: ${FILTER_LAT_LONG_REPLICAS}
@@ -149,6 +124,16 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      joiner_1:
+        condition: service_started
+      joiner_2:
+        condition: service_started
+      joiner_3:
+        condition: service_started
+      joiner_4:
+        condition: service_started
+      joiner_5:
+        condition: service_started
     networks:
       - testing_net
 
