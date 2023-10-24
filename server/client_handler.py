@@ -1,5 +1,4 @@
 import socket
-import signal
 import logging
 from multiprocessing import Process
 
@@ -19,9 +18,6 @@ class ClientHandler:
         )
         self.results_uploader.start()
         self.running = True
-
-        # Register signal handler for SIGTERM
-        signal.signal(signal.SIGTERM, self.__stop)
 
     def handle_client(self):
         """
@@ -59,12 +55,15 @@ class ClientHandler:
         else:
             uploader.send(message.content)
 
-    def __stop(self, *args):
+    def stop(self):
         """
-        Stop server closing the client socket.
+        Stop client server closing resources.
         """
         logging.info("action: client_handler_shutdown | result: in_progress")
+        self.running = False
         self.client_sock.shutdown(socket.SHUT_RDWR)
         self.client_sock.close()
-        self.running = False
+        self.flights_uploader.stop()
+        self.lat_long_uploader.stop()
+        self.results_uploader.terminate()
         logging.info("action: client_handler_shutdown | result: success")

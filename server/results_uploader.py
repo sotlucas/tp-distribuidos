@@ -1,4 +1,5 @@
 import logging
+
 from commons.protocol import Message
 
 
@@ -24,3 +25,11 @@ class ResultsUploader:
     def handle_eof(self):
         # TODO: handle
         pass
+
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: results_uploader_shutdown | result: in_progress")
+        self.receiver.stop()
+        logging.info("action: results_uploader_shutdown | result: success")
