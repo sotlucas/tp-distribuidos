@@ -1,3 +1,6 @@
+import logging
+import signal
+
 SEGMENTS_ARRIVAL_AIRPORT_CODE_INDEX = 5
 
 
@@ -5,6 +8,8 @@ class Processor:
     def __init__(self, receiver, sender):
         self.receiver = receiver
         self.sender = sender
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
 
     def run(self):
         self.receiver.bind(
@@ -31,3 +36,12 @@ class Processor:
             return message
         else:
             return None
+
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")
