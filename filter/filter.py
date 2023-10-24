@@ -1,4 +1,6 @@
 import csv
+import logging
+import signal
 
 
 class FilterConfig:
@@ -13,6 +15,8 @@ class Filter:
         self.config = config
         self.communication_receiver = communication_receiver
         self.communication_sender = communication_sender
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
 
     def run(self):
         self.communication_receiver.bind(
@@ -33,3 +37,12 @@ class Filter:
             filtered_row = [row[key] for key in output_fields]
             rows.append(",".join(filtered_row))
         self.communication_sender.send_all(rows)
+
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: filter_shutdown | result: in_progress")
+        self.communication_receiver.stop()
+        self.communication_sender.stop()
+        logging.info("action: filter_shutdown | result: success")
