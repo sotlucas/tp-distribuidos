@@ -17,6 +17,7 @@ class Processor:
             "startingAirport",
             "destinationAirport",
             "travelDuration",
+            "segmentsArrivalAirportCode",
         ]
 
     def run(self):
