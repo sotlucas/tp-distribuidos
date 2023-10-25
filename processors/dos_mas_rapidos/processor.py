@@ -1,9 +1,9 @@
 import logging
 import re
 
-STARTING_AIRPORT_INDEX = 1
-DESTINATION_AIRPORT_INDEX = 2
-TRAVEL_DURATION_INDEX = 3
+STARTING_AIRPORT = "startingAirport"
+DESTINATION_AIRPORT = "destinationAirport"
+TRAVEL_DURATION = "travelDuration"
 
 
 class Processor:
@@ -12,9 +12,19 @@ class Processor:
         self.sender = sender
         self.trajectory = {}
 
+        self.input_output_fields = [
+            "legId",
+            "startingAirport",
+            "destinationAirport",
+            "travelDuration",
+        ]
+
     def run(self):
         self.receiver.bind(
-            self.process, eof_callback=self.send_results, sender=self.sender
+            self.process,
+            eof_callback=self.send_results,
+            sender=self.sender,
+            input_fields_order=self.input_output_fields,
         )
         self.receiver.start()
 
@@ -50,15 +60,13 @@ class Processor:
         """
         Converts a message to a trajectory string
         """
-        params = message.split(",")
-        return params[STARTING_AIRPORT_INDEX] + "-" + params[DESTINATION_AIRPORT_INDEX]
+        return message[STARTING_AIRPORT] + "-" + message[DESTINATION_AIRPORT]
 
     def convert_message_to_travel_duration(self, message):
         """
         Converts a message to a travel duration in minutes
         """
-        params = message.split(",")
-        return self.convert_travel_duration(params[TRAVEL_DURATION_INDEX])
+        return self.convert_travel_duration(message[TRAVEL_DURATION])
 
     def convert_travel_duration(self, travel_duration):
         """
@@ -87,5 +95,7 @@ class Processor:
         # TODO: send in batch
         for trajectory in self.trajectory:
             for message in self.trajectory[trajectory]:
-                self.sender.send(message)
+                self.sender.send_all(
+                    [message], output_fields_order=self.input_output_fields
+                )
         self.sender.send_eof()

@@ -7,11 +7,29 @@ class Processor:
         self.sender = sender
         self.cache = {}
 
+        self.input_fields = [
+            "legId",
+            "startingAirport",
+            "destinationAirport",
+            "totalTravelDistance",
+            "startingLatitude",
+            "startingLongitude",
+            "destinationLatitude",
+            "destinationLongitude",
+        ]
+        self.output_fields = [
+            "legId",
+            "startingAirport",
+            "destinationAirport",
+            "totalTravelDistance",
+        ]
+
     def run(self):
         self.receiver.bind(
             input_callback=self.process,
             eof_callback=self.sender.send_eof,
             sender=self.sender,
+            input_fields_order=self.input_fields,
         )
         self.receiver.start()
 
@@ -21,30 +39,34 @@ class Processor:
             processed_message = self.process_single(message)
             if processed_message:
                 processed_messages.append(processed_message)
-        self.sender.send_all(processed_messages)
+        self.sender.send_all(processed_messages, output_fields_order=self.output_fields)
 
     def process_single(self, message):
         # input message: legId,startingAirport,destinationAirport,totalTravelDistance,startingLatitude,startingLongitude,destinationLatitude,destinationLongitude
         # output message: legId,startingAirport,destinationAirport,totalTravelDistance
 
-        split_message = message.split(",")
-
-        starting_latitude = split_message[4]
-        starting_longitude = split_message[5]
-        destination_latitude = split_message[6]
-        destination_longitude = split_message[7]
+        starting_latitude = message["startingLatitude"]
+        starting_longitude = message["startingLongitude"]
+        destination_latitude = message["destinationLatitude"]
+        destination_longitude = message["destinationLongitude"]
 
         starting_airport = (starting_latitude, starting_longitude)
         destination_airport = (destination_latitude, destination_longitude)
         distance_between_airports = self.distance(destination_airport, starting_airport)
 
         # We only send flights whose total distance is 4 times greater than the distance between airports
-        total_distance = split_message[3]
+        total_distance = message["totalTravelDistance"]
         if not total_distance:
             # TODO: Verificar si hay que "skipear" los mensajes que no tienen distancia
             # If total distance is null in the database, we don't send the message
             return None
         if float(total_distance) > 4 * distance_between_airports:
+            message = {
+                "legId": message["legId"],
+                "startingAirport": message["startingAirport"],
+                "destinationAirport": message["destinationAirport"],
+                "totalTravelDistance": message["totalTravelDistance"],
+            }
             return message
 
     def distance(self, destination_airport, starting_airport):
@@ -61,5 +83,7 @@ class Processor:
             distance_between_airports = geodesic(
                 starting_airport, destination_airport
             ).miles
-            self.cache[(starting_airport, destination_airport)] = distance_between_airports
+            self.cache[
+                (starting_airport, destination_airport)
+            ] = distance_between_airports
         return distance_between_airports
