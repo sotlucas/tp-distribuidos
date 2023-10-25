@@ -14,8 +14,8 @@ def test_multiple_flights_for_same_trajectory():
 
     assert 1 == len(processor.trajectory)
     assert [
-        "9ca,ATL,BOS,PT1H20M,BOS",
-        "asd,ATL,BOS,PT2H12M,BOS",
+        vuelos[0],
+        vuelos[2],
     ] == processor.trajectory["ATL-BOS"]
 
 
@@ -36,13 +36,13 @@ def test_multiple_flights_multiple_trajectories():
 
     assert 3 == len(processor.trajectory)
     assert [
-        "9ca,ATL,BOS,PT1H20M,BOS",
-        "asd,ATL,BOS,PT2H12M,BOS",
+        vuelos[0],
+        vuelos[2],
     ] == processor.trajectory["ATL-BOS"]
-    assert ["0e8,PHL,DFW,PT2H20M,DFW"] == processor.trajectory["PHL-DFW"]
+    assert [vuelos[3]] == processor.trajectory["PHL-DFW"]
     assert [
-        "gf4,DFW,ATL,PT0H30M,ATL",
-        "c68,DFW,ATL,PT1H30M,ATL",
+        vuelos[6],
+        vuelos[5],
     ] == processor.trajectory["DFW-ATL"]
 
 
@@ -59,10 +59,10 @@ def test_multiple_flights_single_trajectories():
     processor.process(vuelos)
 
     assert 4 == len(processor.trajectory)
-    assert ["9ca,ATL,BOS,PT1H20M,BOS"] == processor.trajectory["ATL-BOS"]
-    assert ["0e8,PHL,DFW,PT2H20M,DFW"] == processor.trajectory["PHL-DFW"]
-    assert ["gf4,DFW,ATL,PT0H30M,ATL"] == processor.trajectory["DFW-ATL"]
-    assert ["c68,LAX,BOS,PT1H30M,BOS"] == processor.trajectory["LAX-BOS"]
+    assert [vuelos[0]] == processor.trajectory["ATL-BOS"]
+    assert [vuelos[1]] == processor.trajectory["PHL-DFW"]
+    assert [vuelos[2]] == processor.trajectory["DFW-ATL"]
+    assert [vuelos[3]] == processor.trajectory["LAX-BOS"]
 
 
 def test_duration_format():
