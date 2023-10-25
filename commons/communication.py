@@ -179,7 +179,6 @@ class CommunicationReceiver(Communication):
                 for message in messages
             ]
             messages = messages_parsed
-        print(messages)
         try:
             self.input_callback(messages)
             logging.debug("Processed in {} seconds".format(time.time() - start_time))

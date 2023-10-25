@@ -12,4 +12,4 @@ class MessageParser:
         """
         Serialize the message and return a string with the output fields
         """
-        return ",".join([message_dict[key] for key in output_fields])
+        return ",".join([str(message_dict[key]) for key in output_fields])
