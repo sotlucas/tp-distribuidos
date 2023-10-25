@@ -53,6 +53,7 @@ class Processor:
             fastest.append(message)
         else:
             second_fastest = self.convert_message_to_travel_duration(fastest[1])
+            print(travel_duration, second_fastest)
             if travel_duration < second_fastest:
                 fastest[1] = message
         fastest.sort(key=self.convert_message_to_travel_duration)

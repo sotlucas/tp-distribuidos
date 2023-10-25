@@ -40,9 +40,10 @@ def test_multiple_flights_multiple_trajectories():
         vuelos[2],
     ] == processor.trajectory["ATL-BOS"]
     assert [vuelos[3]] == processor.trajectory["PHL-DFW"]
+    print(processor.trajectory["DFW-ATL"])
     assert [
         vuelos[6],
-        vuelos[5],
+        vuelos[4],
     ] == processor.trajectory["DFW-ATL"]
 
 
@@ -87,7 +88,7 @@ def test_duration_format_only_day():
 def create_vuelos(vuelos_datos):
     vuelos = []
     for vuelo in vuelos_datos:
-        vuelo.split(",")
+        vuelo = vuelo.split(",")
         vuelos.append(
             {
                 "legId": vuelo[0],
