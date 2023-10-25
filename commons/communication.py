@@ -1,7 +1,7 @@
 import time
-
 import pika
 import logging
+from commons.message_parser import MessageParser
 
 
 class CommunicationConnection:
@@ -55,6 +55,7 @@ class Communication:
     def __init__(self, config, connection):
         self.config = config
         self.connection = connection
+        self.parser = MessageParser(self.config.delimiter)
 
     def close(self):
         """
@@ -81,16 +82,25 @@ class CommunicationReceiverConfig:
         The input_diff_name used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
     - replica_id : int
         The replica_id used to replicate the eof only in topic exchanges
+    - delimiter : str
+        The delimiter used to parse the messages
     """
 
     def __init__(
-            self, input, replicas_count, routing_key="", input_diff_name="", replica_id=1
+        self,
+        input,
+        replicas_count,
+        routing_key="",
+        input_diff_name="",
+        replica_id=1,
+        delimiter=",",
     ):
         self.input = input
         self.replicas_count = replicas_count
         self.routing_key = routing_key
         self.input_diff_name = input_diff_name
         self.replica_id = replica_id
+        self.delimiter = delimiter
 
 
 class CommunicationReceiver(Communication):
@@ -105,7 +115,7 @@ class CommunicationReceiver(Communication):
         super().__init__(config, connection)
         self.messages_received = 0
 
-    def bind(self, input_callback, eof_callback, sender=None):
+    def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
         Binds the receiver to the input queue or exchange
 
@@ -118,6 +128,8 @@ class CommunicationReceiver(Communication):
         ### Optional parameters
         - sender : CommunicationSender
             - Sender to be used when the EOF is received. It sincronizes the EOF propagation, getting how many messages have been sent.
+        - input_fields_order : list of str
+            - List of the input fields in the order they will be received, used to parse the messages
         """
         # We connect here because if we connect in the __init__ it it can be closed by the connection for inactivity
         self.connection.connect()
@@ -127,6 +139,7 @@ class CommunicationReceiver(Communication):
         self.input_callback = input_callback
         self.eof_callback = eof_callback
         self.sender = sender
+        self.input_fields_order = input_fields_order
 
         self.channel.basic_qos(prefetch_count=100)
         self.channel.basic_consume(
@@ -158,9 +171,15 @@ class CommunicationReceiver(Communication):
         if not message:
             return
         self.messages_received += 1
-        # TODO: Crear un parser para los mensajes
-        message = message.decode("utf-8")
+        message = message.decode("utf-8").rstrip()
         messages = message.split("\n")
+        if self.input_fields_order:
+            messages_parsed = [
+                self.parser.parse(message, self.input_fields_order)
+                for message in messages
+            ]
+            messages = messages_parsed
+        print(messages)
         try:
             self.input_callback(messages)
             logging.debug("Processed in {} seconds".format(time.time() - start_time))
@@ -313,11 +332,11 @@ class CommunicationReceiver(Communication):
         logging.debug(f"Requeueing EOF in {self.input_queue}")
 
         message = (
-                b"\0"
-                + ttl.to_bytes(4, "big")
-                + remaining_messages.to_bytes(8, "big")
-                + messages_sent.to_bytes(8, "big")
-                + sender_messages_sent.to_bytes(8, "big")
+            b"\0"
+            + ttl.to_bytes(4, "big")
+            + remaining_messages.to_bytes(8, "big")
+            + messages_sent.to_bytes(8, "big")
+            + sender_messages_sent.to_bytes(8, "big")
         )
         self.channel.basic_publish(
             exchange="",
@@ -329,7 +348,7 @@ class CommunicationReceiver(Communication):
         )
 
     def requeue_topic(
-            self, ttl, remaining_messages, messages_sent, sender_messages_sent
+        self, ttl, remaining_messages, messages_sent, sender_messages_sent
     ):
         """
         Requeues the EOF decreasing its TTL by 1.
@@ -339,11 +358,11 @@ class CommunicationReceiver(Communication):
         logging.debug(f"Requeueing topic EOF in {self.input_queue}")
 
         message = (
-                b"\0"
-                + ttl.to_bytes(4, "big")
-                + remaining_messages.to_bytes(8, "big")
-                + messages_sent.to_bytes(8, "big")
-                + sender_messages_sent.to_bytes(8, "big")
+            b"\0"
+            + ttl.to_bytes(4, "big")
+            + remaining_messages.to_bytes(8, "big")
+            + messages_sent.to_bytes(8, "big")
+            + sender_messages_sent.to_bytes(8, "big")
         )
         next_replica = str((self.config.replica_id % self.config.replicas_count) + 1)
         self.channel.basic_publish(
@@ -405,7 +424,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-                self.config.input + self.config.input_diff_name + self.config.routing_key
+            self.config.input + self.config.input_diff_name + self.config.routing_key
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue
@@ -438,10 +457,15 @@ class CommunicationSenderConfig:
     ### Attributes
     - output : str
         The output where the messages will be sent, it can be a queue or an exchange
+
+    ### Optional attributes
+    - delimiter : str
+        The delimiter used to parse the messages
     """
 
-    def __init__(self, output):
+    def __init__(self, output, delimiter=","):
         self.output = output
+        self.delimiter = delimiter
 
 
 class CommunicationSender(Communication):
@@ -494,10 +518,15 @@ class CommunicationSenderExchange(CommunicationSender):
         """
         self.send_to(message, self.config.output, routing_key)
 
-    def send_all(self, messages, routing_key=""):
+    def send_all(self, messages, routing_key="", output_fields_order=None):
         """
         Sends a batch of messages to the output
         """
+        if output_fields_order:
+            messages = [
+                self.parser.serialize(message, output_fields_order)
+                for message in messages
+            ]
         if len(messages) > 0:
             self.send("\n".join(messages), routing_key)
 
@@ -531,10 +560,15 @@ class CommunicationSenderQueue(CommunicationSender):
         """
         self.send_to(message, "", self.config.output)
 
-    def send_all(self, messages):
+    def send_all(self, messages, output_fields_order=None):
         """
         Sends a batch of messages to the output
         """
+        if output_fields_order:
+            messages = [
+                self.parser.serialize(message, output_fields_order)
+                for message in messages
+            ]
         if len(messages) > 0:
             self.send("\n".join(messages))
 
