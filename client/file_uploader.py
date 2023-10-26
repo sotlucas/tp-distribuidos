@@ -23,8 +23,9 @@ class FileUploader:
 
         logging.info(f"Sending file: {self.file_path}")
         for batch in self.__next_batch(self.file_path, self.batch_size):
-            message = Message(self.type, batch)
-            self.buff.send_message(message)
+            if batch:
+                message = Message(self.type, batch)
+                self.buff.send_message(message)
         # Send message to indicate that the file has ended
         self.buff.send_eof(self.type)
         logging.info(f"File sent: {self.file_path}")
@@ -43,6 +44,7 @@ class FileUploader:
                 if len(batch) == batch_size or not line:
                     yield "".join(batch)
                     batch = []
+            yield "".join(batch)
 
     def __stop(self, *args):
         """
