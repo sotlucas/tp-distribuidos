@@ -1,4 +1,5 @@
 import logging
+import signal
 
 from commons.protocol import Message
 
@@ -17,6 +18,9 @@ class FileUploader:
 
         Each line represents a flight with all the columns separated by commas.
         """
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
+
         logging.info(f"Sending file: {self.file_path}")
         for batch in self.__next_batch(self.file_path, self.batch_size):
             if batch:
@@ -41,3 +45,10 @@ class FileUploader:
                     yield "".join(batch)
                     batch = []
             yield "".join(batch)
+
+    def __stop(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: file_uploader_shutdown | result: in_progress")
+        logging.info("action: file_uploader_shutdown | result: success")

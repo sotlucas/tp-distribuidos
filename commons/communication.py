@@ -3,6 +3,8 @@ import pika
 import logging
 from commons.message_parser import MessageParser
 
+from pika.exceptions import ConnectionWrongStateError
+
 
 class CommunicationConnection:
     """
@@ -38,7 +40,11 @@ class CommunicationConnection:
         Closes the connection sending all messages waiting on the buffer
         This should be called always to ensure all messages have been sent
         """
-        self.connection.close()
+        try:
+            self.connection.close()
+        except ConnectionWrongStateError:
+            # It means the connection is already closed
+            pass
 
 
 class Communication:
@@ -183,7 +189,6 @@ class CommunicationReceiver(Communication):
             self.input_callback(messages)
             logging.debug("Processed in {} seconds".format(time.time() - start_time))
         except Exception as e:
-            logging.info(f"Message: {message}")
             logging.exception(f"Error processing message: {e}")
 
     def intercept(self, message):
@@ -499,6 +504,12 @@ class CommunicationSender(Communication):
             ),
         )
         self.messages_sent += 1
+
+    def stop(self):
+        """
+        Stops the sender
+        """
+        self.close()
 
 
 class CommunicationSenderExchange(CommunicationSender):

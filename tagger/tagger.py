@@ -1,4 +1,5 @@
 import logging
+import signal
 
 
 class Tagger:
@@ -6,6 +7,8 @@ class Tagger:
         self.tag_name = tag_name
         self.receiver = receiver
         self.sender = sender
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
 
     def run(self):
         self.receiver.bind(
@@ -29,3 +32,12 @@ class Tagger:
         # TODO: See if we need to do anything with the EOF here.
         logging.info(f"action: tagger | result: complete")
         pass
+
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: tagger_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: tagger_shutdown | result: success")

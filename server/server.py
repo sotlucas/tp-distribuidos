@@ -23,15 +23,18 @@ class Server:
         self.running = True
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
+        self.client_handlers = []
 
     def run(self):
         while self.running:
             try:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(self.config.connection_timeout)
-                ClientHandler(
+                client_handler = ClientHandler(
                     client_sock, self.server_receiver, self.flights_sender, self.lat_long_sender
-                ).handle_client()
+                )
+                self.client_handlers.append(client_handler)
+                client_handler.handle_client()
             except OSError as e:
                 logging.error(f"Error: {e}")
                 return
@@ -54,6 +57,9 @@ class Server:
         """
         logging.info("action: server_shutdown | result: in_progress")
         self.running = False
+        for client_handler in self.client_handlers:
+            client_handler.stop()
+        # TODO: Check if we need to close the server socket here
         self._server_socket.shutdown(socket.SHUT_RDWR)
         self._server_socket.close()
         logging.info("action: server_socket_closed | result: success")
