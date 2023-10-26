@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import signal
 
 
 class Processor:
@@ -7,6 +8,8 @@ class Processor:
         self.grouper_replicas_count = grouper_replicas_count
         self.receiver = receiver
         self.sender = sender
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
         self.receiver.bind(
@@ -43,3 +46,12 @@ class Processor:
     def send_eof_wrapper(self):
         queue_id = 1  # send eof to the first grouper
         self.sender.send_eof(str(queue_id))
+
+    def __stop(self, *args):
+        """
+        Shutdown. Closing connections.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")
