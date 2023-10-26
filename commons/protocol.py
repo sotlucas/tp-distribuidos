@@ -1,4 +1,5 @@
 import multiprocessing
+import socket
 
 BUFFER_SIZE = 8192  # 8 KiB
 END_OF_MESSAGE = b"\r\n\r\n"
@@ -48,6 +49,13 @@ class CommunicationBuffer:
         """
         message = Message(type, EOF.decode())
         self.send_message(message)
+
+    def stop(self):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        self.sock.shutdown(socket.SHUT_RDWR)
+        self.sock.close()
 
 
 def deserialize_message(line):

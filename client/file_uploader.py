@@ -1,4 +1,5 @@
 import logging
+import signal
 
 from commons.protocol import Message
 
@@ -10,6 +11,8 @@ class FileUploader:
         self.remove_file_header = remove_file_header
         self.batch_size = batch_size
         self.buff = buff
+        # Register signal handler for SIGTERM
+        # signal.signal(signal.SIGTERM, self.stop)
 
     def start(self):
         """
@@ -39,3 +42,9 @@ class FileUploader:
                 if len(batch) == batch_size or not line:
                     yield "".join(batch)
                     batch = []
+
+    def stop(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: file_uploader_shutdown | result: success")

@@ -5,7 +5,7 @@ from multiprocessing import Process
 
 from file_uploader import FileUploader
 from result_handler import ResultHandler
-from commons.protocol import CommunicationBuffer, PeerDisconnected
+from commons.protocol import CommunicationBuffer
 
 
 class ClientConfig:
@@ -21,9 +21,9 @@ class ClientConfig:
 class Client:
     def __init__(self, config):
         self.config = config
-        self.running = True
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.shutdown)
+        signal.signal(signal.SIGINT, self.shutdown)
 
     def run(self):
         # Create a socket
@@ -46,44 +46,24 @@ class Client:
         self.flights_sender.start()
 
         # Start the process to receive the results
-        self.results_receiver = Process(target=self.receive_results)
+        self.results_receiver = Process(target=ResultHandler(self.buff).receive_results)
         self.results_receiver.start()
 
         # Wait for the processes to finish
         self.airports_sender.join()
+        logging.info("Airports sender finished")
         self.flights_sender.join()
+        logging.info("Waiting for results")
         self.results_receiver.join()
-        if self.running:
-            self.shutdown()
-
-    def receive_results(self):
-        """
-        Receive the results from the server.
-        """
-        logging.info("Receiving results")
-        result_handler = ResultHandler()
-        while self.running:
-            try:
-                message = self.buff.get_message()
-                if not message:
-                    break
-                logging.debug(f"Result received: {message.type} | {message.content}")
-                result_handler.save_results(message.content.decode())
-            except PeerDisconnected:
-                logging.info("action: server_disconected")
-                self.running = False
-            except OSError as e:
-                # When receiving SIGTERM, the socket is closed and a OSError is raised.
-                # If not we want to raise the exception.
-                if self.running:
-                    raise e
-                return
-
-        logging.info("Results received")
+        logging.info("All processes finished")
 
     def shutdown(self, signum=None, frame=None):
         logging.info("Shutting down")
-        self.sock.shutdown(socket.SHUT_WR)
-        self.sock.close()
-        self.running = False
+        self.buff.stop()
+        if self.airports_sender.exitcode is not None:
+            self.airports_sender.terminate()
+        if self.flights_sender.exitcode is not None:
+            self.flights_sender.terminate()
+        if self.results_receiver.exitcode is not None:
+            self.results_receiver.terminate()
         logging.info("Shut down completed")

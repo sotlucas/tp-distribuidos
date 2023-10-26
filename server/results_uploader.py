@@ -1,4 +1,6 @@
 import logging
+import signal
+import socket
 
 from commons.protocol import Message
 
@@ -7,6 +9,8 @@ class ResultsUploader:
     def __init__(self, receiver, socket):
         self.socket = socket
         self.receiver = receiver
+        # Register signal handler for SIGTERM
+        # signal.signal(signal.SIGTERM, self.__shutdown)
 
     def start(self):
         logging.info(f"action: results_uploader | result: started")
@@ -18,9 +22,12 @@ class ResultsUploader:
         self.output_single(message_batch)
 
     def output_single(self, content):
-        message = Message(None, content)
-        self.socket.sendall(message.serialize())
-        logging.debug(f"action: result_upload | result: success")
+        try:
+            message = Message(None, content)
+            self.socket.sendall(message.serialize())
+            logging.debug(f"action: result_upload | result: success")
+        except OSError as e:
+            logging.error(f"action: result_upload | result: fail | error: {e}")
 
     def handle_eof(self):
         # TODO: handle
@@ -32,4 +39,6 @@ class ResultsUploader:
         """
         logging.info("action: results_uploader_shutdown | result: in_progress")
         self.receiver.stop()
+        self.socket.shutdown(socket.SHUT_RDWR)
+        self.socket.close()
         logging.info("action: results_uploader_shutdown | result: success")
