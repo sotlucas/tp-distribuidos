@@ -1,4 +1,5 @@
 import logging
+import signal
 
 STARTING_AIRPORT_INDEX = 0
 DESTINATION_AIRPORT_INDEX = 1
@@ -33,6 +34,9 @@ class Grouper:
         self.media_general_sender = media_general_sender
         logging.info(f"Starting grouper {self.replica_id}")
         self.routes = {}
+        self.waiting_for_media_general = False
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
         self.vuelos_receiver.bind(self.process, self.send_results, self.vuelos_sender)
@@ -81,6 +85,7 @@ class Grouper:
             amount += len(prices)
 
         self.media_general_sender.send("{},{}".format(total_fare, amount))
+        self.waiting_for_media_general = True
         self.media_general_receiver.start()
 
     def send_results_to_output(self, messages):
@@ -105,3 +110,15 @@ class Grouper:
 
     def filter_prices(self, prices, media_general):
         return list(filter(lambda price: price > media_general, prices))
+
+    def __stop(self, signum, frame):
+        """
+        Shutdown. Closing all connections.
+        """
+        logging.info("action: grouper_shutdown | result: in_progress")
+        self.vuelos_receiver.stop()
+        self.vuelos_sender.stop()
+        if self.waiting_for_media_general:
+            self.media_general_receiver.stop()
+            self.media_general_sender.stop()
+        logging.info("action: grouper_shutdown | result: success")
