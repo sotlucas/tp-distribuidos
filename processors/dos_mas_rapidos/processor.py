@@ -1,5 +1,6 @@
 import logging
 import re
+import signal
 
 STARTING_AIRPORT_INDEX = 1
 DESTINATION_AIRPORT_INDEX = 2
@@ -11,6 +12,8 @@ class Processor:
         self.receiver = receiver
         self.sender = sender
         self.trajectory = {}
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
         self.receiver.bind(
@@ -89,3 +92,12 @@ class Processor:
             for message in self.trajectory[trajectory]:
                 self.sender.send(message)
         self.sender.send_eof()
+
+    def __stop(self, *args):
+        """
+        Stop processor. Closing resources.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")
