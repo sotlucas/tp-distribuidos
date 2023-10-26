@@ -1,6 +1,5 @@
 import logging
 import signal
-from time import sleep
 
 
 class Processor:
