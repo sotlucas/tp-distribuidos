@@ -11,11 +11,18 @@ class Processor:
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
 
+        self.input_output_fields = [
+            "startingAirport",
+            "destinationAirport",
+            "totalFare",
+        ]
+
     def run(self):
         self.receiver.bind(
             input_callback=self.process,
             eof_callback=self.send_eof_wrapper,
             sender=self.sender,
+            input_fields_order=self.input_output_fields,
         )
         self.receiver.start()
 
@@ -27,7 +34,11 @@ class Processor:
                 processed_messages[queue_id] = []
             processed_messages[queue_id].append(message)
         for queue_id, messages_to_send in processed_messages.items():
-            self.sender.send_all(messages_to_send, str(queue_id))
+            self.sender.send_all(
+                messages_to_send,
+                str(queue_id),
+                output_fields_order=self.input_output_fields,
+            )
 
     def process_single(self, message):
         """
@@ -40,7 +51,8 @@ class Processor:
         return message, queue_id
 
     def get_route(self, message):
-        starting_airport, destination_airport, _ = message.split(",")
+        starting_airport = message["startingAirport"]
+        destination_airport = message["destinationAirport"]
         return f"{starting_airport}-{destination_airport}"
 
     def send_eof_wrapper(self):

@@ -9,11 +9,15 @@ class Processor:
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
 
+        self.input_fields = ["route", "prices"]
+        self.output_fields = ["route", "avg", "max_price"]
+
     def run(self):
         self.receiver.bind(
             input_callback=self.process,
             eof_callback=self.sender.send_eof,
             sender=self.sender,
+            input_fields_order=self.input_fields,
         )
         self.receiver.start()
 
@@ -23,21 +27,23 @@ class Processor:
             processed_message = self.process_single(message)
             if processed_message:
                 processed_messages.append(processed_message)
-        self.sender.send_all(processed_messages)
+        self.sender.send_all(processed_messages, output_fields_order=self.output_fields)
 
     def process_single(self, message):
         # input message: route;prices
         # output message: route,avg,max_price
 
-        route, prices = message.split(";")
-        prices = [float(price) for price in prices.split(",")]
+        route = message["route"]
+        prices = message["prices"]
+        prices = [float(price) for price in prices.split(";")]
 
         # 1. Calcula el avg y max de los precios.
         avg = self.get_avg(prices)
         max_price = self.get_max(prices)
 
         # 2. Formateo el resultado de salida.
-        return "{},{},{}".format(route, avg, max_price)
+        message = {"route": route, "avg": avg, "max_price": max_price}
+        return message
 
     def get_avg(self, prices):
         return sum(prices) / len(prices)

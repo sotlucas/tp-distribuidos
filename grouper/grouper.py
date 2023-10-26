@@ -1,9 +1,10 @@
 import logging
 import signal
 
-STARTING_AIRPORT_INDEX = 0
-DESTINATION_AIRPORT_INDEX = 1
-TOTAL_FARE_INDEX = 2
+STARTING_AIRPORT = "startingAirport"
+DESTINATION_AIRPORT = "destinationAirport"
+TOTAL_FARE = "totalFare"
+AVERAGE = "average"
 
 
 class Grouper:
@@ -20,18 +21,27 @@ class Grouper:
     """
 
     def __init__(
-            self,
-            replica_id,
-            vuelos_receiver,
-            vuelos_sender,
-            media_general_receiver,
-            media_general_sender,
+        self,
+        replica_id,
+        vuelos_receiver,
+        vuelos_sender,
+        media_general_receiver,
+        media_general_sender,
     ):
         self.replica_id = replica_id
         self.vuelos_receiver = vuelos_receiver
         self.vuelos_sender = vuelos_sender
         self.media_general_receiver = media_general_receiver
         self.media_general_sender = media_general_sender
+
+        self.vuelos_input_fields = [
+            "startingAirport",
+            "destinationAirport",
+            "totalFare",
+        ]
+        self.vuelos_output_fields = ["route", "prices"]
+        self.media_general_input_fields = ["average"]
+        self.media_general_output_fields = ["totalFare", "amount"]
         logging.info(f"Starting grouper {self.replica_id}")
         self.routes = {}
         self.waiting_for_media_general = False
@@ -39,7 +49,12 @@ class Grouper:
         signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
-        self.vuelos_receiver.bind(self.process, self.send_results, self.vuelos_sender)
+        self.vuelos_receiver.bind(
+            self.process,
+            self.send_results,
+            self.vuelos_sender,
+            input_fields_order=self.vuelos_input_fields,
+        )
         self.vuelos_receiver.start()
 
     def process(self, messages):
@@ -60,15 +75,13 @@ class Grouper:
             self.routes[route] = [total_fare]
 
     def get_route(self, message):
-        message_split = message.split(",")
         return "{}-{}".format(
-            message_split[STARTING_AIRPORT_INDEX],
-            message_split[DESTINATION_AIRPORT_INDEX],
+            message[STARTING_AIRPORT],
+            message[DESTINATION_AIRPORT],
         )
 
     def get_total_fare(self, message):
-        message_split = message.split(",")
-        return float(message_split[TOTAL_FARE_INDEX])
+        return float(message[TOTAL_FARE])
 
     def send_results(self):
         # 2. Suma todos los precios
@@ -77,35 +90,43 @@ class Grouper:
             self.send_results_to_output,
             self.media_general_receiver.stop,
             self.media_general_sender,
+            input_fields_order=self.media_general_input_fields,
         )
         total_fare = 0
         amount = 0
         for prices in self.routes.values():
             total_fare += sum(prices)
             amount += len(prices)
-
-        self.media_general_sender.send("{},{}".format(total_fare, amount))
+        message = {"totalFare": total_fare, "amount": amount}
+        self.media_general_sender.send_all(
+            [message],
+            output_fields_order=self.media_general_output_fields,
+        )
         self.waiting_for_media_general = True
         self.media_general_receiver.start()
 
     def send_results_to_output(self, messages):
         for message in messages:
             results = self.send_results_to_output_single(message)
-            self.vuelos_sender.send_all(results)
+            self.vuelos_sender.send_all(
+                results, output_fields_order=self.vuelos_output_fields
+            )
         self.routes.clear()
         # self.vuelos_sender.send_eof()
 
     def send_results_to_output_single(self, message):
         # 4. Filtra los precios que estén por encima de la media general.
         # 5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
-        media_general = float(message)
+        media_general = float(message[AVERAGE])
         result = []
         for route, prices in self.routes.items():
             prices_filtered = self.filter_prices(prices, media_general)
             if prices_filtered:
-                result.append(
-                    "{};{}".format(route, ",".join(map(str, prices_filtered)))
-                )
+                message = {
+                    "route": route,
+                    "prices": ";".join(map(str, prices_filtered)),
+                }
+                result.append(message)
         return result
 
     def filter_prices(self, prices, media_general):

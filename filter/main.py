@@ -28,9 +28,12 @@ def main():
         config_params["input_type"],
         config_params["replicas_count"],
         input_diff_name=config_params["output"],
+        delimiter=config_params["delimiter"],
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"], config_params["output_type"]
+        config_params["output"],
+        config_params["output_type"],
+        config_params["delimiter"],
     )
 
     filter_config = FilterConfig(
