@@ -1,7 +1,13 @@
+import logging
+import signal
+
+
 class Processor:
     def __init__(self, receiver, sender):
         self.receiver = receiver
         self.sender = sender
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
         self.receiver.bind(
@@ -38,3 +44,12 @@ class Processor:
 
     def get_max(self, prices):
         return max(prices)
+
+    def __stop(self, *args):
+        """
+        Shutdown. Closing connections.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")
