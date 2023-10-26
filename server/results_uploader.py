@@ -9,10 +9,10 @@ class ResultsUploader:
     def __init__(self, receiver, socket):
         self.socket = socket
         self.receiver = receiver
-        # Register signal handler for SIGTERM
-        # signal.signal(signal.SIGTERM, self.__shutdown)
 
     def start(self):
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
         logging.info(f"action: results_uploader | result: started")
         self.receiver.bind(self.output_callback, self.handle_eof)
         self.receiver.start()

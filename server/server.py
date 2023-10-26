@@ -60,7 +60,7 @@ class Server:
         for client_handler in self.client_handlers:
             client_handler.stop()
         # TODO: Check if we need to close the server socket here
-        # self._server_socket.shutdown(socket.SHUT_RDWR)
-        # self._server_socket.close()
+        self._server_socket.shutdown(socket.SHUT_RDWR)
+        self._server_socket.close()
         logging.info("action: server_socket_closed | result: success")
         logging.info("action: server_shutdown | result: success")
