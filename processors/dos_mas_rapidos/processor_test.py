@@ -2,23 +2,25 @@ from processor import Processor
 
 
 def test_multiple_flights_for_same_trajectory():
-    vuelos = [
+    vuelos_datos = [
         "9ca,ATL,BOS,PT1H20M,BOS",
         "okl,ATL,BOS,PT8H43M,BOS",
         "asd,ATL,BOS,PT2H12M,BOS",
     ]
+    vuelos = create_vuelos(vuelos_datos)
+
     processor = Processor(MockedReceiver(), MockedSender())
     processor.process(vuelos)
 
     assert 1 == len(processor.trajectory)
     assert [
-               "9ca,ATL,BOS,PT1H20M,BOS",
-               "asd,ATL,BOS,PT2H12M,BOS",
-           ] == processor.trajectory["ATL-BOS"]
+        vuelos[0],
+        vuelos[2],
+    ] == processor.trajectory["ATL-BOS"]
 
 
 def test_multiple_flights_multiple_trajectories():
-    vuelos = [
+    vuelos_datos = [
         "9ca,ATL,BOS,PT1H20M,BOS",
         "okl,ATL,BOS,PT8H43M,BOS",
         "asd,ATL,BOS,PT2H12M,BOS",
@@ -27,36 +29,41 @@ def test_multiple_flights_multiple_trajectories():
         "a67,DFW,ATL,PT2H30M,ATL",
         "gf4,DFW,ATL,PT0H30M,ATL",
     ]
+    vuelos = create_vuelos(vuelos_datos)
+
     processor = Processor(MockedReceiver(), MockedSender())
     processor.process(vuelos)
 
     assert 3 == len(processor.trajectory)
     assert [
-               "9ca,ATL,BOS,PT1H20M,BOS",
-               "asd,ATL,BOS,PT2H12M,BOS",
-           ] == processor.trajectory["ATL-BOS"]
-    assert ["0e8,PHL,DFW,PT2H20M,DFW"] == processor.trajectory["PHL-DFW"]
+        vuelos[0],
+        vuelos[2],
+    ] == processor.trajectory["ATL-BOS"]
+    assert [vuelos[3]] == processor.trajectory["PHL-DFW"]
+    print(processor.trajectory["DFW-ATL"])
     assert [
-               "gf4,DFW,ATL,PT0H30M,ATL",
-               "c68,DFW,ATL,PT1H30M,ATL",
-           ] == processor.trajectory["DFW-ATL"]
+        vuelos[6],
+        vuelos[4],
+    ] == processor.trajectory["DFW-ATL"]
 
 
 def test_multiple_flights_single_trajectories():
-    vuelos = [
+    vuelos_datos = [
         "9ca,ATL,BOS,PT1H20M,BOS",
         "0e8,PHL,DFW,PT2H20M,DFW",
         "gf4,DFW,ATL,PT0H30M,ATL",
         "c68,LAX,BOS,PT1H30M,BOS",
     ]
+    vuelos = create_vuelos(vuelos_datos)
+
     processor = Processor(MockedReceiver(), MockedSender())
     processor.process(vuelos)
 
     assert 4 == len(processor.trajectory)
-    assert ["9ca,ATL,BOS,PT1H20M,BOS"] == processor.trajectory["ATL-BOS"]
-    assert ["0e8,PHL,DFW,PT2H20M,DFW"] == processor.trajectory["PHL-DFW"]
-    assert ["gf4,DFW,ATL,PT0H30M,ATL"] == processor.trajectory["DFW-ATL"]
-    assert ["c68,LAX,BOS,PT1H30M,BOS"] == processor.trajectory["LAX-BOS"]
+    assert [vuelos[0]] == processor.trajectory["ATL-BOS"]
+    assert [vuelos[1]] == processor.trajectory["PHL-DFW"]
+    assert [vuelos[2]] == processor.trajectory["DFW-ATL"]
+    assert [vuelos[3]] == processor.trajectory["LAX-BOS"]
 
 
 def test_duration_format():
@@ -75,6 +82,23 @@ def test_duration_format_only_day():
     duration = "P2D"
     processor = Processor(MockedReceiver(), MockedSender())
     assert 2880 == processor.convert_travel_duration(duration)
+
+
+# Aux
+def create_vuelos(vuelos_datos):
+    vuelos = []
+    for vuelo in vuelos_datos:
+        vuelo = vuelo.split(",")
+        vuelos.append(
+            {
+                "legId": vuelo[0],
+                "startingAirport": vuelo[1],
+                "destinationAirport": vuelo[2],
+                "travelDuration": vuelo[3],
+                "segmentsArrivalAirportCode": vuelo[4],
+            }
+        )
+    return vuelos
 
 
 class MockedSender:

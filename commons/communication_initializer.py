@@ -25,6 +25,7 @@ class CommunicationInitializer:
         routing_key="",
         input_diff_name="",
         replica_id=1,
+        delimiter=",",
     ):
         """
         Initialize the receiver based on the input type
@@ -35,6 +36,7 @@ class CommunicationInitializer:
             routing_key=routing_key,
             input_diff_name=input_diff_name,
             replica_id=replica_id,
+            delimiter=delimiter,
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(
@@ -46,11 +48,13 @@ class CommunicationInitializer:
             )
         return communication_receiver
 
-    def initialize_sender(self, output, output_type):
+    def initialize_sender(self, output, output_type, delimiter=","):
         """
         Initialize the sender based on the output type
         """
-        communication_sender_config = CommunicationSenderConfig(output)
+        communication_sender_config = CommunicationSenderConfig(
+            output, delimiter=delimiter
+        )
         if output_type == "QUEUE":
             communication_sender = CommunicationSenderQueue(
                 communication_sender_config, self.connection
