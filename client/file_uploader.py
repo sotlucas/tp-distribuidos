@@ -11,8 +11,6 @@ class FileUploader:
         self.remove_file_header = remove_file_header
         self.batch_size = batch_size
         self.buff = buff
-        # Register signal handler for SIGTERM
-        # signal.signal(signal.SIGTERM, self.stop)
 
     def start(self):
         """
@@ -20,6 +18,9 @@ class FileUploader:
 
         Each line represents a flight with all the columns separated by commas.
         """
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
+
         logging.info(f"Sending file: {self.file_path}")
         for batch in self.__next_batch(self.file_path, self.batch_size):
             message = Message(self.type, batch)
@@ -43,8 +44,9 @@ class FileUploader:
                     yield "".join(batch)
                     batch = []
 
-    def stop(self, *args):
+    def __stop(self, *args):
         """
         Graceful shutdown. Closing all connections.
         """
+        logging.info("action: file_uploader_shutdown | result: in_progress")
         logging.info("action: file_uploader_shutdown | result: success")

@@ -22,8 +22,8 @@ class Client:
     def __init__(self, config):
         self.config = config
         # Register signal handler for SIGTERM
-        signal.signal(signal.SIGTERM, self.shutdown)
-        signal.signal(signal.SIGINT, self.shutdown)
+        signal.signal(signal.SIGTERM, self.__shutdown)
+        signal.signal(signal.SIGINT, self.__shutdown)
 
     def run(self):
         # Create a socket
@@ -57,13 +57,13 @@ class Client:
         self.results_receiver.join()
         logging.info("All processes finished")
 
-    def shutdown(self, signum=None, frame=None):
+    def __shutdown(self, signum=None, frame=None):
         logging.info("Shutting down")
         self.buff.stop()
-        if self.airports_sender.exitcode is not None:
+        if self.airports_sender.exitcode is None:
             self.airports_sender.terminate()
-        if self.flights_sender.exitcode is not None:
+        if self.flights_sender.exitcode is None:
             self.flights_sender.terminate()
-        if self.results_receiver.exitcode is not None:
+        if self.results_receiver.exitcode is None:
             self.results_receiver.terminate()
         logging.info("Shut down completed")

@@ -10,13 +10,14 @@ class ResultHandler:
         self.tstamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.running = True
         self.buff = buff
-        # Register signal handler for SIGTERM
-        # signal.signal(signal.SIGTERM, self.stop)
 
     def receive_results(self):
         """
         Receive the results from the server.
         """
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
+
         logging.info("Receiving results")
         while self.running:
             try:
@@ -52,7 +53,7 @@ class ResultHandler:
         with open(f"results/{self.tstamp}_{file_name}.txt", "a") as f:
             f.write(data + "\n")
 
-    def stop(self, *args):
+    def __stop(self, *args):
         """
         Graceful shutdown. Closing all connections.
         """
