@@ -5,6 +5,12 @@
 - Sotelo Guerreño, Lucas Nahuel - 102730
 - Prada, Joaquín - 105978
 
+## Docs
+
+[Consigna](docs/Consigna.pdf)
+
+[Informe](docs/informe.pdf)
+
 ## Ejecución
 
 1. Primero es necesario tener los datasets dentro del directorio `data/`:
