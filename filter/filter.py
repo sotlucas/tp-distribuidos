@@ -1,3 +1,7 @@
+import logging
+import signal
+
+
 class FilterConfig:
     def __init__(self, input_fields, output_fields, delimiter):
         self.input_fields = input_fields
@@ -12,6 +16,8 @@ class Filter:
         self.communication_sender = communication_sender
         self.input_fields = config.input_fields.split(",")
         self.output_fields = config.output_fields.split(",")
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
 
     def run(self):
         self.communication_receiver.bind(
@@ -26,3 +32,12 @@ class Filter:
         self.communication_sender.send_all(
             messages, output_fields_order=self.output_fields
         )
+
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: filter_shutdown | result: in_progress")
+        self.communication_receiver.stop()
+        self.communication_sender.stop()
+        logging.info("action: filter_shutdown | result: success")

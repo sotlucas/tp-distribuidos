@@ -17,3 +17,11 @@ class MessageUploader:
         logging.info("Sending EOF")
         self.sender.send_eof()
         self.sender.close()
+
+    def stop(self):
+        """
+        Stop message uploader closing resources.
+        """
+        logging.info("action: message_uploader_shutdown | result: in_progress")
+        self.sender.stop()
+        logging.info("action: message_uploader_shutdown | result: success")

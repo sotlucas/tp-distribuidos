@@ -26,13 +26,17 @@ docker-compose-up: docker-image
 .PHONY: docker-compose-up
 
 docker-compose-down:
-	docker compose -f docker-compose.yml stop -t 1
+	docker compose -f docker-compose.yml stop -t 6
 	docker compose -f docker-compose.yml down
 .PHONY: docker-compose-down
 
 docker-compose-logs:
 	docker compose -f docker-compose.yml logs -f
 .PHONY: docker-compose-logs
+
+docker-compose-stop:
+	docker compose -f docker-compose.yml stop -t 6
+.PHONY: docker-compose-stop
 
 test:
 	python3 -m pytest -v

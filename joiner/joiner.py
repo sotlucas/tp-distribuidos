@@ -1,4 +1,5 @@
 import logging
+import signal
 
 
 class Joiner:
@@ -7,7 +8,6 @@ class Joiner:
         self.vuelos_receiver = vuelos_receiver
         self.vuelos_sender = vuelos_sender
         self.lat_long_airports = {}
-
         self.lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
         self.vuelos_input_fields = [
             "legId",
@@ -25,6 +25,9 @@ class Joiner:
             "destinationLatitude",
             "destinationLongitude",
         ]
+        self.joining = False
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
         self.lat_long_receiver.bind(
@@ -49,6 +52,7 @@ class Joiner:
 
     def start_joining(self):
         logging.info("Starting joining")
+        self.joining = True
         self.vuelos_receiver.bind(
             input_callback=self.join_lat_long_airports,
             eof_callback=self.vuelos_sender.send_eof,
@@ -84,3 +88,14 @@ class Joiner:
             "destinationLongitude": destination_airport_lat_long[1],
         }
         return message
+
+    def __stop(self, *args):
+        """
+        Shutdown. Closing connections.
+        """
+        logging.info("action: joiner_shutdown | result: in_progress")
+        self.lat_long_receiver.stop()
+        if self.joining:
+            self.vuelos_receiver.stop()
+            self.vuelos_sender.stop()
+        logging.info("action: joiner_shutdown | result: success")

@@ -1,5 +1,6 @@
 import logging
 import re
+import signal
 
 STARTING_AIRPORT = "startingAirport"
 DESTINATION_AIRPORT = "destinationAirport"
@@ -11,6 +12,8 @@ class Processor:
         self.receiver = receiver
         self.sender = sender
         self.trajectory = {}
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
         self.input_output_fields = [
             "legId",
@@ -101,3 +104,12 @@ class Processor:
                     [message], output_fields_order=self.input_output_fields
                 )
         self.sender.send_eof()
+
+    def __stop(self, *args):
+        """
+        Stop processor. Closing resources.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")

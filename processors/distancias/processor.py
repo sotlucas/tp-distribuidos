@@ -1,3 +1,6 @@
+import logging
+import signal
+
 from geopy.distance import geodesic
 
 
@@ -6,6 +9,8 @@ class Processor:
         self.receiver = receiver
         self.sender = sender
         self.cache = {}
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
         self.input_fields = [
             "legId",
@@ -87,3 +92,12 @@ class Processor:
                 (starting_airport, destination_airport)
             ] = distance_between_airports
         return distance_between_airports
+
+    def __stop(self, *args):
+        """
+        Shutdown. Closing connections.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")

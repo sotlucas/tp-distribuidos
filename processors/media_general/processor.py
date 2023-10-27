@@ -1,5 +1,5 @@
 import logging
-from time import sleep
+import signal
 
 
 class Processor:
@@ -11,6 +11,8 @@ class Processor:
         self.price_sum = 0
         self.amount = 0
         self.media_general = 0
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__stop)
 
     def run(self):
         self.receiver.bind(
@@ -38,3 +40,12 @@ class Processor:
         logging.info("Sending results")
         self.sender.send(str(media_general))
         # self.sender.send_eof()
+
+    def __stop(self, *args):
+        """
+        Shutdown. Closing connections.
+        """
+        logging.info("action: processor_shutdown | result: in_progress")
+        self.receiver.stop()
+        self.sender.stop()
+        logging.info("action: processor_shutdown | result: success")
