@@ -3,7 +3,7 @@ import signal
 
 
 class ConnectionConfig:
-    def __init__(self, input_fields, output_fields):
+    def __init__(self, input_fields=None, output_fields=None):
         self.input_fields = input_fields
         self.output_fields = output_fields
 
