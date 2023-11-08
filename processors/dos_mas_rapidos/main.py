@@ -1,7 +1,8 @@
-from processor import Processor
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from dos_mas_rapidos import DosMasRapidos
+from commons.connection import ConnectionConfig, Connection
 
 # TODO: Ver si se pueden replicar de alguna manera este processor
 DOS_MAS_RAPIDOS_REPLICAS_COUNT = 1
@@ -31,8 +32,23 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    processor = Processor(receiver, sender)
-    processor.run()
+    input_output_fields = [
+        "legId",
+        "startingAirport",
+        "destinationAirport",
+        "travelDuration",
+        "segmentsArrivalAirportCode",
+    ]
+
+    processor = DosMasRapidos()
+
+    connection_config = ConnectionConfig(input_output_fields, input_output_fields)
+    Connection(
+        connection_config,
+        receiver,
+        sender,
+        processor,
+    ).run()
 
 
 if __name__ == "__main__":

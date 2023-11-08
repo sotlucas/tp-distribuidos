@@ -1,4 +1,4 @@
-from processor import Processor
+from dos_mas_rapidos import DosMasRapidos
 
 
 def test_multiple_flights_for_same_trajectory():
@@ -9,7 +9,7 @@ def test_multiple_flights_for_same_trajectory():
     ]
     vuelos = create_vuelos(vuelos_datos)
 
-    processor = Processor(MockedReceiver(), MockedSender())
+    processor = DosMasRapidos()
     processor.process(vuelos)
 
     assert 1 == len(processor.trajectory)
@@ -31,7 +31,7 @@ def test_multiple_flights_multiple_trajectories():
     ]
     vuelos = create_vuelos(vuelos_datos)
 
-    processor = Processor(MockedReceiver(), MockedSender())
+    processor = DosMasRapidos()
     processor.process(vuelos)
 
     assert 3 == len(processor.trajectory)
@@ -56,7 +56,7 @@ def test_multiple_flights_single_trajectories():
     ]
     vuelos = create_vuelos(vuelos_datos)
 
-    processor = Processor(MockedReceiver(), MockedSender())
+    processor = DosMasRapidos()
     processor.process(vuelos)
 
     assert 4 == len(processor.trajectory)
@@ -68,19 +68,19 @@ def test_multiple_flights_single_trajectories():
 
 def test_duration_format():
     duration = "PT1H30M"
-    processor = Processor(MockedReceiver(), MockedSender())
+    processor = DosMasRapidos()
     assert 90 == processor.convert_travel_duration(duration)
 
 
 def test_duration_format_days():
     duration = "P1DT8M"
-    processor = Processor(MockedReceiver(), MockedSender())
+    processor = DosMasRapidos()
     assert 1448 == processor.convert_travel_duration(duration)
 
 
 def test_duration_format_only_day():
     duration = "P2D"
-    processor = Processor(MockedReceiver(), MockedSender())
+    processor = DosMasRapidos()
     assert 2880 == processor.convert_travel_duration(duration)
 
 
@@ -99,16 +99,3 @@ def create_vuelos(vuelos_datos):
             }
         )
     return vuelos
-
-
-class MockedSender:
-    def send(self, message):
-        pass
-
-    def send_eof(self):
-        pass
-
-
-class MockedReceiver:
-    def run(self, input_callback, eof_callback):
-        pass

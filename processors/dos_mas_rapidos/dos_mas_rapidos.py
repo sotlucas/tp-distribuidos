@@ -1,42 +1,18 @@
 import logging
 import re
-import signal
+
+from commons.processor import Processor
 
 STARTING_AIRPORT = "startingAirport"
 DESTINATION_AIRPORT = "destinationAirport"
 TRAVEL_DURATION = "travelDuration"
 
 
-class Processor:
-    def __init__(self, receiver, sender):
-        self.receiver = receiver
-        self.sender = sender
+class DosMasRapidos(Processor):
+    def __init__(self):
         self.trajectory = {}
-        # Register signal handler for SIGTERM
-        signal.signal(signal.SIGTERM, self.__stop)
 
-        self.input_output_fields = [
-            "legId",
-            "startingAirport",
-            "destinationAirport",
-            "travelDuration",
-            "segmentsArrivalAirportCode",
-        ]
-
-    def run(self):
-        self.receiver.bind(
-            self.process,
-            eof_callback=self.send_results,
-            sender=self.sender,
-            input_fields_order=self.input_output_fields,
-        )
-        self.receiver.start()
-
-    def process(self, messages):
-        for message in messages:
-            self.process_single(message)
-
-    def process_single(self, message):
+    def process(self, message):
         """
         Checks if the travel duration is one of the two fastest and if it is,
         it adds the message to the fastest list
@@ -92,24 +68,13 @@ class Processor:
             minutes = int(duration_match.group(3) or 0)
         return days * 24 * 60 + hours * 60 + minutes
 
-    def send_results(self):
+    def finish_processing(self):
         """
-        Sends the fastest messages to the output queue
+        Returns the fastest messages
         """
-        logging.info("Sending results")
-        # TODO: send in batch
+        logging.info("Finishing processing")
+        messages = []
         for trajectory in self.trajectory:
             for message in self.trajectory[trajectory]:
-                self.sender.send_all(
-                    [message], output_fields_order=self.input_output_fields
-                )
-        self.sender.send_eof()
-
-    def __stop(self, *args):
-        """
-        Stop processor. Closing resources.
-        """
-        logging.info("action: processor_shutdown | result: in_progress")
-        self.receiver.stop()
-        self.sender.stop()
-        logging.info("action: processor_shutdown | result: success")
+                messages.append(message)
+        return messages

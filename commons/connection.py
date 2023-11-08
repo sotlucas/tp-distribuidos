@@ -37,7 +37,11 @@ class Connection:
         )
 
     def handle_eof(self):
-        self.processor.finish_processing()
+        messages = self.processor.finish_processing()
+        if messages:
+            self.communication_sender.send_all(
+                messages, output_fields_order=self.config.output_fields
+            )
         self.communication_sender.send_eof()
 
     def __shutdown(self, *args):
