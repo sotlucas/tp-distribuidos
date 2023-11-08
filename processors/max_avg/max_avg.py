@@ -1,4 +1,7 @@
-class MaxAvg:
+from commons.processor import Processor
+
+
+class MaxAvg(Processor):
     def process(self, message):
         # input message: route;prices
         # output message: route,avg,max_price

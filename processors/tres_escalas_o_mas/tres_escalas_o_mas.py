@@ -1,7 +1,10 @@
+from commons.processor import Processor
+
+
 SEGMENTS_ARRIVAL_AIRPORT = "segmentsArrivalAirportCode"
 
 
-class TresEscalasOMas:
+class TresEscalasOMas(Processor):
     def process(self, message):
         segmentsArrivalAirportCode = message[SEGMENTS_ARRIVAL_AIRPORT]
         arrivals = segmentsArrivalAirportCode.split("||")

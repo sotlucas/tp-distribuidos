@@ -1,7 +1,8 @@
 import logging
+from commons.processor import Processor
 
 
-class MediaGeneral:
+class MediaGeneral(Processor):
     def __init__(self, grouper_replicas_count):
         self.grouper_replicas_count = grouper_replicas_count
         self.amount_received = 0  # Number of groupers that have sent their results

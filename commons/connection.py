@@ -3,9 +3,10 @@ import signal
 
 
 class ConnectionConfig:
-    def __init__(self, input_fields=None, output_fields=None):
+    def __init__(self, input_fields=None, output_fields=None, send_eof=True):
         self.input_fields = input_fields
         self.output_fields = output_fields
+        self.send_eof = send_eof
 
 
 class Connection:
@@ -36,13 +37,13 @@ class Connection:
             processed_messages, output_fields_order=self.config.output_fields
         )
 
-    def handle_eof(self, send_eof=True):
+    def handle_eof(self):
         messages = self.processor.finish_processing()
         if messages:
             self.communication_sender.send_all(
                 messages, output_fields_order=self.config.output_fields
             )
-        if send_eof:
+        if self.config.send_eof:
             self.communication_sender.send_eof()
 
     def __shutdown(self, *args):
