@@ -2,6 +2,7 @@ from filter import Filter, FilterConfig
 from commons.communication_initializer import CommunicationInitializer
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -36,12 +37,17 @@ def main():
         config_params["delimiter"],
     )
 
-    filter_config = FilterConfig(
-        config_params["input_fields"],
-        config_params["output_fields"],
-        config_params["delimiter"],
+    input_fields = config_params["input_fields"].split(",")
+    output_fields = config_params["output_fields"].split(",")
+
+    filter_config = FilterConfig(output_fields)
+    filter = Filter(filter_config)
+
+    connection_config = ConnectionConfig(
+        input_fields,
+        output_fields,
     )
-    Filter(filter_config, receiver, sender).run()
+    Connection(connection_config, receiver, sender, filter).run()
 
 
 if __name__ == "__main__":
