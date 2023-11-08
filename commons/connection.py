@@ -36,13 +36,14 @@ class Connection:
             processed_messages, output_fields_order=self.config.output_fields
         )
 
-    def handle_eof(self):
+    def handle_eof(self, send_eof=True):
         messages = self.processor.finish_processing()
         if messages:
             self.communication_sender.send_all(
                 messages, output_fields_order=self.config.output_fields
             )
-        self.communication_sender.send_eof()
+        if send_eof:
+            self.communication_sender.send_eof()
 
     def __shutdown(self, *args):
         """
