@@ -6,16 +6,21 @@ from commons.protocol import Message
 
 
 class ResultsUploader:
-    def __init__(self, receiver, socket):
+    """
+    It sends the results to the client through a socket.
+    """
+
+    def __init__(self, queue, socket):
+        self.queue = queue
         self.socket = socket
-        self.receiver = receiver
 
     def start(self):
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
-        logging.info(f"action: results_uploader | result: started")
-        self.receiver.bind(self.output_callback, self.handle_eof)
-        self.receiver.start()
+        logging.info(f"action: results_listener | result: started")
+        while True:  # TODO: handle shutdown
+            messages = self.queue.get()
+            self.output_callback(messages)
 
     def output_callback(self, messages):
         message_batch = "\n".join(messages)
@@ -29,16 +34,10 @@ class ResultsUploader:
         except OSError as e:
             logging.error(f"action: result_upload | result: fail | error: {e}")
 
-    def handle_eof(self):
-        # TODO: handle
-        pass
-
     def __shutdown(self, *args):
         """
         Graceful shutdown. Closing all connections.
         """
-        logging.info("action: results_uploader_shutdown | result: in_progress")
-        self.receiver.stop()
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
-        logging.info("action: results_uploader_shutdown | result: success")
+        logging.info("action: results_listener_shutdown | result: success")

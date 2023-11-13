@@ -21,12 +21,13 @@ services:
       - "15672:15672"
 
   client:
-    container_name: client
+    deploy:
+      replicas: ${CLIENT_REPLICAS}
     image: client:latest
     entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
     depends_on:
       - server
     networks:
@@ -43,7 +44,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_resultados
       - VUELOS_OUTPUT=vuelos
       - LAT_LONG_OUTPUT=lat&long
@@ -65,7 +66,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
@@ -88,7 +89,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=startingAirport,destinationAirport,totalFare
@@ -111,7 +112,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
@@ -134,7 +135,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalTravelDistance
@@ -157,7 +158,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_multiple
       - OUTPUT=vuelos_tres_escalas_o_mas
       - RABBIT_HOST=rabbitmq
@@ -177,7 +178,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,segmentsArrivalAirportCode
@@ -200,7 +201,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,travelDuration,segmentsArrivalAirportCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,travelDuration,segmentsArrivalAirportCode
@@ -221,7 +222,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_dos_mas_rapidos
       - OUTPUT=vuelos_dos_mas_rapidos_sink
       - RABBIT_HOST=rabbitmq
@@ -240,7 +241,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=;
       - INPUT_FIELDS=AirportCode,AirportName,CityName,CountryName,CountryCode,Latitude,Longitude,WorldAreaCode,CityNamegeo_name_id,CountryNamegeo_name_id,coordinates
       - OUTPUT_FIELDS=AirportCode,Latitude,Longitude
@@ -272,7 +273,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_distancia
       - LAT_LONG_INPUT=lat&long_filtered
       - OUTPUT=vuelos_distancia_joined
@@ -293,7 +294,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=2
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_distancia
       - LAT_LONG_INPUT=lat&long_filtered
       - OUTPUT=vuelos_distancia_joined
@@ -314,7 +315,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=3
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_distancia
       - LAT_LONG_INPUT=lat&long_filtered
       - OUTPUT=vuelos_distancia_joined
@@ -335,7 +336,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=4
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_distancia
       - LAT_LONG_INPUT=lat&long_filtered
       - OUTPUT=vuelos_distancia_joined
@@ -356,7 +357,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=5
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_distancia
       - LAT_LONG_INPUT=lat&long_filtered
       - OUTPUT=vuelos_distancia_joined
@@ -378,7 +379,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_distancia_joined
       - OUTPUT=vuelos_distancias_sink
       - RABBIT_HOST=rabbitmq
@@ -397,7 +398,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_avg_max_balanced
       - VUELOS_OUTPUT=vuelos_max_avg_filtered
       - MEDIA_GENERAL_INPUT=media_general_sink
@@ -418,7 +419,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=2
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_avg_max_balanced
       - VUELOS_OUTPUT=vuelos_max_avg_filtered
       - MEDIA_GENERAL_INPUT=media_general_sink
@@ -439,7 +440,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REPLICA_ID=3
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - VUELOS_INPUT=vuelos_avg_max_balanced
       - VUELOS_OUTPUT=vuelos_max_avg_filtered
       - MEDIA_GENERAL_INPUT=media_general_sink
@@ -461,7 +462,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_avg_max
       - OUTPUT=vuelos_avg_max_balanced
       - RABBIT_HOST=rabbitmq
@@ -480,7 +481,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=media_general
       - OUTPUT=media_general_sink
       - RABBIT_HOST=rabbitmq
@@ -500,7 +501,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_max_avg_filtered
       - OUTPUT=vuelos_max_avg_sink
       - RABBIT_HOST=rabbitmq
@@ -520,7 +521,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_dos_mas_rapidos_sink
       - OUTPUT=vuelos_resultados
       - RABBIT_HOST=rabbitmq
@@ -541,7 +542,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_tres_escalas_o_mas_sink
       - OUTPUT=vuelos_resultados
       - RABBIT_HOST=rabbitmq
@@ -562,7 +563,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_distancias_sink
       - OUTPUT=vuelos_resultados
       - RABBIT_HOST=rabbitmq
@@ -583,7 +584,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_max_avg_sink
       - OUTPUT=vuelos_resultados
       - RABBIT_HOST=rabbitmq

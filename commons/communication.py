@@ -93,13 +93,13 @@ class CommunicationReceiverConfig:
     """
 
     def __init__(
-        self,
-        input,
-        replicas_count,
-        routing_key="",
-        input_diff_name="",
-        replica_id=1,
-        delimiter=",",
+            self,
+            input,
+            replicas_count,
+            routing_key="",
+            input_diff_name="",
+            replica_id=1,
+            delimiter=",",
     ):
         self.input = input
         self.replicas_count = replicas_count
@@ -171,20 +171,24 @@ class CommunicationReceiver(Communication):
         """
         ch.basic_ack(delivery_tag=method.delivery_tag)
         start_time = time.time()
-        logging.debug("Received {}".format(body))
-        message = self.intercept(body)
+        corr_id, _, body_partition = body.decode("utf-8").rstrip().partition(",")
+        logging.debug(f"corr_id: {corr_id} | Received {body}")
+        message = self.intercept(body_partition.encode("utf-8"))
         # TODO: revisar
         if not message:
             return
         self.messages_received += 1
         message = message.decode("utf-8").rstrip()
         messages = message.split("\n")
-        if self.input_fields_order:
-            messages_parsed = [
-                self.parser.parse(message, self.input_fields_order)
-                for message in messages
-            ]
-            messages = messages_parsed
+        messages_parsed = []
+        for message in messages:
+            content = self.parser.parse(message, self.input_fields_order) if self.input_fields_order else message
+            mess = {
+                "content": content,
+                "corr_id": corr_id
+            }
+            messages_parsed.append(mess)
+        messages = messages_parsed
         try:
             self.input_callback(messages)
             logging.debug("Processed in {} seconds".format(time.time() - start_time))
@@ -336,11 +340,11 @@ class CommunicationReceiver(Communication):
         logging.debug(f"Requeueing EOF in {self.input_queue}")
 
         message = (
-            b"\0"
-            + ttl.to_bytes(4, "big")
-            + remaining_messages.to_bytes(8, "big")
-            + messages_sent.to_bytes(8, "big")
-            + sender_messages_sent.to_bytes(8, "big")
+                b"\0"
+                + ttl.to_bytes(4, "big")
+                + remaining_messages.to_bytes(8, "big")
+                + messages_sent.to_bytes(8, "big")
+                + sender_messages_sent.to_bytes(8, "big")
         )
         self.channel.basic_publish(
             exchange="",
@@ -352,7 +356,7 @@ class CommunicationReceiver(Communication):
         )
 
     def requeue_topic(
-        self, ttl, remaining_messages, messages_sent, sender_messages_sent
+            self, ttl, remaining_messages, messages_sent, sender_messages_sent
     ):
         """
         Requeues the EOF decreasing its TTL by 1.
@@ -362,11 +366,11 @@ class CommunicationReceiver(Communication):
         logging.debug(f"Requeueing topic EOF in {self.input_queue}")
 
         message = (
-            b"\0"
-            + ttl.to_bytes(4, "big")
-            + remaining_messages.to_bytes(8, "big")
-            + messages_sent.to_bytes(8, "big")
-            + sender_messages_sent.to_bytes(8, "big")
+                b"\0"
+                + ttl.to_bytes(4, "big")
+                + remaining_messages.to_bytes(8, "big")
+                + messages_sent.to_bytes(8, "big")
+                + sender_messages_sent.to_bytes(8, "big")
         )
         next_replica = str((self.config.replica_id % self.config.replicas_count) + 1)
         self.channel.basic_publish(
@@ -428,7 +432,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-            self.config.input + self.config.input_diff_name + self.config.routing_key
+                self.config.input + self.config.input_diff_name + self.config.routing_key
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue

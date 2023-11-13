@@ -1,6 +1,7 @@
 import socket
 import logging
-from multiprocessing import Process
+import multiprocessing as mp
+import shortuuid
 
 import commons.protocol as protocol
 from commons.protocol import PeerDisconnected
@@ -9,12 +10,13 @@ from results_uploader import ResultsUploader
 
 
 class ClientHandler:
-    def __init__(self, client_sock, receiver, flights_sender, lat_long_sender):
+    def __init__(self, client_sock, flights_sender, lat_long_sender, results_uploader):
         self.client_sock = client_sock
+        self.id = shortuuid.uuid(str(self.client_sock.getsockname()))
         self.flights_uploader = MessageUploader(flights_sender)
         self.lat_long_uploader = MessageUploader(lat_long_sender)
-        self.results_uploader = Process(
-            target=ResultsUploader(receiver, self.client_sock).start
+        self.results_uploader = mp.Process(
+            target=results_uploader.start
         )
         self.results_uploader.start()
         self.running = True
@@ -53,6 +55,7 @@ class ClientHandler:
                 # The client will not send any more messages
                 raise PeerDisconnected
         else:
+            message.content = self.id.encode() + ",".encode() + message.content  # TOOD: move to another place
             uploader.send(message.content)
 
     def stop(self):

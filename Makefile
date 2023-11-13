@@ -22,20 +22,20 @@ docker-image:
 .PHONY: docker-image
 
 docker-compose-up: docker-image
-	docker compose -f docker-compose.yml up -d --build
+	docker compose -f docker-compose-min.yml up -d --build
 .PHONY: docker-compose-up
 
 docker-compose-down:
-	docker compose -f docker-compose.yml stop -t 6
-	docker compose -f docker-compose.yml down
+	docker compose -f docker-compose-min.yml stop -t 6
+	docker compose -f docker-compose-min.yml down
 .PHONY: docker-compose-down
 
 docker-compose-logs:
-	docker compose -f docker-compose.yml logs -f
+	docker compose -f docker-compose-min.yml logs -f
 .PHONY: docker-compose-logs
 
 docker-compose-stop:
-	docker compose -f docker-compose.yml stop -t 6
+	docker compose -f docker-compose-min.yml stop -t 6
 .PHONY: docker-compose-stop
 
 test:

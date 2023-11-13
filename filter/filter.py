@@ -30,7 +30,8 @@ class Filter:
 
     def filter(self, messages):
         self.communication_sender.send_all(
-            messages, output_fields_order=self.output_fields
+            list(map(lambda x: {'corr_id': x['corr_id'], **x['content']}, messages)),
+            output_fields_order=['corr_id'] + self.output_fields
         )
 
     def __shutdown(self, *args):

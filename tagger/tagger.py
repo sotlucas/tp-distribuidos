@@ -26,7 +26,7 @@ class Tagger:
         """
         Adds the tag name to the beginning of the message and sends it to the output.
         """
-        return f"[{self.tag_name}]{message}"
+        return f"{message['corr_id']},[{self.tag_name}]{message['content']}"
 
     def handle_eof(self):
         # TODO: See if we need to do anything with the EOF here.
