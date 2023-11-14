@@ -1,7 +1,8 @@
-from processor import Processor
+from load_balancer import LoadBalancer
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -30,8 +31,22 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    processor = Processor(config_params["grouper_replicas_count"], receiver, sender)
-    processor.run()
+    input_fields = [
+        "startingAirport",
+        "destinationAirport",
+        "totalFare",
+    ]
+    output_fields = input_fields
+
+    processor = LoadBalancer(config_params["grouper_replicas_count"])
+
+    connection_config = ConnectionConfig(input_fields, output_fields, is_topic=True)
+    Connection(
+        connection_config,
+        receiver,
+        sender,
+        processor,
+    ).run()
 
 
 if __name__ == "__main__":

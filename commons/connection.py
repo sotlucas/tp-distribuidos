@@ -3,10 +3,13 @@ import signal
 
 
 class ConnectionConfig:
-    def __init__(self, input_fields=None, output_fields=None, send_eof=True):
+    def __init__(
+        self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
+    ):
         self.input_fields = input_fields
         self.output_fields = output_fields
         self.send_eof = send_eof
+        self.is_topic = is_topic
 
 
 class Connection:
@@ -33,12 +36,35 @@ class Connection:
             processed_message = self.processor.process(message)
             if processed_message:
                 processed_messages.append(processed_message)
-        self.communication_sender.send_all(
-            processed_messages, output_fields_order=self.config.output_fields
-        )
+
+        if self.config.is_topic:
+            self.__send_messages_topic(processed_messages)
+        else:
+            self.communication_sender.send_all(
+                processed_messages, output_fields_order=self.config.output_fields
+            )
+
+    def __send_messages_topic(self, messages):
+        # message: (topic, message)
+        messages_by_topic = {}
+        for message in messages:
+            messages_by_topic[message[0]] = messages_by_topic.get(message[0], []) + [
+                message[1]
+            ]
+        for topic, messages in messages_by_topic.items():
+            self.communication_sender.send_all(
+                messages,
+                routing_key=str(topic),
+                output_fields_order=self.config.output_fields,
+            )
 
     def handle_eof(self):
         messages = self.processor.finish_processing()
+        if self.config.is_topic:
+            # TODO: If needed, we should move the topic name the finish_processing of the processor.
+            TOPIC_EOF = "1"
+            self.communication_sender.send_eof(TOPIC_EOF)
+            return
         if messages:
             self.communication_sender.send_all(
                 messages, output_fields_order=self.config.output_fields
@@ -53,6 +79,8 @@ class Connection:
         logging.info("action: shutdown | result: in_progress")
         # TODO: neccesary to call finish_processing?
         # self.processor.finish_processing()
-        self.communication_receiver.stop()
-        self.communication_sender.stop()
+        if self.communication_receiver:
+            self.communication_receiver.stop()
+        if self.communication_sender:
+            self.communication_sender.stop()
         logging.info("action: shutdown | result: success")
