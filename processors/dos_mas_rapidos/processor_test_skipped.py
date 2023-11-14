@@ -1,5 +1,6 @@
 # Test skipped, change the name of the file to processor_test.py to run the test.
 # It is skipped because it fails importing the commons package.
+# A test placeholder is added to avoid failing because of no tests. test_placeholder.py
 
 from dos_mas_rapidos import DosMasRapidos
 
