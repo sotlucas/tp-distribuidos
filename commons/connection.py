@@ -38,13 +38,11 @@ class Connection:
                 processed_messages.append(processed_message)
 
         if self.config.is_topic:
-            self.__send_messages_topic(processed_messages)
+            self.send_messages_topic(processed_messages)
         else:
-            self.communication_sender.send_all(
-                processed_messages, output_fields_order=self.config.output_fields
-            )
+            self.send_messages(processed_messages)
 
-    def __send_messages_topic(self, messages):
+    def send_messages_topic(self, messages):
         # message: (topic, message)
         messages_by_topic = {}
         for message in messages:
@@ -58,6 +56,11 @@ class Connection:
                 output_fields_order=self.config.output_fields,
             )
 
+    def send_messages(self, messages):
+        self.communication_sender.send_all(
+            messages, output_fields_order=self.config.output_fields
+        )
+
     def handle_eof(self):
         messages = self.processor.finish_processing()
         if self.config.is_topic:
@@ -66,9 +69,7 @@ class Connection:
             self.communication_sender.send_eof(TOPIC_EOF)
             return
         if messages:
-            self.communication_sender.send_all(
-                messages, output_fields_order=self.config.output_fields
-            )
+            self.send_messages(messages)
         if self.config.send_eof:
             self.communication_sender.send_eof()
 

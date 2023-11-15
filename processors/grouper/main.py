@@ -2,6 +2,7 @@ from grouper import Grouper
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -51,14 +52,26 @@ def main():
         config_params["media_general_output"], config_params["output_type"]
     )
 
+    vuelos_input_fields = [
+        "startingAirport",
+        "destinationAirport",
+        "totalFare",
+    ]
+    vuelos_output_fields = ["route", "prices"]
+
     processor = Grouper(
-        config_params["replica_id"],
+        config_params["replica_id"], media_general_receiver, media_general_sender
+    )
+
+    connection_config = ConnectionConfig(
+        vuelos_input_fields, vuelos_output_fields, send_eof=False
+    )
+    Connection(
+        connection_config,
         vuelos_receiver,
         vuelos_sender,
-        media_general_receiver,
-        media_general_sender,
-    )
-    processor.run()
+        processor,
+    ).run()
 
 
 if __name__ == "__main__":
