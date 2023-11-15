@@ -1,5 +1,6 @@
 import logging
 import signal
+from commons.protocol import EOF
 
 
 class ConnectionConfig:
@@ -63,6 +64,13 @@ class Connection:
 
     def handle_eof(self):
         messages = self.processor.finish_processing()
+        if messages is EOF:
+            # If the processor returns EOF, it means that it wants to stop the connection.
+            # This is useful for the joiner, which needs to stop the connection when it finishes processing.
+            # TODO: See if this can be changed
+            self.__shutdown()
+            return
+
         if self.config.is_topic:
             # TODO: If needed, we should move the topic name the finish_processing of the processor.
             TOPIC_EOF = "1"
