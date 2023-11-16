@@ -14,6 +14,7 @@ docker-image:
 	docker build -f ./tagger/Dockerfile -t "tagger:latest" .
 	docker build -f ./joiner/Dockerfile -t "joiner:latest" .
 	docker build -f ./grouper/Dockerfile -t "grouper:latest" .
+	docker build -f ./results_listener/Dockerfile -t "results_listener:latest" .
 	# Execute this command from time to time to clean up intermediate stages generated
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you 
 	# want to avoid rebuilding client image every time the docker-compose-up command 

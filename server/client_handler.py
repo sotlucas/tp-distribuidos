@@ -1,7 +1,6 @@
 import socket
 import logging
 import multiprocessing as mp
-import shortuuid
 
 import commons.protocol as protocol
 from commons.protocol import PeerDisconnected
@@ -10,13 +9,13 @@ from results_uploader import ResultsUploader
 
 
 class ClientHandler:
-    def __init__(self, client_sock, flights_sender, lat_long_sender, results_uploader):
+    def __init__(self, corr_id, client_sock, receiver, flights_sender, lat_long_sender):
+        self.id = corr_id
         self.client_sock = client_sock
-        self.id = shortuuid.uuid(str(self.client_sock.getsockname()))
         self.flights_uploader = MessageUploader(flights_sender)
         self.lat_long_uploader = MessageUploader(lat_long_sender)
         self.results_uploader = mp.Process(
-            target=results_uploader.start
+            target=ResultsUploader(receiver, self.client_sock).start
         )
         self.results_uploader.start()
         self.running = True

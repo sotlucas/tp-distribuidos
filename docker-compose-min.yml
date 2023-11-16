@@ -27,7 +27,7 @@ services:
     entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
     depends_on:
       - server
     networks:
@@ -44,12 +44,12 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
-      - VUELOS_INPUT=vuelos_resultados
+      - LOGGING_LEVEL=INFO
+      - VUELOS_INPUT=vuelos_resultados_listener
       - VUELOS_OUTPUT=vuelos
       - LAT_LONG_OUTPUT=lat&long
       - RABBIT_HOST=rabbitmq
-      - INPUT_TYPE=QUEUE
+      - INPUT_TYPE=EXCHANGE
       - OUTPUT_TYPE=QUEUE
     depends_on:
       rabbitmq:
@@ -66,7 +66,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - DELIMITER=,
       - INPUT_FIELDS=legId,searchDate,flightDate,startingAirport,destinationAirport,fareBasisCode,travelDuration,elapsedDays,isBasicEconomy,isRefundable,isNonStop,baseFare,totalFare,seatsRemaining,totalTravelDistance,segmentsDepartureTimeEpochSeconds,segmentsDepartureTimeRaw,segmentsArrivalTimeEpochSeconds,segmentsArrivalTimeRaw,segmentsArrivalAirportCode,segmentsDepartureAirportCode,segmentsAirlineName,segmentsAirlineCode,segmentsEquipmentDescription,segmentsDurationInSeconds,segmentsDistance,segmentsCabinCode
       - OUTPUT_FIELDS=legId,startingAirport,destinationAirport,totalFare,totalTravelDistance,travelDuration,segmentsArrivalAirportCode
@@ -89,7 +89,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
       - INPUT=vuelos_filtered
       - OUTPUT=vuelos_resultados
       - RABBIT_HOST=rabbitmq
@@ -97,6 +97,26 @@ services:
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${TAGGER_MAX_AVG_REPLICAS}
       - TAG_NAME=MAX_AVG
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  results_listener:
+    deploy:
+      replicas: ${RESULTS_LISTENER_REPLICAS}
+    image: results_listener:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=INFO
+      - INPUT=vuelos_resultados
+      - OUTPUT=vuelos_resultados_listener
+      - RABBIT_HOST=rabbitmq
+      - INPUT_TYPE=QUEUE
+      - OUTPUT_TYPE=EXCHANGE
+      - REPLICAS_COUNT=${RESULTS_LISTENER_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy

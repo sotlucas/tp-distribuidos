@@ -43,8 +43,10 @@ def main():
     server_config = ServerConfig(
         config_params["server_port"],
         config_params["connection_timeout"],
+        config_params["vuelos_input"],
+        config_params["input_type"],
     )
-    Server(server_config, vuelos_receiver, resultados_sender, lat_long_sender).run()
+    Server(server_config, vuelos_initializer, resultados_sender, lat_long_sender).run()
 
 
 if __name__ == "__main__":

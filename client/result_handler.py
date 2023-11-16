@@ -48,6 +48,7 @@ class ResultHandler:
 
     def save_result_single(self, data):
         # get the tag between [] to identify the file
+        logging.info(f"Saving result: {data}")
         file_name = data.split("[")[1].split("]")[0].lower()
 
         with open(f"results/{self.tstamp}_{file_name}.txt", "a") as f:

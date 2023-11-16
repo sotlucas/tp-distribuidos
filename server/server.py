@@ -1,54 +1,51 @@
 import signal
 import socket
 import logging
-import multiprocessing as mp
+import shortuuid
 
 from client_handler import ClientHandler
-from results_listener import ResultsListener
-from results_uploader import ResultsUploader
 
 
 class ServerConfig:
-    def __init__(self, port, connection_timeout):
+    def __init__(self, port, connection_timeout, vuelos_input, input_type):
         self.port = port
         self.connection_timeout = connection_timeout
+        self.vuelos_input = vuelos_input
+        self.input_type = input_type
 
 
 class Server:
-    def __init__(self, config, server_receiver, flights_sender, lat_long_sender):
+    def __init__(self, config, server_receiver_initializer, flights_sender, lat_long_sender):
         self.config = config
-        self.server_receiver = server_receiver
+        self.server_receiver_initializer = server_receiver_initializer
         self.flights_sender = flights_sender
         self.lat_long_sender = lat_long_sender
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(("", config.port))
         self._server_socket.listen()
+
         self.running = True
-        self.results_listener_queue = mp.Queue()  # Queue to send messages to the results listener
-        self.results_listener = ResultsListener(self.server_receiver, self.results_listener_queue)
-        self.results_listener_proc = mp.Process(
-            target=self.results_listener.start
-        )
-        self.results_listener_proc.start()
-        self.results_listener_proc2 = mp.Process(
-            target=self.results_listener.add_client_handler
-        )
-        self.results_listener_proc2.start()
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
+        self.client_handlers = []
 
     def run(self):
         while self.running:
             try:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(self.config.connection_timeout)
-                client_handler_queue = mp.Queue()  # Queue to send messages to the client handler
-                results_uploader = ResultsUploader(client_handler_queue, client_sock)
-                client_handler = ClientHandler(
-                    client_sock, self.flights_sender, self.lat_long_sender, results_uploader
+                corr_id = shortuuid.uuid(str(client_sock.getsockname()))
+                vuelos_receiver = self.server_receiver_initializer.initialize_receiver(
+                    self.config.vuelos_input,
+                    self.config.input_type,
+                    1,  # REPLICAS_COUNT
+                    routing_key=str(corr_id),
+                    replica_id=1,
                 )
-                self.results_listener_queue.put((client_handler.id, results_uploader))
+                client_handler = ClientHandler(
+                    corr_id, client_sock, vuelos_receiver, self.flights_sender, self.lat_long_sender
+                )
                 # TODO: create a new process for each client handler. Use a Pool of processes
                 client_handler.handle_client()
             except OSError as e:

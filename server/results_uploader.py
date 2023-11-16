@@ -7,22 +7,23 @@ from commons.protocol import Message
 
 class ResultsUploader:
     """
-    It sends the results to the client through a socket.
+    It sends the results to the client through a socket
     """
 
-    def __init__(self, queue, socket):
-        self.queue = queue
+    def __init__(self, receiver, socket):
         self.socket = socket
+        self.receiver = receiver
 
     def start(self):
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
-        logging.info(f"action: results_listener | result: started")
-        while True:  # TODO: handle shutdown
-            messages = self.queue.get()
-            self.output_callback(messages)
+        logging.info(f"action: results_uploader | result: started")
+        self.receiver.bind(self.output_callback, self.handle_eof)
+        self.receiver.start()
 
     def output_callback(self, messages):
+        logging.info(f"action: result_upload | result: in_progress | messages: {messages}")
+        messages = [message['content'] for message in messages]
         message_batch = "\n".join(messages)
         self.output_single(message_batch)
 
@@ -34,10 +35,16 @@ class ResultsUploader:
         except OSError as e:
             logging.error(f"action: result_upload | result: fail | error: {e}")
 
+    def handle_eof(self):
+        # TODO: handle
+        pass
+
     def __shutdown(self, *args):
         """
         Graceful shutdown. Closing all connections.
         """
+        logging.info("action: results_uploader_shutdown | result: in_progress")
+        self.receiver.stop()
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
-        logging.info("action: results_listener_shutdown | result: success")
+        logging.info("action: results_uploader_shutdown | result: success")
