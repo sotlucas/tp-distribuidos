@@ -1,7 +1,8 @@
-from processor import Processor
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from max_avg import MaxAvg
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -29,8 +30,13 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    processor = Processor(receiver, sender)
-    processor.run()
+    input_fields = ["route", "prices"]
+    output_fields = ["route", "avg", "max_price"]
+
+    processor = MaxAvg()
+
+    connection_config = ConnectionConfig(input_fields, output_fields)
+    Connection(connection_config, receiver, sender, processor).run()
 
 
 if __name__ == "__main__":

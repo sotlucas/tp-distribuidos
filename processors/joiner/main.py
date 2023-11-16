@@ -1,7 +1,9 @@
 from joiner import Joiner
+from lat_long import LatLong
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from commons.connection import ConnectionConfig, Connection
 
 # Because they are working as an exchange, they do not share the same as the other groupers
 # TODO: See if this can be changed
@@ -48,8 +50,44 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    joiner = Joiner(lat_long_receiver, vuelos_receiver, vuelos_sender)
-    joiner.run()
+    lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
+
+    latlong = LatLong()
+
+    connection_config = ConnectionConfig(lat_long_input_fields, None, send_eof=False)
+    Connection(
+        connection_config,
+        lat_long_receiver,
+        None,
+        latlong,
+    ).run()
+
+    vuelos_input_fields = [
+        "legId",
+        "startingAirport",
+        "destinationAirport",
+        "totalTravelDistance",
+    ]
+    vuelos_output_fields = [
+        "legId",
+        "startingAirport",
+        "destinationAirport",
+        "totalTravelDistance",
+        "startingLatitude",
+        "startingLongitude",
+        "destinationLatitude",
+        "destinationLongitude",
+    ]
+
+    joiner = Joiner(latlong.get_lat_long_airports())
+
+    connection_config = ConnectionConfig(vuelos_input_fields, vuelos_output_fields)
+    Connection(
+        connection_config,
+        vuelos_receiver,
+        vuelos_sender,
+        joiner,
+    ).run()
 
 
 if __name__ == "__main__":
