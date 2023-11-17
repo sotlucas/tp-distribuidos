@@ -12,10 +12,11 @@ class Filter(Processor):
         self.config = config
 
     def process(self, message):
+        logging.debug(f"Filtering message: {message}")
         filtered_message = {}
         for field in self.config.output_fields:
-            filtered_message[field] = message[field]
-        return filtered_message
+            filtered_message[field] = message['content'][field]
+        return {**filtered_message, 'corr_id': message['corr_id']}
 
     def finish_processing(self):
         pass

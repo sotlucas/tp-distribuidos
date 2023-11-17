@@ -2,6 +2,7 @@ from results_listener import ResultsListener
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -29,8 +30,15 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    processor = ResultsListener(receiver, sender)
-    processor.run()
+    processor = ResultsListener()
+
+    connection_config = ConnectionConfig(None, None, is_topic=True)  # TODO: check
+    Connection(
+        connection_config,
+        receiver,
+        sender,
+        processor,
+    ).run()
 
 
 if __name__ == "__main__":
