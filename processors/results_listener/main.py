@@ -32,7 +32,7 @@ def main():
 
     processor = ResultsListener()
 
-    connection_config = ConnectionConfig(None, None, is_topic=True)  # TODO: check
+    connection_config = ConnectionConfig(is_topic=True)  # TODO: check
     Connection(
         connection_config,
         receiver,

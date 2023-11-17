@@ -5,7 +5,7 @@ from commons.protocol import EOF
 
 class ConnectionConfig:
     def __init__(
-        self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
+            self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
     ):
         self.input_fields = input_fields
         self.output_fields = output_fields
@@ -54,12 +54,12 @@ class Connection:
             self.communication_sender.send_all(
                 messages,
                 routing_key=str(topic),
-                output_fields_order=self.config.output_fields,
+                output_fields_order=["corr_id"] + self.config.output_fields if self.config.output_fields else None
             )
 
     def send_messages(self, messages):
         self.communication_sender.send_all(
-            messages, output_fields_order=self.config.output_fields
+            messages, output_fields_order=["corr_id"] + self.config.output_fields if self.config.output_fields else None
         )
 
     def handle_eof(self):

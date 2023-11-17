@@ -9,7 +9,7 @@ class Tagger(Processor):
         """
         Adds the tag name to the beginning of the message and sends it to the output.
         """
-        return f"[{self.tag_name}]{message}"
+        return f"{message['corr_id']},[{self.tag_name}]{message['content']}"
 
     def finish_processing(self):
         pass
