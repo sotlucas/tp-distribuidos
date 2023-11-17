@@ -1,5 +1,5 @@
 FROM python:3.9.7-slim
-COPY joiner /
+COPY processors/tagger /
 COPY commons /commons
 RUN pip install -r requirements.txt
 ENTRYPOINT ["/bin/sh"]

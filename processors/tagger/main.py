@@ -1,7 +1,8 @@
-from tagger import Tagger
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from tagger import Tagger
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -30,7 +31,12 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    Tagger(config_params["tag_name"], receiver, sender).run()
+    processor = Tagger(config_params["tag_name"])
+
+    # We don't need to specify input and output fields for the Tagger
+    # TODO: We do not need to send EOF now, but we will need it when we handle multiple clients
+    connection_config = ConnectionConfig(send_eof=False)
+    Connection(connection_config, receiver, sender, processor).run()
 
 
 if __name__ == "__main__":

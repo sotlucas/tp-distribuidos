@@ -1,7 +1,8 @@
-from processor import Processor
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from tres_escalas_o_mas import TresEscalasOMas
+from commons.connection import Connection, ConnectionConfig
 
 
 def main():
@@ -29,7 +30,20 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    Processor(receiver, sender).run()
+    input_fields = [
+        "legId",
+        "startingAirport",
+        "destinationAirport",
+        "totalFare",
+        "travelDuration",
+        "segmentsArrivalAirportCode",
+    ]
+    output_fields = input_fields
+
+    processor = TresEscalasOMas()
+
+    config = ConnectionConfig(input_fields, output_fields)
+    Connection(config, receiver, sender, processor).run()
 
 
 if __name__ == "__main__":

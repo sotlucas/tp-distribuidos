@@ -1,52 +1,13 @@
-import logging
-import signal
-
 from geopy.distance import geodesic
 
+from commons.processor import Processor
 
-class Processor:
-    def __init__(self, receiver, sender):
-        self.receiver = receiver
-        self.sender = sender
+
+class Distancias(Processor):
+    def __init__(self):
         self.cache = {}
-        # Register signal handler for SIGTERM
-        signal.signal(signal.SIGTERM, self.__stop)
 
-        self.input_fields = [
-            "legId",
-            "startingAirport",
-            "destinationAirport",
-            "totalTravelDistance",
-            "startingLatitude",
-            "startingLongitude",
-            "destinationLatitude",
-            "destinationLongitude",
-        ]
-        self.output_fields = [
-            "legId",
-            "startingAirport",
-            "destinationAirport",
-            "totalTravelDistance",
-        ]
-
-    def run(self):
-        self.receiver.bind(
-            input_callback=self.process,
-            eof_callback=self.sender.send_eof,
-            sender=self.sender,
-            input_fields_order=self.input_fields,
-        )
-        self.receiver.start()
-
-    def process(self, messages):
-        processed_messages = []
-        for message in messages:
-            processed_message = self.process_single(message)
-            if processed_message:
-                processed_messages.append(processed_message)
-        self.sender.send_all(processed_messages, output_fields_order=self.output_fields)
-
-    def process_single(self, message):
+    def process(self, message):
         # input message: legId,startingAirport,destinationAirport,totalTravelDistance,startingLatitude,startingLongitude,destinationLatitude,destinationLongitude
         # output message: legId,startingAirport,destinationAirport,totalTravelDistance
 
@@ -93,11 +54,5 @@ class Processor:
             ] = distance_between_airports
         return distance_between_airports
 
-    def __stop(self, *args):
-        """
-        Shutdown. Closing connections.
-        """
-        logging.info("action: processor_shutdown | result: in_progress")
-        self.receiver.stop()
-        self.sender.stop()
-        logging.info("action: processor_shutdown | result: success")
+    def finish_processing(self):
+        pass

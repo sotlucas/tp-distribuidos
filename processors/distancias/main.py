@@ -1,7 +1,8 @@
-from processor import Processor
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from distancias import Distancias
+from commons.connection import ConnectionConfig, Connection
 
 
 def main():
@@ -29,8 +30,32 @@ def main():
         config_params["output"], config_params["output_type"]
     )
 
-    processor = Processor(receiver, sender)
-    processor.run()
+    input_fields = [
+        "legId",
+        "startingAirport",
+        "destinationAirport",
+        "totalTravelDistance",
+        "startingLatitude",
+        "startingLongitude",
+        "destinationLatitude",
+        "destinationLongitude",
+    ]
+    output_fields = [
+        "legId",
+        "startingAirport",
+        "destinationAirport",
+        "totalTravelDistance",
+    ]
+
+    processor = Distancias()
+
+    connection_config = ConnectionConfig(input_fields, output_fields)
+    Connection(
+        connection_config,
+        receiver,
+        sender,
+        processor,
+    ).run()
 
 
 if __name__ == "__main__":

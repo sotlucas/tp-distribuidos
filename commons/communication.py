@@ -162,6 +162,7 @@ class CommunicationReceiver(Communication):
         """
         Stops the receiver
         """
+        logging.debug("Stopping receiver")
         self.channel.stop_consuming()
         self.close()
 
