@@ -5,7 +5,7 @@ from commons.flight_parser import FlightParser
 from commons.message import (
     Message,
     MessageType,
-    FlightMessage,
+    ProtocolMessage,
     EOFMessage,
     EOFRequeueMessage,
     EOFCallbackMessage,
@@ -187,9 +187,9 @@ class CommunicationReceiver(Communication):
             logging.exception(f"Error parsing message: {e}")
             return
 
-        if message.message_type == MessageType.FLIGHT:
-            logging.debug("Received flight message")
-            self.handle_flight(message)
+        if message.message_type == MessageType.PROTOCOL:
+            logging.debug("Received protocol message")
+            self.handle_protocol(message)
 
         elif message.message_type == MessageType.EOF:
             logging.debug("Received EOF")
@@ -201,26 +201,26 @@ class CommunicationReceiver(Communication):
 
         elif message.message_type == MessageType.EOF_CALLBACK:
             logging.debug("Received EOF callback")
-            self.handle_eof_callback(message)
+            self.handle_eof_callback()
 
-    def handle_flight(self, message):
+    def handle_protocol(self, message):
         """
-        Handles the flight message, calling the input_callback function
+        Handles the protocol message, calling the input_callback function
         """
         start_time = time.time()
 
-        flights = message.payload.decode("utf-8").rstrip().split("\n")
+        message.payload = message.payload.rstrip().split("\n")
         if self.input_fields_order:
-            flights_parsed = [
-                self.parser.parse(flight, self.input_fields_order) for flight in flights
+            messages_parsed = [
+                self.parser.parse(message, self.input_fields_order)
+                for message in message.payload
             ]
-            flights = flights_parsed
+            message.payload = messages_parsed
 
         self.messages_received += 1
 
-        # TODO: We need to return all the message when using multiple clients, not only the flights.
         try:
-            self.input_callback(flights)
+            self.input_callback(message)
         except Exception as e:
             logging.exception(f"Error processing message in input_callback: {e}")
 
@@ -303,6 +303,9 @@ class CommunicationReceiver(Communication):
                 else:
                     # We are in a topic exchange, so we requeue the original EOF to the next replica
                     self.requeue_original_eof_topic(sender_messages_sent)
+
+    def handle_eof_callback(self):
+        self.eof_callback()
 
     def requeue_eof(
         self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
@@ -446,6 +449,10 @@ class CommunicationSenderConfig:
         self.delimiter = delimiter
 
 
+# TODO: Temporary solution to avoid the client_id problem
+CLIENT_ID_TEMPORAL = 0
+
+
 class CommunicationSender(Communication):
     """
     Abstract class to be used by the CommunicationSender classes
@@ -467,27 +474,58 @@ class CommunicationSender(Communication):
             self.declare_output()
             self.active = True
 
+    def send_all(self, messages, routing_key="", output_fields_order=None):
+        """
+        Sends a batch of messages to the output
+        """
+        if output_fields_order:
+            messages_serialized = [
+                self.parser.serialize(message, output_fields_order)
+                for message in messages.payload
+            ]
+            messages.payload = messages_serialized
+        messages.payload = "\n".join(messages.payload)
+
+        self.send(messages, routing_key)
+
+    def send(self, message, routing_key=""):
+        """
+        Sends a message to the output
+        """
+        raise NotImplementedError("The send method must be implemented by the subclass")
+
     def send_to(self, message, exchange, routing_key):
         self.activate()
         self.channel.basic_publish(
             exchange=exchange,
             routing_key=routing_key,
-            body=message,
+            body=message.to_bytes(),
             properties=pika.BasicProperties(
                 delivery_mode=pika.DeliveryMode.Transient,
             ),
         )
         self.messages_sent += 1
 
+    def send_eof(self, routing_key=""):
+        """
+        Function to send the EOF to propagate through the distributed system.
+
+        Protocol:
+        - First byte is 0
+        - Next 8 bytes are the number of messages sent
+
+        | EOF | messages_sent |
+        0     1               9
+        """
+        logging.debug("Sending EOF")
+        message = EOFMessage(CLIENT_ID_TEMPORAL, self.messages_sent)
+        self.send(message, routing_key)
+
     def stop(self):
         """
         Stops the sender
         """
         self.close()
-
-
-# TODO: Temporary solution to avoid the client_id problem
-CLIENT_ID_TEMPORAL = 0
 
 
 class CommunicationSenderExchange(CommunicationSender):
@@ -506,38 +544,6 @@ class CommunicationSenderExchange(CommunicationSender):
         """
         self.send_to(message, self.config.output, routing_key)
 
-    def send_all(self, messages, routing_key="", output_fields_order=None):
-        """
-        Sends a batch of messages to the output
-        """
-        if output_fields_order:
-            messages = [
-                self.parser.serialize(message, output_fields_order)
-                for message in messages
-            ]
-        if len(messages) > 0:
-            flights = "\n".join(messages)
-            message = FlightMessage(
-                CLIENT_ID_TEMPORAL,
-                flights.encode("utf-8"),
-            )
-            self.send(message, routing_key)
-
-    def send_eof(self, routing_key=""):
-        """
-        Function to send the EOF to propagate through the distributed system.
-
-        Protocol:
-        - First byte is 0
-        - Next 8 bytes are the number of messages sent
-
-        | EOF | messages_sent |
-        0     1               9
-        """
-        logging.debug("Sending EOF")
-        message = EOFMessage(0, self.messages_sent).to_bytes()
-        self.send(message, routing_key)
-
 
 class CommunicationSenderQueue(CommunicationSender):
     """
@@ -547,40 +553,8 @@ class CommunicationSenderQueue(CommunicationSender):
     def declare_output(self):
         self.channel.queue_declare(queue=self.config.output)
 
-    def send(self, message):
+    def send(self, message, routing_key=""):
         """
         Sends a message to the output queue.
         """
         self.send_to(message, "", self.config.output)
-
-    def send_all(self, messages, output_fields_order=None):
-        """
-        Sends a batch of messages to the output
-        """
-        if output_fields_order:
-            messages = [
-                self.parser.serialize(message, output_fields_order)
-                for message in messages
-            ]
-        if len(messages) > 0:
-            flights = "\n".join(messages)
-            message = FlightMessage(
-                CLIENT_ID_TEMPORAL,
-                flights.encode("utf-8"),
-            )
-            self.send(message)
-
-    def send_eof(self):
-        """
-        Function to send the EOF to propagate through the distributed system.
-
-        Protocol:
-        - First byte is 0
-        - Next 8 bytes are the number of messages sent
-
-        | EOF | messages_sent |
-        0     1               9
-        """
-        logging.debug("Sending EOF")
-        message = EOFMessage(0, self.messages_sent).to_bytes()
-        self.send(message)
