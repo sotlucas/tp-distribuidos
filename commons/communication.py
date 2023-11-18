@@ -1,7 +1,15 @@
 import time
 import pika
 import logging
-from commons.message_parser import MessageParser
+from commons.flight_parser import FlightParser
+from commons.message import (
+    Message,
+    MessageType,
+    FlightMessage,
+    EOFMessage,
+    EOFRequeueMessage,
+    EOFCallbackMessage,
+)
 
 from pika.exceptions import ConnectionWrongStateError
 
@@ -61,7 +69,7 @@ class Communication:
     def __init__(self, config, connection):
         self.config = config
         self.connection = connection
-        self.parser = MessageParser(self.config.delimiter)
+        self.parser = FlightParser(self.config.delimiter)
 
     def close(self):
         """
@@ -171,88 +179,81 @@ class CommunicationReceiver(Communication):
         Callback to be called when a message is received, it calls the input_callback function with the message as parameter
         """
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        start_time = time.time()
         logging.debug("Received {}".format(body))
-        message = self.intercept(body)
-        # TODO: revisar
-        if not message:
-            return
-        self.messages_received += 1
-        message = message.decode("utf-8").rstrip()
-        messages = message.split("\n")
-        if self.input_fields_order:
-            messages_parsed = [
-                self.parser.parse(message, self.input_fields_order)
-                for message in messages
-            ]
-            messages = messages_parsed
-        try:
-            self.input_callback(messages)
-            logging.debug("Processed in {} seconds".format(time.time() - start_time))
-        except Exception as e:
-            logging.exception(f"Error processing message: {e}")
 
-    def intercept(self, message):
+        try:
+            message = Message.from_bytes(body)
+        except Exception as e:
+            logging.exception(f"Error parsing message: {e}")
+            return
+
+        if message.message_type == MessageType.FLIGHT:
+            logging.debug("Received flight message")
+            self.handle_flight(message)
+
+        elif message.message_type == MessageType.EOF:
+            logging.debug("Received EOF")
+            self.handle_eof(message)
+
+        elif message.message_type == MessageType.EOF_REQUEUE:
+            logging.debug("Received EOF requeue")
+            self.handle_eof_requeue(message)
+
+        elif message.message_type == MessageType.EOF_CALLBACK:
+            logging.debug("Received EOF callback")
+            self.handle_eof_callback(message)
+
+    def handle_flight(self, message):
         """
-        Detects if the message is an EOF message, if not, it returns the message.
+        Handles the flight message, calling the input_callback function
         """
-        EOF = 0
-        if not message[0] == EOF:
-            return message
-        self.handle_eof(message)
+        start_time = time.time()
+
+        flights = message.payload.decode("utf-8").rstrip().split("\n")
+        if self.input_fields_order:
+            flights_parsed = [
+                self.parser.parse(flight, self.input_fields_order) for flight in flights
+            ]
+            flights = flights_parsed
+
+        self.messages_received += 1
+
+        # TODO: We need to return all the message when using multiple clients, not only the flights.
+        try:
+            self.input_callback(flights)
+        except Exception as e:
+            logging.exception(f"Error processing message in input_callback: {e}")
+
+        logging.debug("Processed in {} seconds".format(time.time() - start_time))
 
     def handle_eof(self, message):
-        """
-        Handles the EOF message.
+        # We convert the EOF to a EOFRequeueMessage to be able to handle it in the same way
+        eof_message = EOFRequeueMessage(
+            message.client_id,
+            self.config.replicas_count,
+            message.messages_sent,
+            0,
+            message.messages_sent,
+        )
+        self.handle_eof_requeue(eof_message)
 
-        Protocol first EOF:
-        - First byte is 0
-        - Next 8 bytes are the number of messages sent
+    def handle_eof_requeue(self, message):
+        new_ttl = message.ttl - 1
+        new_remaining_messages = message.remaining_messages - self.messages_received
 
-        0     1               9
-        | EOF | messages_sent |
+        # TODO: This breaks encapsulation, see if we can do it in a better way
+        sender_messages_sent = self.sender.messages_sent if self.sender else 0
+        new_messages_sent = message.messages_sent + sender_messages_sent
 
-
-        Protocol requeued EOF:
-        - First byte is 0
-        - Next 4 bytes are the TTL
-        - Next 8 bytes are the number of remaining messages to receive
-        - Next 8 bytes are the number of messages sent
-        - Next 8 bytes are the number of messages sent by the sender
-
-        0     1     5                   13              21                     29
-        | EOF | TTL | remaining_messages | messages_sent | messages_sent_sender |
-
-
-        Special topic exchange EOF:
-        - First byte is 0
-        - Next 8 bytes is the string "callback"
-        """
-        special_topic_exchange_eof = b"\0callback"
-        if message == special_topic_exchange_eof:
-            logging.debug("Received special EOF for topic exchanges")
-            # It means it is a special EOF for topic exchanges
-            self.eof_callback()
-            return
-
-        (
-            ttl,
-            remaining_messages,
-            messages_sent,
-            new_messages_sent,
-            new_remaining_messages,
-            sender_messages_sent,
-        ) = self.get_new_eof_parameters(message)
-
-        if ttl > 0:
-            new_ttl = ttl - 1
+        if new_ttl > 0:
             if self.config.routing_key == "":
                 # The EOF has not finished propagating, so we requeue it
-                self.requeue(
+                self.requeue_eof(
+                    message.client_id,
                     new_ttl,
                     new_remaining_messages,
                     new_messages_sent,
-                    sender_messages_sent,
+                    message.messages_sent_sender,
                 )
 
                 # We stop the receiver to avoid receiving more messages
@@ -262,6 +263,7 @@ class CommunicationReceiver(Communication):
             else:
                 # We are in a topic exchange, so we only requeue the EOF to the next replica
                 self.requeue_topic(
+                    message.client_id,
                     new_ttl,
                     new_remaining_messages,
                     new_messages_sent,
@@ -285,64 +287,37 @@ class CommunicationReceiver(Communication):
 
                 else:
                     # We are in a topic exchange, so we only requeue the EOF to the next replica
-                    self.requeue_special_topic()
+                    self.requeue_special_topic(message.client_id)
 
             else:
                 if self.config.routing_key == "":
                     # It means there are remaining messages to receive, so we wait for them requeuing the EOF
                     # We requeue with the same received values, because we will receive again the EOF and we will update them
-                    self.requeue(
-                        ttl, remaining_messages, messages_sent, sender_messages_sent
+                    self.requeue_eof(
+                        message.client_id,
+                        message.ttl,
+                        message.remaining_messages,
+                        message.messages_sent,
+                        message.sender_messages_sent,
                     )
                 else:
                     # We are in a topic exchange, so we requeue the original EOF to the next replica
                     self.requeue_original_eof_topic(sender_messages_sent)
 
-    def get_new_eof_parameters(self, message):
-        FIRST_EOF_LENGTH = 9
-
-        if len(message) == FIRST_EOF_LENGTH:
-            # It means it is the first EOF, so we add the TTL to the message to finish all the workers before continuing
-            ttl = self.config.replicas_count - 1
-            remaining_messages = int.from_bytes(message[1:9], "big")
-            messages_sent = 0
-            original_sender_messages_sent = remaining_messages
-        else:
-            # It means it is a requeued EOF, so we get the TTL and remaining_messages from the message
-            ttl = int.from_bytes(message[1:5], "big")
-            remaining_messages = int.from_bytes(message[5:13], "big")
-            messages_sent = int.from_bytes(message[13:21], "big")
-            original_sender_messages_sent = int.from_bytes(message[21:29], "big")
-
-        # TODO: This breaks encapsulation, see if we can do it in a better way
-        sender_messages_sent = self.sender.messages_sent if self.sender else 0
-
-        new_messages_sent = sender_messages_sent + messages_sent
-        new_remaining_messages = remaining_messages - self.messages_received
-        return (
-            ttl,
-            remaining_messages,
-            messages_sent,
-            new_messages_sent,
-            new_remaining_messages,
-            original_sender_messages_sent,
-        )
-
-    def requeue(self, ttl, remaining_messages, messages_sent, sender_messages_sent):
+    def requeue_eof(
+        self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
+    ):
         """
-        Requeues the EOF decreasing its TTL by 1.
+        Requeues the EOF
 
         The EOF is requeued to the input queue, so it is sent to the other instances.
         """
         logging.debug(f"Requeueing EOF in {self.input_queue}")
 
-        message = (
-            b"\0"
-            + ttl.to_bytes(4, "big")
-            + remaining_messages.to_bytes(8, "big")
-            + messages_sent.to_bytes(8, "big")
-            + sender_messages_sent.to_bytes(8, "big")
-        )
+        message = EOFRequeueMessage(
+            client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
+        ).to_bytes()
+
         self.channel.basic_publish(
             exchange="",
             routing_key=self.input_queue,
@@ -353,22 +328,19 @@ class CommunicationReceiver(Communication):
         )
 
     def requeue_topic(
-        self, ttl, remaining_messages, messages_sent, sender_messages_sent
+        self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
     ):
         """
-        Requeues the EOF decreasing its TTL by 1.
+        Requeues the EOF to the next replica.
 
         The EOF is requeued to the input queue, so it is sent to the other instances.
         """
         logging.debug(f"Requeueing topic EOF in {self.input_queue}")
 
-        message = (
-            b"\0"
-            + ttl.to_bytes(4, "big")
-            + remaining_messages.to_bytes(8, "big")
-            + messages_sent.to_bytes(8, "big")
-            + sender_messages_sent.to_bytes(8, "big")
-        )
+        message = EOFRequeueMessage(
+            client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
+        ).to_bytes()
+
         next_replica = str((self.config.replica_id % self.config.replicas_count) + 1)
         self.channel.basic_publish(
             exchange=self.config.input,
@@ -379,13 +351,14 @@ class CommunicationReceiver(Communication):
             ),
         )
 
-    def requeue_original_eof_topic(self, sender_messages_sent):
+    def requeue_original_eof_topic(self, client_id, sender_messages_sent):
         """
         Requeues the original EOF to the next replica.
         """
         logging.debug(f"Requeueing original EOF in {self.input_queue}")
 
-        message = b"\0" + sender_messages_sent.to_bytes(8, "big")
+        message = EOFMessage(client_id, sender_messages_sent).to_bytes()
+
         next_replica = str((self.config.replica_id % self.config.replicas_count) + 1)
         self.channel.basic_publish(
             exchange=self.config.input,
@@ -396,7 +369,7 @@ class CommunicationReceiver(Communication):
             ),
         )
 
-    def requeue_special_topic(self):
+    def requeue_special_topic(self, client_id):
         """
         Requeues the special EOF decreasing its TTL by 1.
 
@@ -404,7 +377,7 @@ class CommunicationReceiver(Communication):
         """
         logging.debug(f"Requeueing special EOF in {self.input_queue}")
 
-        message = b"\0callback"
+        message = EOFCallbackMessage(client_id).to_bytes()
         for i in range(self.config.replicas_count):
             self.channel.basic_publish(
                 exchange=self.config.input,
@@ -513,6 +486,10 @@ class CommunicationSender(Communication):
         self.close()
 
 
+# TODO: Temporary solution to avoid the client_id problem
+CLIENT_ID_TEMPORAL = 0
+
+
 class CommunicationSenderExchange(CommunicationSender):
     """
     Class to send messages to an exchange
@@ -539,7 +516,12 @@ class CommunicationSenderExchange(CommunicationSender):
                 for message in messages
             ]
         if len(messages) > 0:
-            self.send("\n".join(messages), routing_key)
+            flights = "\n".join(messages)
+            message = FlightMessage(
+                CLIENT_ID_TEMPORAL,
+                flights.encode("utf-8"),
+            )
+            self.send(message, routing_key)
 
     def send_eof(self, routing_key=""):
         """
@@ -553,7 +535,7 @@ class CommunicationSenderExchange(CommunicationSender):
         0     1               9
         """
         logging.debug("Sending EOF")
-        message = b"\0" + self.messages_sent.to_bytes(8, "big")
+        message = EOFMessage(0, self.messages_sent).to_bytes()
         self.send(message, routing_key)
 
 
@@ -581,7 +563,12 @@ class CommunicationSenderQueue(CommunicationSender):
                 for message in messages
             ]
         if len(messages) > 0:
-            self.send("\n".join(messages))
+            flights = "\n".join(messages)
+            message = FlightMessage(
+                CLIENT_ID_TEMPORAL,
+                flights.encode("utf-8"),
+            )
+            self.send(message)
 
     def send_eof(self):
         """
@@ -595,5 +582,5 @@ class CommunicationSenderQueue(CommunicationSender):
         0     1               9
         """
         logging.debug("Sending EOF")
-        message = b"\0" + self.messages_sent.to_bytes(8, "big")
+        message = EOFMessage(0, self.messages_sent).to_bytes()
         self.send(message)
