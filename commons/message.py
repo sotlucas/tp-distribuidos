@@ -57,7 +57,7 @@ class FlightMessage(Message):
         super().__init__(message_type, client_id)
         self.payload_bytes = payload_bytes
 
-    def from_bytes(self, client_id, bytes):
+    def from_bytes(client_id, bytes):
         flight_payload = bytes[10:]
 
         return FlightMessage(client_id, flight_payload)
