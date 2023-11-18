@@ -1,6 +1,10 @@
 import logging
 import signal
 from commons.protocol import EOF
+from commons.message import ProtocolMessage
+
+# TODO: remove this
+TEMPORAL_CLIENT_ID = 0
 
 
 class ConnectionConfig:
@@ -33,17 +37,19 @@ class Connection:
 
     def process(self, messages):
         processed_messages = []
-        for message in messages:
+        for message in messages.payload:
             processed_message = self.processor.process(message)
             if processed_message:
                 processed_messages.append(processed_message)
 
+        if not processed_messages:
+            return
         if self.config.is_topic:
-            self.send_messages_topic(processed_messages)
+            self.send_messages_topic(processed_messages, messages.client_id)
         else:
-            self.send_messages(processed_messages)
+            self.send_messages(processed_messages, messages.client_id)
 
-    def send_messages_topic(self, messages):
+    def send_messages_topic(self, messages, client_id):
         # message: (topic, message)
         messages_by_topic = {}
         for message in messages:
@@ -51,15 +57,17 @@ class Connection:
                 message[1]
             ]
         for topic, messages in messages_by_topic.items():
+            message_to_send = ProtocolMessage(client_id, messages)
             self.communication_sender.send_all(
-                messages,
+                message_to_send,
                 routing_key=str(topic),
                 output_fields_order=self.config.output_fields,
             )
 
-    def send_messages(self, messages):
+    def send_messages(self, messages, client_id):
+        message_to_send = ProtocolMessage(client_id, messages)
         self.communication_sender.send_all(
-            messages, output_fields_order=self.config.output_fields
+            message_to_send, output_fields_order=self.config.output_fields
         )
 
     def handle_eof(self):
@@ -77,7 +85,7 @@ class Connection:
             self.communication_sender.send_eof(TOPIC_EOF)
             return
         if messages:
-            self.send_messages(messages)
+            self.send_messages(messages, TEMPORAL_CLIENT_ID)
         if self.config.send_eof:
             self.communication_sender.send_eof()
 

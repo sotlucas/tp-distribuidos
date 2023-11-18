@@ -1,4 +1,4 @@
-class MessageParser:
+class FlightParser:
     def __init__(self, delimeter):
         self.delimeter = delimeter
 

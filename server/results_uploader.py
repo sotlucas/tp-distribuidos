@@ -18,7 +18,7 @@ class ResultsUploader:
         self.receiver.start()
 
     def output_callback(self, messages):
-        message_batch = "\n".join(messages)
+        message_batch = "\n".join(messages.payload)
         self.output_single(message_batch)
 
     def output_single(self, content):

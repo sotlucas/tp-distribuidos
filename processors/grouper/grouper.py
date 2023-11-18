@@ -1,10 +1,14 @@
 import logging
 from commons.processor import Processor
+from commons.message import ProtocolMessage
 
 STARTING_AIRPORT = "startingAirport"
 DESTINATION_AIRPORT = "destinationAirport"
 TOTAL_FARE = "totalFare"
 AVERAGE = "average"
+
+# TODO: remove this
+TEMPORAL_CLIENT_ID = 0
 
 
 class Grouper(Processor):
@@ -69,8 +73,9 @@ class Grouper(Processor):
             total_fare += sum(prices)
             amount += len(prices)
         message = {"totalFare": total_fare, "amount": amount}
+        message_to_send = ProtocolMessage(TEMPORAL_CLIENT_ID, [message])
         self.media_general_sender.send_all(
-            [message],
+            message_to_send,
             output_fields_order=self.media_general_output_fields,
         )
         self.waiting_for_media_general = True
@@ -78,7 +83,7 @@ class Grouper(Processor):
         return self.vuelos_message_to_send
 
     def process_media_general(self, messages):
-        for message in messages:
+        for message in messages.payload:
             results = self.process_single(message)
             self.vuelos_message_to_send.extend(results)
         self.routes.clear()
