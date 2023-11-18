@@ -3,7 +3,7 @@ import logging
 import multiprocessing as mp
 
 import commons.protocol as protocol
-from commons.message import FlightMessage
+from commons.message import ProtocolMessage
 from commons.protocol import PeerDisconnected
 from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
@@ -55,11 +55,10 @@ class ClientHandler:
                 # The client will not send any more messages
                 raise PeerDisconnected
         else:
-            flight_message = FlightMessage(
-                self.id,
-                message.content
-            )
-            uploader.send(flight_message.to_bytes())
+            # TODO: Decoding here because send needs a string, find a better way
+            #       And it is a list because send needs a list, find a better way
+            protocol_message = ProtocolMessage(self.id, [message.content.decode("utf-8")])
+            uploader.send(protocol_message)
 
     def stop(self):
         """

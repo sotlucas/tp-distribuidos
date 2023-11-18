@@ -1,7 +1,7 @@
+import hashlib
 import signal
 import socket
 import logging
-import shortuuid
 
 from client_handler import ClientHandler
 
@@ -35,7 +35,8 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(self.config.connection_timeout)
-                client_id = 123  # TODO: generate a unique id for each client
+                # Create client_id hashing client ip and port, and then converting it to int
+                client_id = self.get_client_id(client_sock)
                 vuelos_receiver = self.server_receiver_initializer.initialize_receiver(
                     self.config.vuelos_input,
                     self.config.input_type,
@@ -51,6 +52,16 @@ class Server:
             except OSError as e:
                 logging.error(f"Error: {e}")
                 return
+
+    def get_client_id(self, client_sock):
+        """
+        Creates a client id hashing the client ip and port
+        """
+        client_id = int(hashlib.md5(
+            f"{client_sock.getpeername()[0]}:{client_sock.getpeername()[1]}".encode(),
+        ).hexdigest()[:8], 16)
+        logging.info(f"action: client_id | result: success | client_id: {client_id}")
+        return client_id
 
     def __accept_new_connection(self):
         """

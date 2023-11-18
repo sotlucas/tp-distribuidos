@@ -1,8 +1,4 @@
 import logging
-from commons.message import ProtocolMessage
-
-# TODO: remove this
-TEST_ID = 0
 
 
 class MessageUploader:
@@ -13,10 +9,7 @@ class MessageUploader:
     def __init__(self, sender):
         self.sender = sender
 
-    def send(self, client_message):
-        # TODO: Decoding here because send needs a string, find a better way
-        #       And it is a list because send needs a list, find a better way
-        message = ProtocolMessage(TEST_ID, [client_message.decode("utf-8")])
+    def send(self, message):
         self.sender.send_all(message)
         logging.debug(f"action: message_upload | result: success")
 
