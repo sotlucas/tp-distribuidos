@@ -30,6 +30,12 @@ class ClientHandler:
             try:
                 client_message = buff.get_message()
                 self.__handle_message(client_message)
+            except BlockingIOError as e:
+                # TODO: change this
+                # When the socket is non-blocking and there is no message to read, a BlockingIOError is raised.
+                # We ignore it and continue.
+                logging.error(f"action: receive_message | result: fail | error: {e}")
+                pass
             except OSError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
                 self.running = False
