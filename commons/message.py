@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 
 
@@ -20,13 +21,15 @@ class Message:
         type = int.from_bytes(bytes[0:2], byteorder="big")
         client_id = int.from_bytes(bytes[2:10], byteorder="big")
 
-        if type == MessageType.FLIGHT:
+        logging.debug(f"Received message type {type} from client {client_id}")
+
+        if type == MessageType.FLIGHT.value:
             return FlightMessage.from_bytes(client_id, bytes)
-        elif type == MessageType.EOF:
+        elif type == MessageType.EOF.value:
             return EOFMessage.from_bytes(client_id, bytes)
-        elif type == MessageType.EOF_REQUEUE:
+        elif type == MessageType.EOF_REQUEUE.value:
             return EOFRequeueMessage.from_bytes(client_id, bytes)
-        elif type == MessageType.EOF_CALLBACK:
+        elif type == MessageType.EOF_CALLBACK.value:
             return EOFCallbackMessage.from_bytes(client_id, bytes)
         else:
             raise Exception("Unknown message type")
@@ -101,7 +104,7 @@ class EOFRequeueMessage(Message):
     """
 
     def __init__(
-        self, client_id, ttl, remaining_messages, messages_sent, messages_sent_sender
+            self, client_id, ttl, remaining_messages, messages_sent, messages_sent_sender
     ):
         message_type = MessageType.EOF_REQUEUE
         super().__init__(message_type, client_id)
@@ -129,12 +132,12 @@ class EOFRequeueMessage(Message):
         )
 
         return (
-            message_type_bytes
-            + client_id_bytes
-            + ttl_bytes
-            + remaining_messages_bytes
-            + messages_sent_bytes
-            + messages_sent_sender_bytes
+                message_type_bytes
+                + client_id_bytes
+                + ttl_bytes
+                + remaining_messages_bytes
+                + messages_sent_bytes
+                + messages_sent_sender_bytes
         )
 
 

@@ -54,12 +54,12 @@ class Connection:
             self.communication_sender.send_all(
                 messages,
                 routing_key=str(topic),
-                output_fields_order=["corr_id"] + self.config.output_fields if self.config.output_fields else None
+                output_fields_order=self.config.output_fields if self.config.output_fields else None
             )
 
     def send_messages(self, messages):
         self.communication_sender.send_all(
-            messages, output_fields_order=["corr_id"] + self.config.output_fields if self.config.output_fields else None
+            messages, output_fields_order=self.config.output_fields if self.config.output_fields else None
         )
 
     def handle_eof(self):

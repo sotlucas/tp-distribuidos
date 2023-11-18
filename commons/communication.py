@@ -101,13 +101,13 @@ class CommunicationReceiverConfig:
     """
 
     def __init__(
-        self,
-        input,
-        replicas_count,
-        routing_key="",
-        input_diff_name="",
-        replica_id=1,
-        delimiter=",",
+            self,
+            input,
+            replicas_count,
+            routing_key="",
+            input_diff_name="",
+            replica_id=1,
+            delimiter=",",
     ):
         self.input = input
         self.replicas_count = replicas_count
@@ -209,7 +209,7 @@ class CommunicationReceiver(Communication):
         """
         start_time = time.time()
 
-        flights = message.payload.decode("utf-8").rstrip().split("\n")
+        flights = message.payload_bytes.decode("utf-8").rstrip().split("\n")
         if self.input_fields_order:
             flights_parsed = [
                 self.parser.parse(flight, self.input_fields_order) for flight in flights
@@ -305,7 +305,7 @@ class CommunicationReceiver(Communication):
                     self.requeue_original_eof_topic(sender_messages_sent)
 
     def requeue_eof(
-        self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
+            self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
     ):
         """
         Requeues the EOF
@@ -328,7 +328,7 @@ class CommunicationReceiver(Communication):
         )
 
     def requeue_topic(
-        self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
+            self, client_id, ttl, remaining_messages, messages_sent, sender_messages_sent
     ):
         """
         Requeues the EOF to the next replica.
@@ -402,7 +402,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-            self.config.input + self.config.input_diff_name + self.config.routing_key
+                self.config.input + self.config.input_diff_name + self.config.routing_key
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue
@@ -521,7 +521,7 @@ class CommunicationSenderExchange(CommunicationSender):
                 CLIENT_ID_TEMPORAL,
                 flights.encode("utf-8"),
             )
-            self.send(message, routing_key)
+            self.send(message.to_bytes(), routing_key)
 
     def send_eof(self, routing_key=""):
         """
@@ -568,7 +568,7 @@ class CommunicationSenderQueue(CommunicationSender):
                 CLIENT_ID_TEMPORAL,
                 flights.encode("utf-8"),
             )
-            self.send(message)
+            self.send(message.to_bytes())
 
     def send_eof(self):
         """

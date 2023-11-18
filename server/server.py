@@ -35,16 +35,16 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(self.config.connection_timeout)
-                corr_id = shortuuid.uuid(str(client_sock.getsockname()))
+                client_id = 123  # TODO: generate a unique id for each client
                 vuelos_receiver = self.server_receiver_initializer.initialize_receiver(
                     self.config.vuelos_input,
                     self.config.input_type,
                     1,  # REPLICAS_COUNT
-                    routing_key=str(corr_id),
+                    routing_key=str(client_id),
                     replica_id=1,
                 )
                 client_handler = ClientHandler(
-                    corr_id, client_sock, vuelos_receiver, self.flights_sender, self.lat_long_sender
+                    client_id, client_sock, vuelos_receiver, self.flights_sender, self.lat_long_sender
                 )
                 # TODO: create a new process for each client handler. Use a Pool of processes
                 client_handler.handle_client()
