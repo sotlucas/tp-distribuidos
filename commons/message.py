@@ -1,9 +1,8 @@
-import logging
 from enum import Enum
 
 
 class MessageType(Enum):
-    FLIGHT = 0
+    PROTOCOL = 0
     EOF = 1
     EOF_REQUEUE = 2
     EOF_CALLBACK = 3
@@ -21,10 +20,8 @@ class Message:
         type = int.from_bytes(bytes[0:2], byteorder="big")
         client_id = int.from_bytes(bytes[2:10], byteorder="big")
 
-        logging.debug(f"Received message type {type} from client {client_id}")
-
-        if type == MessageType.FLIGHT.value:
-            return FlightMessage.from_bytes(client_id, bytes)
+        if type == MessageType.PROTOCOL.value:
+            return ProtocolMessage.from_bytes(client_id, bytes)
         elif type == MessageType.EOF.value:
             return EOFMessage.from_bytes(client_id, bytes)
         elif type == MessageType.EOF_REQUEUE.value:
@@ -46,27 +43,29 @@ class Message:
         )
 
 
-class FlightMessage(Message):
+class ProtocolMessage(Message):
     """
-    Flight message structure:
+    Protocol message structure:
 
         0      2          10         N
         | type | client_id | payload |
 
     """
 
-    def __init__(self, client_id, payload_bytes):
-        message_type = MessageType.FLIGHT
+    def __init__(self, client_id, payload):
+        message_type = MessageType.PROTOCOL
         super().__init__(message_type, client_id)
-        self.payload_bytes = payload_bytes
+        self.payload = payload
 
     def from_bytes(client_id, bytes):
-        flight_payload = bytes[10:]
+        payload = bytes[10:]
+        payload = payload.decode("utf-8")
 
-        return FlightMessage(client_id, flight_payload)
+        return ProtocolMessage(client_id, payload)
 
     def to_bytes_impl(self, message_type_bytes, client_id_bytes):
-        return message_type_bytes + client_id_bytes + self.payload_bytes
+        payload_bytes = self.payload.encode("utf-8")
+        return message_type_bytes + client_id_bytes + payload_bytes
 
 
 class EOFMessage(Message):
@@ -104,7 +103,7 @@ class EOFRequeueMessage(Message):
     """
 
     def __init__(
-            self, client_id, ttl, remaining_messages, messages_sent, messages_sent_sender
+        self, client_id, ttl, remaining_messages, messages_sent, messages_sent_sender
     ):
         message_type = MessageType.EOF_REQUEUE
         super().__init__(message_type, client_id)
@@ -132,12 +131,12 @@ class EOFRequeueMessage(Message):
         )
 
         return (
-                message_type_bytes
-                + client_id_bytes
-                + ttl_bytes
-                + remaining_messages_bytes
-                + messages_sent_bytes
-                + messages_sent_sender_bytes
+            message_type_bytes
+            + client_id_bytes
+            + ttl_bytes
+            + remaining_messages_bytes
+            + messages_sent_bytes
+            + messages_sent_sender_bytes
         )
 
 

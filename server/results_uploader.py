@@ -22,9 +22,7 @@ class ResultsUploader:
         self.receiver.start()
 
     def output_callback(self, messages):
-        logging.info(f"action: result_upload | result: in_progress | messages: {messages}")
-        messages = [message['content'] for message in messages]
-        message_batch = "\n".join(messages)
+        message_batch = "\n".join(messages.payload)
         self.output_single(message_batch)
 
     def output_single(self, content):
