@@ -39,6 +39,7 @@ class Server:
         """
         Initializes the results listener.
         """
+        # TODO: change to env vars
         receiver = self.server_receiver_initializer.initialize_receiver(
             "vuelos_resultados",
             "QUEUE",

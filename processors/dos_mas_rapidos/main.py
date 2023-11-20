@@ -40,14 +40,12 @@ def main():
         "segmentsArrivalAirportCode",
     ]
 
-    processor = DosMasRapidos()
-
     connection_config = ConnectionConfig(input_output_fields, input_output_fields)
     Connection(
         connection_config,
         receiver,
         sender,
-        processor,
+        DosMasRapidos,
     ).run()
 
 

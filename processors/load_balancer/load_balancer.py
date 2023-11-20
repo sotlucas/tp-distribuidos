@@ -3,9 +3,14 @@ import logging
 from commons.processor import Processor
 
 
-class LoadBalancer(Processor):
+class LoadBalancerConfig:
     def __init__(self, grouper_replicas_count):
         self.grouper_replicas_count = grouper_replicas_count
+
+
+class LoadBalancer(Processor):
+    def __init__(self, config):
+        self.config = config
 
     def process(self, message):
         """
@@ -13,7 +18,7 @@ class LoadBalancer(Processor):
         """
         route = self.get_route(message)
         message_hash = hashlib.md5(route.encode()).hexdigest()
-        queue_id = (int(message_hash, 16) % self.grouper_replicas_count) + 1
+        queue_id = (int(message_hash, 16) % self.config.grouper_replicas_count) + 1
         logging.debug(f"Forwarding message to queue {queue_id}")
         return (queue_id, message)
 

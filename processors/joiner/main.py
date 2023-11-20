@@ -52,14 +52,14 @@ def main():
 
     lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
 
-    latlong = LatLong()
+    # TODO: fix this
 
     connection_config = ConnectionConfig(lat_long_input_fields, None, send_eof=False)
     Connection(
         connection_config,
         lat_long_receiver,
         None,
-        latlong,
+        LatLong,
     ).run()
 
     vuelos_input_fields = [
@@ -81,12 +81,14 @@ def main():
 
     joiner = Joiner(latlong.get_lat_long_airports())
 
+    joiner_config = JoinerConfig()
     connection_config = ConnectionConfig(vuelos_input_fields, vuelos_output_fields)
     Connection(
         connection_config,
         vuelos_receiver,
         vuelos_sender,
-        joiner,
+        Joiner,
+        joiner_config
     ).run()
 
 

@@ -18,11 +18,14 @@ class ConnectionConfig:
 
 
 class Connection:
-    def __init__(self, config, communication_receiver, communication_sender, processor):
+    def __init__(self, config, communication_receiver, communication_sender,
+                 processor_name, processor_config=None):
         self.config = config
         self.communication_receiver = communication_receiver
         self.communication_sender = communication_sender
-        self.processor = processor
+        self.processor_name = processor_name
+        self.processor_config = processor_config
+        self.processors = {}
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
 
@@ -35,10 +38,17 @@ class Connection:
         )
         self.communication_receiver.start()
 
+    def get_processor(self, client_id):
+        if client_id not in self.processors:
+            processor = self.processor_name(self.processor_config) if self.processor_config else self.processor_name()
+            self.processors[client_id] = processor
+        return self.processors[client_id]
+
     def process(self, messages):
+        processor = self.get_processor(messages.client_id)
         processed_messages = []
         for message in messages.payload:
-            processed_message = self.processor.process(message)
+            processed_message = processor.process(message)
             if processed_message:
                 processed_messages.append(processed_message)
 

@@ -41,13 +41,12 @@ def main():
     output_fields = config_params["output_fields"].split(",")
 
     filter_config = FilterConfig(output_fields)
-    filter = Filter(filter_config)
 
     connection_config = ConnectionConfig(
         input_fields,
         output_fields,
     )
-    Connection(connection_config, receiver, sender, filter).run()
+    Connection(connection_config, receiver, sender, Filter, filter_config).run()
 
 
 if __name__ == "__main__":

@@ -45,11 +45,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=INFO
-      - VUELOS_INPUT=vuelos_resultados
+      - VUELOS_INPUT=vuelos_resultados_listener
       - VUELOS_OUTPUT=vuelos
       - LAT_LONG_OUTPUT=lat&long
       - RABBIT_HOST=rabbitmq
-      - INPUT_TYPE=QUEUE
+      - INPUT_TYPE=EXCHANGE
       - OUTPUT_TYPE=QUEUE
     depends_on:
       rabbitmq:

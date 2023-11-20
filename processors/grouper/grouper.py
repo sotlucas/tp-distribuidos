@@ -11,6 +11,13 @@ AVERAGE = "average"
 TEMPORAL_CLIENT_ID = 0
 
 
+class GrouperConfig:
+    def __init__(self, replica_id, media_general_receiver, media_general_sender):
+        self.replica_id = replica_id
+        self.media_general_receiver = media_general_receiver
+        self.media_general_sender = media_general_sender
+
+
 class Grouper(Processor):
     """
     1. Agrupa totalFare por route.
@@ -24,10 +31,10 @@ class Grouper(Processor):
     5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
     """
 
-    def __init__(self, replica_id, media_general_receiver, media_general_sender):
-        self.replica_id = replica_id
-        self.media_general_receiver = media_general_receiver
-        self.media_general_sender = media_general_sender
+    def __init__(self, config):
+        self.replica_id = config.replica_id
+        self.media_general_receiver = config.media_general_receiver
+        self.media_general_sender = config.media_general_sender
 
         self.media_general_input_fields = ["average"]
         self.media_general_output_fields = ["totalFare", "amount"]

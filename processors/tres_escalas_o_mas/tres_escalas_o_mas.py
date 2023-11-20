@@ -1,6 +1,5 @@
 from commons.processor import Processor
 
-
 SEGMENTS_ARRIVAL_AIRPORT = "segmentsArrivalAirportCode"
 
 
