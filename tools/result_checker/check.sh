@@ -5,6 +5,6 @@ list="max_avg distancias dos_mas_rapidos tres_escalas"
 for i in $list; do
     filename=$(ls -t *$i.txt | head -1)
     echo "Testing $filename"
-    diff <(sort ../tools/result_checker/"$i".txt) <(sort "$filename")
+    diff -q <(sort ../tools/result_checker/"$i".txt) <(sort "$filename")
     echo "---"
 done
