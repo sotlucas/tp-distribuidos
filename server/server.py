@@ -5,6 +5,7 @@ import logging
 from multiprocessing import BoundedSemaphore, Process, Queue
 
 from client_handler import ClientHandler
+from results_listener import ResultsListener
 
 
 class ServerConfig:
@@ -27,10 +28,28 @@ class Server:
         self._server_socket.bind(("", config.port))
         self._server_socket.listen()
 
+        self.results_listener = Process(target=self.results_listener_initializer)
+        self.results_listener.start()
         self.running = True
+        self.client_handlers = []
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
-        self.client_handlers = []
+
+    def results_listener_initializer(self):
+        """
+        Initializes the results listener.
+        """
+        receiver = self.server_receiver_initializer.initialize_receiver(
+            "vuelos_resultados",
+            "QUEUE",
+            1,  # REPLICAS_COUNT
+        )
+        sender = self.server_receiver_initializer.initialize_sender(
+            "vuelos_resultados_listener",
+            "EXCHANGE",
+        )
+        results_listener = ResultsListener(receiver, sender)
+        results_listener.start()
 
     def run(self):
         """

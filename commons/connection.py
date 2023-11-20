@@ -38,7 +38,7 @@ class Connection:
     def process(self, messages):
         processed_messages = []
         for message in messages.payload:
-            processed_message = self.processor.process({"payload": message, "client_id": messages.client_id})
+            processed_message = self.processor.process(message)
             if processed_message:
                 processed_messages.append(processed_message)
 
