@@ -21,6 +21,7 @@ class Message:
 class CommunicationBuffer:
     def __init__(self, sock):
         self.sock = sock
+        self.sock.setblocking(True)
         self.buffer = b""
         self.lock = multiprocessing.Lock()
 

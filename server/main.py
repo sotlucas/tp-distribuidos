@@ -17,6 +17,7 @@ def main():
         "rabbit_host": str,
         "output_type": str,
         "input_type": str,
+        "max_clients": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -24,11 +25,6 @@ def main():
     initialize_log(logging_level)
 
     vuelos_initializer = CommunicationInitializer(config_params["rabbit_host"])
-    vuelos_receiver = vuelos_initializer.initialize_receiver(
-        config_params["vuelos_input"],
-        config_params["input_type"],
-        SERVER_REPLICAS_COUNT,
-    )
 
     resultados_initializer = CommunicationInitializer(config_params["rabbit_host"])
     resultados_sender = resultados_initializer.initialize_sender(
@@ -45,6 +41,7 @@ def main():
         config_params["connection_timeout"],
         config_params["vuelos_input"],
         config_params["input_type"],
+        config_params["max_clients"]
     )
     Server(server_config, vuelos_initializer, resultados_sender, lat_long_sender).run()
 

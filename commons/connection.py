@@ -9,7 +9,7 @@ TEMPORAL_CLIENT_ID = 0
 
 class ConnectionConfig:
     def __init__(
-        self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
+            self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
     ):
         self.input_fields = input_fields
         self.output_fields = output_fields
@@ -38,7 +38,7 @@ class Connection:
     def process(self, messages):
         processed_messages = []
         for message in messages.payload:
-            processed_message = self.processor.process(message)
+            processed_message = self.processor.process({"payload": message, "client_id": messages.client_id})
             if processed_message:
                 processed_messages.append(processed_message)
 

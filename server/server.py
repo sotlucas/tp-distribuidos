@@ -8,11 +8,12 @@ from client_handler import ClientHandler
 
 
 class ServerConfig:
-    def __init__(self, port, connection_timeout, vuelos_input, input_type):
+    def __init__(self, port, connection_timeout, vuelos_input, input_type, max_clients):
         self.port = port
         self.connection_timeout = connection_timeout
         self.vuelos_input = vuelos_input
         self.input_type = input_type
+        self.max_clients = max_clients
 
 
 class Server:
@@ -51,9 +52,8 @@ class Server:
     def client_handler_tracker(self, queue):
         """
         Creates a new process for each client connection and keeps track of them.
-        Allows a maximum of 4 processes at a time.
         """
-        sema = BoundedSemaphore(4)
+        sema = BoundedSemaphore(self.config.max_clients)
         procs = []
         while True:
             client_sock = queue.get()
@@ -65,7 +65,7 @@ class Server:
             while not procs[0].is_alive():
                 procs.pop(0)
         for p in procs:
-            p.join()  # wait for any remaining tasks
+            p.join()
 
     def worker(self, sema, client_sock):
         """
