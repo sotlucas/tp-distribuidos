@@ -103,26 +103,6 @@ services:
     networks:
       - testing_net
 
-  results_listener:
-    deploy:
-      replicas: ${RESULTS_LISTENER_REPLICAS}
-    image: results_listener:latest
-    entrypoint: python3 /main.py
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
-      - INPUT=vuelos_resultados
-      - OUTPUT=vuelos_resultados_listener
-      - RABBIT_HOST=rabbitmq
-      - INPUT_TYPE=QUEUE
-      - OUTPUT_TYPE=EXCHANGE
-      - REPLICAS_COUNT=${RESULTS_LISTENER_REPLICAS}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - testing_net
-
 networks:
   testing_net:
     ipam:
