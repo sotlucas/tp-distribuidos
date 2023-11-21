@@ -6,10 +6,11 @@ from commons.protocol import PeerDisconnected
 
 
 class ResultHandler:
-    def __init__(self, buff):
+    def __init__(self, buff, replica_id):
         self.tstamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.running = True
         self.buff = buff
+        self.replica_id = replica_id
 
     def receive_results(self):
         """
@@ -51,7 +52,7 @@ class ResultHandler:
         logging.info(f"Saving result: {data}")
         file_name = data.split("[")[1].split("]")[0].lower()
 
-        with open(f"results/{self.tstamp}_{file_name}.txt", "a") as f:
+        with open(f"results/{self.replica_id}_{self.tstamp}_{file_name}.txt", "a") as f:
             f.write(data + "\n")
 
     def __stop(self, *args):

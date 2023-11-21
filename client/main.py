@@ -18,6 +18,7 @@ def main(arcv):
         "logging_level": str,
         "remove_file_header": bool,
         "batch_size": int,
+        "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -31,6 +32,7 @@ def main(arcv):
         airports_file_path,
         config_params["remove_file_header"],
         config_params["batch_size"],
+        config_params["replica_id"],
     )
     Client(config).run()
 
