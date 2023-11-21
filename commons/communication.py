@@ -101,13 +101,13 @@ class CommunicationReceiverConfig:
     """
 
     def __init__(
-            self,
-            input,
-            replicas_count,
-            routing_key="",
-            input_diff_name="",
-            replica_id=1,
-            delimiter=",",
+        self,
+        input,
+        replicas_count,
+        routing_key="",
+        input_diff_name="",
+        replica_id=1,
+        delimiter=",",
     ):
         self.input = input
         self.replicas_count = replicas_count
@@ -222,7 +222,7 @@ class CommunicationReceiver(Communication):
             message.payload = messages_parsed
 
         self.messages_received[message.client_id] = (
-                self.messages_received.get(message.client_id, 0) + 1
+            self.messages_received.get(message.client_id, 0) + 1
         )
 
         try:
@@ -267,8 +267,8 @@ class CommunicationReceiver(Communication):
 
         new_ttl = message.ttl - 1
         new_remaining_messages = (
-                message.remaining_messages
-                - self.messages_received.get(message.client_id, 0)
+            message.remaining_messages
+            - self.messages_received.get(message.client_id, 0)
         )
 
         # TODO: This breaks encapsulation, see if we can do it in a better way
@@ -315,16 +315,18 @@ class CommunicationReceiver(Communication):
             else:
                 # It means there are remaining messages to receive.
                 # We requeue with the original values, to start a new round of EOF propagation
-                self.requeue_original_eof(message.original_messages_sent)
+                self.requeue_original_eof(
+                    message.client_id, message.original_messages_sent
+                )
 
     def requeue_eof(
-            self,
-            client_id,
-            ttl,
-            remaining_messages,
-            messages_sent,
-            original_messages_sent,
-            eof_id,
+        self,
+        client_id,
+        ttl,
+        remaining_messages,
+        messages_sent,
+        original_messages_sent,
+        eof_id,
     ):
         """
         Requeues the EOF
@@ -424,7 +426,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-                self.config.input + self.config.input_diff_name + self.config.routing_key
+            self.config.input + self.config.input_diff_name + self.config.routing_key
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name)
         self.input_queue = input_queue.method.queue
@@ -519,7 +521,7 @@ class CommunicationSender(Communication):
             ),
         )
         self.messages_sent[message.client_id] = (
-                self.messages_sent.get(message.client_id, 0) + 1
+            self.messages_sent.get(message.client_id, 0) + 1
         )
 
     def send_eof(self, client_id, routing_key=""):
@@ -534,9 +536,7 @@ class CommunicationSender(Communication):
         0     1               9
         """
         logging.debug("Sending EOF")
-        message = EOFMessage(
-            client_id, self.get_client_messages_sent(client_id)
-        )
+        message = EOFMessage(client_id, self.get_client_messages_sent(client_id))
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):

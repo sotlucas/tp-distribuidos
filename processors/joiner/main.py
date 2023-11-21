@@ -1,9 +1,12 @@
-from joiner import Joiner
-from lat_long import LatLong
+from joiner import Joiner, JoinerConfig
+from lat_long import LatLong, LatLongConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
+from state import State
+
+import threading
 
 # Because they are working as an exchange, they do not share the same as the other groupers
 # TODO: See if this can be changed
@@ -28,6 +31,8 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
+    state = State()
+
     lat_long_communication_initializer = CommunicationInitializer(
         config_params["rabbit_host"]
     )
@@ -37,6 +42,21 @@ def main():
         JOINER_REPLICA_COUNT,
         input_diff_name=str(config_params["replica_id"]),
     )
+
+    lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
+
+    lat_long_config = LatLongConfig(state)
+
+    connection_config = ConnectionConfig(lat_long_input_fields, None, send_eof=False)
+    connection = Connection(
+        connection_config,
+        lat_long_receiver,
+        None,
+        LatLong,
+        lat_long_config,
+    )
+    lat_long_thread = threading.Thread(target=connection.run)
+    lat_long_thread.start()
 
     vuelos_communication_initializer = CommunicationInitializer(
         config_params["rabbit_host"]
@@ -49,18 +69,6 @@ def main():
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]
     )
-
-    lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
-
-    # TODO: fix this
-
-    connection_config = ConnectionConfig(lat_long_input_fields, None, send_eof=False)
-    Connection(
-        connection_config,
-        lat_long_receiver,
-        None,
-        LatLong,
-    ).run()
 
     vuelos_input_fields = [
         "legId",
@@ -79,17 +87,17 @@ def main():
         "destinationLongitude",
     ]
 
-    joiner = Joiner(latlong.get_lat_long_airports())
+    joiner_config = JoinerConfig(state)
 
-    joiner_config = JoinerConfig()
     connection_config = ConnectionConfig(vuelos_input_fields, vuelos_output_fields)
-    Connection(
-        connection_config,
-        vuelos_receiver,
-        vuelos_sender,
-        Joiner,
-        joiner_config
-    ).run()
+    connection = Connection(
+        connection_config, vuelos_receiver, vuelos_sender, Joiner, joiner_config
+    )
+    joiner_thread = threading.Thread(target=connection.run)
+    joiner_thread.start()
+
+    lat_long_thread.join()
+    joiner_thread.join()
 
 
 if __name__ == "__main__":

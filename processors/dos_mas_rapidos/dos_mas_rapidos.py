@@ -1,7 +1,7 @@
 import logging
 import re
 
-from commons.processor import Processor
+from commons.processor import Processor, Respose, ResponseType
 
 STARTING_AIRPORT = "startingAirport"
 DESTINATION_AIRPORT = "destinationAirport"
@@ -9,7 +9,7 @@ TRAVEL_DURATION = "travelDuration"
 
 
 class DosMasRapidos(Processor):
-    def __init__(self):
+    def __init__(self, client_id):
         self.trajectory = {}
 
     def process(self, message):
@@ -68,7 +68,7 @@ class DosMasRapidos(Processor):
             minutes = int(duration_match.group(3) or 0)
         return days * 24 * 60 + hours * 60 + minutes
 
-    def finish_processing(self, client_id):
+    def finish_processing(self):
         """
         Returns the fastest messages
         """
@@ -77,4 +77,4 @@ class DosMasRapidos(Processor):
         for trajectory in self.trajectory:
             for message in self.trajectory[trajectory]:
                 messages.append(message)
-        return messages
+        return Respose(ResponseType.MULTIPLE, messages)

@@ -1,5 +1,5 @@
 import logging
-from commons.processor import Processor
+from commons.processor import Processor, Respose, ResponseType
 from commons.message import ProtocolMessage
 
 STARTING_AIRPORT = "startingAirport"
@@ -9,15 +9,21 @@ AVERAGE = "average"
 
 
 class GrouperConfig:
-    def __init__(self, replica_id, media_general_communication_initializer,
-                 media_general_input,
-                 input_type,
-                 replicas_count,
-                 input_diff_name,
-                 media_general_output,
-                 output_type):
+    def __init__(
+        self,
+        replica_id,
+        media_general_communication_initializer,
+        media_general_input,
+        input_type,
+        replicas_count,
+        input_diff_name,
+        media_general_output,
+        output_type,
+    ):
         self.replica_id = replica_id
-        self.media_general_communication_initializer = media_general_communication_initializer
+        self.media_general_communication_initializer = (
+            media_general_communication_initializer
+        )
         self.media_general_input = media_general_input
         self.input_type = input_type
         self.replicas_count = replicas_count
@@ -39,18 +45,21 @@ class Grouper(Processor):
     5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, client_id):
         self.replica_id = config.replica_id
+        self.client_id = client_id
         self.media_general_receiver = (
             config.media_general_communication_initializer.initialize_receiver(
                 config.media_general_input,
                 config.input_type,
                 config.replicas_count,
-                input_diff_name=config.input_diff_name
+                input_diff_name=config.input_diff_name,
             )
         )
-        self.media_general_sender = config.media_general_communication_initializer.initialize_sender(
-            config.media_general_output, config.output_type
+        self.media_general_sender = (
+            config.media_general_communication_initializer.initialize_sender(
+                config.media_general_output, config.output_type
+            )
         )
 
         self.media_general_input_fields = ["average"]
@@ -82,7 +91,7 @@ class Grouper(Processor):
     def get_total_fare(self, message):
         return float(message[TOTAL_FARE])
 
-    def finish_processing(self, client_id):
+    def finish_processing(self):
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
         self.media_general_receiver.bind(
@@ -97,14 +106,14 @@ class Grouper(Processor):
             total_fare += sum(prices)
             amount += len(prices)
         message = {"totalFare": total_fare, "amount": amount}
-        message_to_send = ProtocolMessage(client_id, [message])
+        message_to_send = ProtocolMessage(self.client_id, [message])
         self.media_general_sender.send_all(
             message_to_send,
             output_fields_order=self.media_general_output_fields,
         )
         self.waiting_for_media_general = True
         self.media_general_receiver.start()
-        return self.vuelos_message_to_send
+        return Respose(ResponseType.MULTIPLE, self.vuelos_message_to_send)
 
     def process_media_general(self, messages):
         for message in messages.payload:

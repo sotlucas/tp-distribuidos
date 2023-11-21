@@ -1,5 +1,5 @@
 import logging
-from commons.processor import Processor
+from commons.processor import Processor, Respose, ResponseType
 
 
 class FilterConfig:
@@ -8,7 +8,7 @@ class FilterConfig:
 
 
 class Filter(Processor):
-    def __init__(self, config):
+    def __init__(self, config, client_id):
         self.config = config
 
     def process(self, message):
@@ -16,7 +16,7 @@ class Filter(Processor):
         filtered_message = {}
         for field in self.config.output_fields:
             filtered_message[field] = message[field]
-        return filtered_message
+        return Respose(ResponseType.SINGLE, filtered_message)
 
-    def finish_processing(self, client_id):
+    def finish_processing(self):
         pass

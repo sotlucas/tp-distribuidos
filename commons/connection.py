@@ -1,12 +1,12 @@
 import logging
 import signal
-from commons.protocol import EOF
 from commons.message import ProtocolMessage
+from commons.processor import ResponseType
 
 
 class ConnectionConfig:
     def __init__(
-            self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
+        self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
     ):
         self.input_fields = input_fields
         self.output_fields = output_fields
@@ -15,8 +15,14 @@ class ConnectionConfig:
 
 
 class Connection:
-    def __init__(self, config, communication_receiver, communication_sender,
-                 processor_name, processor_config=None):
+    def __init__(
+        self,
+        config,
+        communication_receiver,
+        communication_sender,
+        processor_name,
+        processor_config=None,
+    ):
         self.config = config
         self.communication_receiver = communication_receiver
         self.communication_sender = communication_sender
@@ -37,7 +43,11 @@ class Connection:
 
     def get_processor(self, client_id):
         if client_id not in self.processors:
-            processor = self.processor_name(self.processor_config) if self.processor_config else self.processor_name()
+            processor = (
+                self.processor_name(self.processor_config, client_id)
+                if self.processor_config
+                else self.processor_name(client_id)
+            )
             self.processors[client_id] = processor
         return self.processors[client_id]
 
@@ -47,7 +57,10 @@ class Connection:
         for message in messages.payload:
             processed_message = processor.process(message)
             if processed_message:
-                processed_messages.append(processed_message)
+                if processed_message.type == ResponseType.SINGLE:
+                    processed_messages.append(processed_message.payload)
+                elif processed_message.type == ResponseType.MULTIPLE:
+                    processed_messages.extend(processed_message.payload)
 
         if not processed_messages:
             return
@@ -78,13 +91,13 @@ class Connection:
         )
 
     def handle_eof(self, client_id):
-        messages = self.get_processor(client_id).finish_processing(client_id)
-        if messages is EOF:
-            # If the processor returns EOF, it means that it wants to stop the connection.
-            # This is useful for the joiner, which needs to stop the connection when it finishes processing.
-            # TODO: See if this can be changed
-            self.__shutdown()
-            return
+        messages = []
+        message = self.get_processor(client_id).finish_processing()
+        if message:
+            if message.type == ResponseType.SINGLE:
+                messages.append(message.payload)
+            elif message.type == ResponseType.MULTIPLE:
+                messages.extend(message.payload)
 
         if self.config.is_topic:
             # TODO: If needed, we should move the topic name the finish_processing of the processor.
