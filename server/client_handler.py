@@ -50,7 +50,7 @@ class ClientHandler:
         uploader = self.flights_uploader if message.type == "flight" else self.lat_long_uploader
         if message.content == protocol.EOF:
             # Send EOF to queue to communicate that all the file has been sent.
-            uploader.finish_sending()
+            uploader.finish_sending(self.id)
             if message.type == "flight" and message.content == protocol.EOF:
                 # The client will not send any more messages
                 raise PeerDisconnected

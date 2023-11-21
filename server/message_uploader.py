@@ -13,9 +13,9 @@ class MessageUploader:
         self.sender.send_all(message)
         logging.debug(f"action: message_upload | result: success")
 
-    def finish_sending(self):
+    def finish_sending(self, client_id):
         logging.info("Sending EOF")
-        self.sender.send_eof()
+        self.sender.send_eof(client_id)
         self.sender.close()
 
     def stop(self):
