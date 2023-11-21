@@ -54,5 +54,5 @@ class Distancias(Processor):
             ] = distance_between_airports
         return distance_between_airports
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

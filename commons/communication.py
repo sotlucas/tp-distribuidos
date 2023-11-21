@@ -306,7 +306,7 @@ class CommunicationReceiver(Communication):
 
                 eof_finish_ttl = self.config.replicas_count
                 self.requeue_eof_finish(message.client_id, eof_finish_ttl)
-                self.eof_callback()
+                self.eof_callback(message.client_id)
 
                 # We remove the client_id from the messages_received and eof_current_id dicts
                 # TODO: Ojo cuando querramos guardar los datos. Si se cae un nodo, se pierden los datos de ese nodo.
@@ -404,7 +404,7 @@ class CommunicationReceiver(Communication):
 
         if self.config.routing_key:
             # We are in a topic exchange, so we execute the eof_callback
-            self.eof_callback()
+            self.eof_callback(message.client_id)
 
         # We remove the client_id from the messages_received and eof_current_id dicts
         # TODO: Ojo cuando querramos guardar los datos. Si se cae un nodo, se pierden los datos de ese nodo.
@@ -469,10 +469,6 @@ class CommunicationSenderConfig:
         self.delimiter = delimiter
 
 
-# TODO: Temporary solution to avoid the client_id problem
-CLIENT_ID_TEMPORAL = 0
-
-
 class CommunicationSender(Communication):
     """
     Abstract class to be used by the CommunicationSender classes
@@ -527,7 +523,7 @@ class CommunicationSender(Communication):
                 self.messages_sent.get(message.client_id, 0) + 1
         )
 
-    def send_eof(self, routing_key=""):
+    def send_eof(self, client_id, routing_key=""):
         """
         Function to send the EOF to propagate through the distributed system.
 
@@ -540,7 +536,7 @@ class CommunicationSender(Communication):
         """
         logging.debug("Sending EOF")
         message = EOFMessage(
-            CLIENT_ID_TEMPORAL, self.get_client_messages_sent(CLIENT_ID_TEMPORAL)
+            client_id, self.get_client_messages_sent(client_id)
         )
         self.send(message, routing_key)
 

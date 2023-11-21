@@ -15,7 +15,7 @@ class LatLong(Processor):
         )
         self.lat_long_airports[airport_code] = (latitude, longitude)
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         return EOF
 
     def get_lat_long_airports(self):

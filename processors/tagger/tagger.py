@@ -16,5 +16,5 @@ class Tagger(Processor):
         """
         return f"[{self.config.tag_name}]{message}"
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

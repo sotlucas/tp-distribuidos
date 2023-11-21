@@ -32,5 +32,5 @@ class Joiner(Processor):
         }
         return message
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

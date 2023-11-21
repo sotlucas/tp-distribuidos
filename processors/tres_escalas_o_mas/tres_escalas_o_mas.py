@@ -13,5 +13,5 @@ class TresEscalasOMas(Processor):
         else:
             return None
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

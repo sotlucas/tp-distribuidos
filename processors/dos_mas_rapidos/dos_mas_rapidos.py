@@ -68,7 +68,7 @@ class DosMasRapidos(Processor):
             minutes = int(duration_match.group(3) or 0)
         return days * 24 * 60 + hours * 60 + minutes
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         """
         Returns the fastest messages
         """

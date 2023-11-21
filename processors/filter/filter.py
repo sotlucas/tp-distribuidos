@@ -18,5 +18,5 @@ class Filter(Processor):
             filtered_message[field] = message[field]
         return filtered_message
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

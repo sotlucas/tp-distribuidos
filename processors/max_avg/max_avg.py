@@ -24,5 +24,5 @@ class MaxAvg(Processor):
     def get_max(self, prices):
         return max(prices)
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

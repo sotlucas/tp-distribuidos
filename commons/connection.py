@@ -3,9 +3,6 @@ import signal
 from commons.protocol import EOF
 from commons.message import ProtocolMessage
 
-# TODO: remove this
-TEMPORAL_CLIENT_ID = 0
-
 
 class ConnectionConfig:
     def __init__(
@@ -80,8 +77,8 @@ class Connection:
             message_to_send, output_fields_order=self.config.output_fields
         )
 
-    def handle_eof(self):
-        messages = self.processor.finish_processing()
+    def handle_eof(self, client_id):
+        messages = self.get_processor(client_id).finish_processing(client_id)
         if messages is EOF:
             # If the processor returns EOF, it means that it wants to stop the connection.
             # This is useful for the joiner, which needs to stop the connection when it finishes processing.
@@ -91,13 +88,13 @@ class Connection:
 
         if self.config.is_topic:
             # TODO: If needed, we should move the topic name the finish_processing of the processor.
-            TOPIC_EOF = "1"
-            self.communication_sender.send_eof(TOPIC_EOF)
+            DEFAULT_TOPIC_EOF = "1"
+            self.communication_sender.send_eof(client_id, routing_key=DEFAULT_TOPIC_EOF)
             return
         if messages:
-            self.send_messages(messages, TEMPORAL_CLIENT_ID)
+            self.send_messages(messages, client_id)
         if self.config.send_eof:
-            self.communication_sender.send_eof()
+            self.communication_sender.send_eof(client_id)
 
     def __shutdown(self, *args):
         """

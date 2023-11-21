@@ -27,5 +27,5 @@ class LoadBalancer(Processor):
         destination_airport = message["destinationAirport"]
         return f"{starting_airport}-{destination_airport}"
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         pass

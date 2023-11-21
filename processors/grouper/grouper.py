@@ -7,9 +7,6 @@ DESTINATION_AIRPORT = "destinationAirport"
 TOTAL_FARE = "totalFare"
 AVERAGE = "average"
 
-# TODO: remove this
-TEMPORAL_CLIENT_ID = 0
-
 
 class GrouperConfig:
     def __init__(self, replica_id, media_general_receiver, media_general_sender):
@@ -65,7 +62,7 @@ class Grouper(Processor):
     def get_total_fare(self, message):
         return float(message[TOTAL_FARE])
 
-    def finish_processing(self):
+    def finish_processing(self, client_id):
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
         self.media_general_receiver.bind(
@@ -80,7 +77,7 @@ class Grouper(Processor):
             total_fare += sum(prices)
             amount += len(prices)
         message = {"totalFare": total_fare, "amount": amount}
-        message_to_send = ProtocolMessage(TEMPORAL_CLIENT_ID, [message])
+        message_to_send = ProtocolMessage(client_id, [message])
         self.media_general_sender.send_all(
             message_to_send,
             output_fields_order=self.media_general_output_fields,
