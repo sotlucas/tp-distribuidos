@@ -177,7 +177,6 @@ class CommunicationReceiver(Communication):
         """
         logging.debug("Stopping receiver")
         self.channel.stop_consuming()
-        self.close()
 
     def callback(self, ch, method, properties, body):
         """

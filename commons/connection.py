@@ -104,7 +104,7 @@ class Connection:
         # TODO: neccesary to call finish_processing?
         # self.processor.finish_processing()
         if self.communication_receiver:
-            self.communication_receiver.stop()
+            self.communication_receiver.close()
         if self.communication_sender:
-            self.communication_sender.stop()
+            self.communication_sender.close()
         logging.info("action: shutdown | result: success")

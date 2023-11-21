@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import signal
 
 from commons.protocol import PeerDisconnected
@@ -52,7 +53,10 @@ class ResultHandler:
         logging.info(f"Saving result: {data}")
         file_name = data.split("[")[1].split("]")[0].lower()
 
-        with open(f"results/{self.replica_id}_{self.tstamp}_{file_name}.txt", "a") as f:
+        if not os.path.exists(f"results/client_{self.replica_id}"):
+            os.makedirs(f"results/client_{self.replica_id}")
+
+        with open(f"results/client_{self.replica_id}/{self.tstamp}_{file_name}.txt", "a") as f:
             f.write(data + "\n")
 
     def __stop(self, *args):
