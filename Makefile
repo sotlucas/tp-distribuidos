@@ -41,3 +41,7 @@ docker-compose-stop:
 test:
 	python3 -m pytest -v
 .PHONY: test
+
+check:
+	./tools/result_checker/check.sh
+.PHONY: check
