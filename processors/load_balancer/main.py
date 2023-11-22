@@ -1,4 +1,4 @@
-from load_balancer import LoadBalancer
+from load_balancer import LoadBalancer, LoadBalancerConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
@@ -38,14 +38,15 @@ def main():
     ]
     output_fields = input_fields
 
-    processor = LoadBalancer(config_params["grouper_replicas_count"])
+    load_balancer_config = LoadBalancerConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(input_fields, output_fields, is_topic=True)
     Connection(
         connection_config,
         receiver,
         sender,
-        processor,
+        LoadBalancer,
+        load_balancer_config
     ).run()
 
 

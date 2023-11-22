@@ -1,7 +1,7 @@
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
-from media_general import MediaGeneral
+from media_general import MediaGeneral, MediaGeneralConfig
 from commons.connection import ConnectionConfig, Connection
 
 MEDIA_GENERAL_REPLICAS_COUNT = 1
@@ -35,10 +35,10 @@ def main():
     input_fields = ["sum", "amount"]
     output_fields = ["media_general"]
 
-    processor = MediaGeneral(config_params["grouper_replicas_count"])
+    media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(input_fields, output_fields)
-    Connection(connection_config, receiver, sender, processor).run()
+    Connection(connection_config, receiver, sender, MediaGeneral, media_general_config).run()
 
 
 if __name__ == "__main__":

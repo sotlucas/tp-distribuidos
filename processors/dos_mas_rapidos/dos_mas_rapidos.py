@@ -1,7 +1,7 @@
 import logging
 import re
 
-from commons.processor import Processor
+from commons.processor import Processor, Response, ResponseType
 
 STARTING_AIRPORT = "startingAirport"
 DESTINATION_AIRPORT = "destinationAirport"
@@ -9,7 +9,7 @@ TRAVEL_DURATION = "travelDuration"
 
 
 class DosMasRapidos(Processor):
-    def __init__(self):
+    def __init__(self, client_id):
         self.trajectory = {}
 
     def process(self, message):
@@ -77,4 +77,4 @@ class DosMasRapidos(Processor):
         for trajectory in self.trajectory:
             for message in self.trajectory[trajectory]:
                 messages.append(message)
-        return messages
+        return Response(ResponseType.MULTIPLE, messages)

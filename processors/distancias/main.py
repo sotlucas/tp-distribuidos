@@ -47,14 +47,12 @@ def main():
         "totalTravelDistance",
     ]
 
-    processor = Distancias()
-
     connection_config = ConnectionConfig(input_fields, output_fields)
     Connection(
         connection_config,
         receiver,
         sender,
-        processor,
+        Distancias,
     ).run()
 
 

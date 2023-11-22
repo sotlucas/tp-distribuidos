@@ -9,13 +9,15 @@ from commons.protocol import CommunicationBuffer
 
 
 class ClientConfig:
-    def __init__(self, server_ip, server_port, flights_file_path, airports_file_path, remove_file_header, batch_size):
+    def __init__(self, server_ip, server_port, flights_file_path, airports_file_path, remove_file_header, batch_size,
+                 replica_id):
         self.server_ip = server_ip
         self.server_port = server_port
         self.flights_file_path = flights_file_path
         self.airports_file_path = airports_file_path
         self.remove_file_header = remove_file_header
         self.batch_size = batch_size
+        self.replica_id = replica_id
 
 
 class Client:
@@ -46,7 +48,7 @@ class Client:
         self.flights_sender.start()
 
         # Start the process to receive the results
-        self.results_receiver = Process(target=ResultHandler(self.buff).receive_results)
+        self.results_receiver = Process(target=ResultHandler(self.buff, self.config.replica_id).receive_results)
         self.results_receiver.start()
 
         # Wait for the processes to finish

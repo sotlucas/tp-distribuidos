@@ -1,10 +1,15 @@
 from commons.processor import Processor
-from commons.protocol import EOF
+
+
+class LatLongConfig:
+    def __init__(self, state):
+        self.state = state
 
 
 class LatLong(Processor):
-    def __init__(self):
-        self.lat_long_airports = {}
+    def __init__(self, config, client_id):
+        self.config = config
+        self.client_id = client_id
 
     def process(self, message):
         # message fields: AirportCode,Latitude,Longitude
@@ -13,10 +18,7 @@ class LatLong(Processor):
             message["Latitude"],
             message["Longitude"],
         )
-        self.lat_long_airports[airport_code] = (latitude, longitude)
+        self.config.state.add_airport(self.client_id, airport_code, latitude, longitude)
 
     def finish_processing(self):
-        return EOF
-
-    def get_lat_long_airports(self):
-        return self.lat_long_airports
+        self.config.state.all_airports_received(self.client_id)

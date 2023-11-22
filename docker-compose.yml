@@ -20,11 +20,28 @@ services:
       - "5672:5672"
       - "15672:15672"
 
-  client:
-    container_name: client
+  client_1:
     image: client:latest
     entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
     environment:
+      - REPLICA_ID=1
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    depends_on:
+      - server
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./data/archivo.csv:/archivo.csv
+      - ./data/airports-codepublic.csv:/airports-codepublic.csv
+      - ./results:/results
+
+  client_2:
+    image: client:latest
+    entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
+    environment:
+      - REPLICA_ID=2
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
     depends_on:
@@ -44,11 +61,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
-      - VUELOS_INPUT=vuelos_resultados
+      - VUELOS_INPUT=vuelos_resultados_listener
       - VUELOS_OUTPUT=vuelos
       - LAT_LONG_OUTPUT=lat&long
       - RABBIT_HOST=rabbitmq
-      - INPUT_TYPE=QUEUE
+      - INPUT_TYPE=EXCHANGE
       - OUTPUT_TYPE=QUEUE
     depends_on:
       rabbitmq:

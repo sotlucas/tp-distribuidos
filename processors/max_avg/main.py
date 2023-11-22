@@ -33,10 +33,8 @@ def main():
     input_fields = ["route", "prices"]
     output_fields = ["route", "avg", "max_price"]
 
-    processor = MaxAvg()
-
     connection_config = ConnectionConfig(input_fields, output_fields)
-    Connection(connection_config, receiver, sender, processor).run()
+    Connection(connection_config, receiver, sender, MaxAvg).run()
 
 
 if __name__ == "__main__":

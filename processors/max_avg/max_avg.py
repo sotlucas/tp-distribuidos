@@ -1,7 +1,10 @@
-from commons.processor import Processor
+from commons.processor import Processor, Response, ResponseType
 
 
 class MaxAvg(Processor):
+    def __init__(self, client_id):
+        pass
+
     def process(self, message):
         # input message: route;prices
         # output message: route,avg,max_price
@@ -16,7 +19,7 @@ class MaxAvg(Processor):
 
         # 2. Formateo el resultado de salida.
         message = {"route": route, "avg": avg, "max_price": max_price}
-        return message
+        return Response(ResponseType.SINGLE, message)
 
     def get_avg(self, prices):
         return sum(prices) / len(prices)

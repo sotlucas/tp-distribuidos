@@ -1,19 +1,21 @@
 import socket
 import logging
-from multiprocessing import Process
+import multiprocessing as mp
 
 import commons.protocol as protocol
+from commons.message import ProtocolMessage
 from commons.protocol import PeerDisconnected
 from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
 
 
 class ClientHandler:
-    def __init__(self, client_sock, receiver, flights_sender, lat_long_sender):
+    def __init__(self, corr_id, client_sock, receiver, flights_sender, lat_long_sender):
+        self.id = corr_id
         self.client_sock = client_sock
         self.flights_uploader = MessageUploader(flights_sender)
         self.lat_long_uploader = MessageUploader(lat_long_sender)
-        self.results_uploader = Process(
+        self.results_uploader = mp.Process(
             target=ResultsUploader(receiver, self.client_sock).start
         )
         self.results_uploader.start()
@@ -48,12 +50,15 @@ class ClientHandler:
         uploader = self.flights_uploader if message.type == "flight" else self.lat_long_uploader
         if message.content == protocol.EOF:
             # Send EOF to queue to communicate that all the file has been sent.
-            uploader.finish_sending()
+            uploader.finish_sending(self.id)
             if message.type == "flight" and message.content == protocol.EOF:
                 # The client will not send any more messages
                 raise PeerDisconnected
         else:
-            uploader.send(message.content)
+            # TODO: Decoding here because send needs a string, find a better way
+            #       And it is a list because send needs a list, find a better way
+            protocol_message = ProtocolMessage(self.id, [message.content.decode("utf-8")])
+            uploader.send(protocol_message)
 
     def stop(self):
         """

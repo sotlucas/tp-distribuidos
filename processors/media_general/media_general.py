@@ -1,10 +1,15 @@
 import logging
-from commons.processor import Processor
+from commons.processor import Processor, Response, ResponseType
+
+
+class MediaGeneralConfig:
+    def __init__(self, grouper_replicas_count):
+        self.grouper_replicas_count = grouper_replicas_count
 
 
 class MediaGeneral(Processor):
-    def __init__(self, grouper_replicas_count):
-        self.grouper_replicas_count = grouper_replicas_count
+    def __init__(self, config, client_id):
+        self.config = config
         self.amount_received = 0  # Number of groupers that have sent their results
         self.price_sum = 0
         self.amount = 0
@@ -16,11 +21,11 @@ class MediaGeneral(Processor):
         self.price_sum += float(prices_sum)
         self.amount += int(amount)
         self.amount_received += 1
-        if self.amount_received == self.grouper_replicas_count:
+        if self.amount_received == self.config.grouper_replicas_count:
             logging.info("received all messages, calculating media")
             media_general = self.price_sum / self.amount
             message = {"media_general": str(media_general)}
-            return message
+            return Response(ResponseType.SINGLE, message)
 
     def finish_processing(self):
         pass

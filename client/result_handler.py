@@ -1,15 +1,17 @@
 import datetime
 import logging
+import os
 import signal
 
 from commons.protocol import PeerDisconnected
 
 
 class ResultHandler:
-    def __init__(self, buff):
+    def __init__(self, buff, replica_id):
         self.tstamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.running = True
         self.buff = buff
+        self.replica_id = replica_id
 
     def receive_results(self):
         """
@@ -48,9 +50,13 @@ class ResultHandler:
 
     def save_result_single(self, data):
         # get the tag between [] to identify the file
+        logging.info(f"Saving result: {data}")
         file_name = data.split("[")[1].split("]")[0].lower()
 
-        with open(f"results/{self.tstamp}_{file_name}.txt", "a") as f:
+        if not os.path.exists(f"results/client_{self.replica_id}"):
+            os.makedirs(f"results/client_{self.replica_id}")
+
+        with open(f"results/client_{self.replica_id}/{self.tstamp}_{file_name}.txt", "a") as f:
             f.write(data + "\n")
 
     def __stop(self, *args):

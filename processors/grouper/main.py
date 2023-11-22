@@ -1,4 +1,4 @@
-from grouper import Grouper
+from grouper import Grouper, GrouperConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
@@ -40,17 +40,6 @@ def main():
     media_general_communication_initializer = CommunicationInitializer(
         config_params["rabbit_host"]
     )
-    media_general_receiver = (
-        media_general_communication_initializer.initialize_receiver(
-            config_params["media_general_input"],
-            config_params["input_type"],
-            config_params["replicas_count"],
-            input_diff_name=str(config_params["replica_id"]),
-        )
-    )
-    media_general_sender = media_general_communication_initializer.initialize_sender(
-        config_params["media_general_output"], config_params["output_type"]
-    )
 
     vuelos_input_fields = [
         "startingAirport",
@@ -59,9 +48,13 @@ def main():
     ]
     vuelos_output_fields = ["route", "prices"]
 
-    processor = Grouper(
-        config_params["replica_id"], media_general_receiver, media_general_sender
-    )
+    grouper_config = GrouperConfig(config_params["replicas_count"], media_general_communication_initializer,
+                                   config_params["media_general_input"],
+                                   config_params["input_type"],
+                                   config_params["replicas_count"],
+                                   str(config_params["replica_id"]),
+                                   config_params["media_general_output"],
+                                   config_params["output_type"])
 
     connection_config = ConnectionConfig(
         vuelos_input_fields, vuelos_output_fields, send_eof=False
@@ -70,7 +63,8 @@ def main():
         connection_config,
         vuelos_receiver,
         vuelos_sender,
-        processor,
+        Grouper,
+        grouper_config
     ).run()
 
 

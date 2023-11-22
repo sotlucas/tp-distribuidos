@@ -40,10 +40,8 @@ def main():
     ]
     output_fields = input_fields
 
-    processor = TresEscalasOMas()
-
     config = ConnectionConfig(input_fields, output_fields)
-    Connection(config, receiver, sender, processor).run()
+    Connection(config, receiver, sender, TresEscalasOMas).run()
 
 
 if __name__ == "__main__":

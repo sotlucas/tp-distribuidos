@@ -6,6 +6,10 @@ from commons.protocol import Message
 
 
 class ResultsUploader:
+    """
+    It sends the results to the client through a socket
+    """
+
     def __init__(self, receiver, socket):
         self.socket = socket
         self.receiver = receiver
