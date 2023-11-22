@@ -1,4 +1,4 @@
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 
 class TaggerConfig:
@@ -15,7 +15,7 @@ class Tagger(Processor):
         Adds the tag name to the beginning of the message and sends it to the output.
         """
         message = f"[{self.config.tag_name}]{message}"
-        return Respose(ResponseType.SINGLE, message)
+        return Response(ResponseType.SINGLE, message)
 
     def finish_processing(self):
         pass

@@ -1,6 +1,6 @@
 from geopy.distance import geodesic
 
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 
 class Distancias(Processor):
@@ -33,7 +33,7 @@ class Distancias(Processor):
                 "destinationAirport": message["destinationAirport"],
                 "totalTravelDistance": message["totalTravelDistance"],
             }
-            return Respose(ResponseType.SINGLE, message)
+            return Response(ResponseType.SINGLE, message)
 
     def distance(self, destination_airport, starting_airport):
         """

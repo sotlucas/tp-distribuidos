@@ -1,6 +1,6 @@
 import hashlib
 import logging
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 
 class LoadBalancerConfig:
@@ -20,7 +20,7 @@ class LoadBalancer(Processor):
         message_hash = hashlib.md5(route.encode()).hexdigest()
         queue_id = (int(message_hash, 16) % self.config.grouper_replicas_count) + 1
         logging.debug(f"Forwarding message to queue {queue_id}")
-        return Respose(ResponseType.SINGLE, (queue_id, message))
+        return Response(ResponseType.SINGLE, (queue_id, message))
 
     def get_route(self, message):
         starting_airport = message["startingAirport"]

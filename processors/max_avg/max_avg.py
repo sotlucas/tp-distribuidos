@@ -1,4 +1,4 @@
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 
 class MaxAvg(Processor):
@@ -19,7 +19,7 @@ class MaxAvg(Processor):
 
         # 2. Formateo el resultado de salida.
         message = {"route": route, "avg": avg, "max_price": max_price}
-        return Respose(ResponseType.SINGLE, message)
+        return Response(ResponseType.SINGLE, message)
 
     def get_avg(self, prices):
         return sum(prices) / len(prices)

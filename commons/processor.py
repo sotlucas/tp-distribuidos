@@ -6,7 +6,7 @@ class ResponseType(Enum):
     MULTIPLE = 1
 
 
-class Respose:
+class Response:
     def __init__(self, response_type, payload):
         self.type = response_type
         self.payload = payload

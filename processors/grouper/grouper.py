@@ -1,5 +1,5 @@
 import logging
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 from commons.message import ProtocolMessage
 
 STARTING_AIRPORT = "startingAirport"
@@ -10,15 +10,15 @@ AVERAGE = "average"
 
 class GrouperConfig:
     def __init__(
-        self,
-        replica_id,
-        media_general_communication_initializer,
-        media_general_input,
-        input_type,
-        replicas_count,
-        input_diff_name,
-        media_general_output,
-        output_type,
+            self,
+            replica_id,
+            media_general_communication_initializer,
+            media_general_input,
+            input_type,
+            replicas_count,
+            input_diff_name,
+            media_general_output,
+            output_type,
     ):
         self.replica_id = replica_id
         self.media_general_communication_initializer = (
@@ -113,7 +113,7 @@ class Grouper(Processor):
         )
         self.waiting_for_media_general = True
         self.media_general_receiver.start()
-        return Respose(ResponseType.MULTIPLE, self.vuelos_message_to_send)
+        return Response(ResponseType.MULTIPLE, self.vuelos_message_to_send)
 
     def process_media_general(self, messages):
         for message in messages.payload:

@@ -1,5 +1,5 @@
 import logging
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 
 class MediaGeneralConfig:
@@ -25,7 +25,7 @@ class MediaGeneral(Processor):
             logging.info("received all messages, calculating media")
             media_general = self.price_sum / self.amount
             message = {"media_general": str(media_general)}
-            return Respose(ResponseType.SINGLE, message)
+            return Response(ResponseType.SINGLE, message)
 
     def finish_processing(self):
         pass

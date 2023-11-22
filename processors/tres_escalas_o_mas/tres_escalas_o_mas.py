@@ -1,4 +1,4 @@
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 SEGMENTS_ARRIVAL_AIRPORT = "segmentsArrivalAirportCode"
 
@@ -12,7 +12,7 @@ class TresEscalasOMas(Processor):
         arrivals = segmentsArrivalAirportCode.split("||")
         stopover = len(arrivals) - 1  # -1 because the last arrival is the destination
         if stopover >= 3:
-            return Respose(ResponseType.SINGLE, message)
+            return Response(ResponseType.SINGLE, message)
         else:
             return None
 

@@ -1,4 +1,4 @@
-from commons.processor import Processor, Respose, ResponseType
+from commons.processor import Processor, Response, ResponseType
 
 LEG_ID = "legId"
 STARTING_AIRPORT = "startingAirport"
@@ -41,10 +41,10 @@ class Joiner(Processor):
             for flight in self.flights_cache:
                 messages.append(self.process_flight(flight))
             self.flights_cache = []
-            return Respose(ResponseType.MULTIPLE, messages)
+            return Response(ResponseType.MULTIPLE, messages)
 
         message = self.process_flight(message)
-        return Respose(ResponseType.SINGLE, message)
+        return Response(ResponseType.SINGLE, message)
 
     def process_flight(self, flight):
         starting_airport = flight[STARTING_AIRPORT]
