@@ -4,6 +4,7 @@ PWD := $(shell pwd)
 docker-image:
 	docker build -f ./server/Dockerfile -t "server:latest" .
 	docker build -f ./client/Dockerfile -t "client:latest" .
+	docker build -f ./health_checker/Dockerfile -t "health_checker:latest" .
 	docker build -f ./processors/filter/Dockerfile -t "filter:latest" .
 	docker build -f ./processors/tres_escalas_o_mas/Dockerfile -t "tres_escalas_o_mas:latest" .
 	docker build -f ./processors/dos_mas_rapidos/Dockerfile -t "dos_mas_rapidos:latest" .
