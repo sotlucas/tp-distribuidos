@@ -614,6 +614,18 @@ services:
     networks:
       - testing_net
 
+  health_checker:
+    image: health_checker:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
 networks:
   testing_net:
     ipam:
