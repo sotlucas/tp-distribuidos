@@ -620,6 +620,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
+      - FILTER_GENERAL_REPLICAS=${FILTER_GENERAL_REPLICAS}
     depends_on:
       rabbitmq:
         condition: service_healthy
