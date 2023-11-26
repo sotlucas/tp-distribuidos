@@ -4,6 +4,8 @@ import logging
 import time
 from multiprocessing import Process
 
+from commons.protocol import CommunicationBuffer, Message
+
 HEALTH_CHECKER_PORT = 5000
 CONNECTION_RETRY_TIME = 2
 HEALTH_CHECK_INTERVAL = 5
@@ -51,6 +53,7 @@ class HealthChecker:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((processor_name, HEALTH_CHECKER_PORT))
+                buff = CommunicationBuffer(sock)
                 break
             except socket.error:
                 logging.info(f"Connection Failed to processor {processor_name}, Retrying...")
@@ -58,12 +61,8 @@ class HealthChecker:
         logging.info(f"Connected to processor {processor_name}")
         while self.running:
             try:
-                sock.sendall(b"CHECK\n")
-                # While loop to read from socket to avoid short reads
-                data = b""
-                while b"\n" not in data:
-                    data += sock.recv(1024)
-                if data == b"OK\n":
+                buff.send_message(Message(None, "CHECK\n"))
+                if buff.get_message().content == b"OK\n":
                     logging.info(f"Processor {processor_name} is healthy")
                 else:
                     logging.error(f"Processor {processor_name} is not healthy")
