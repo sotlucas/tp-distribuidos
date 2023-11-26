@@ -1,3 +1,6 @@
+from multiprocessing import Process
+
+from commons.health_checker import HealthChecker
 from load_balancer import LoadBalancer, LoadBalancerConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
@@ -20,6 +23,10 @@ def main():
 
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
+
+    # Healthcheck process
+    health = Process(target=HealthChecker().run)
+    health.start()
 
     communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
     receiver = communication_initializer.initialize_receiver(
@@ -48,6 +55,8 @@ def main():
         LoadBalancer,
         load_balancer_config
     ).run()
+
+    health.join()
 
 
 if __name__ == "__main__":

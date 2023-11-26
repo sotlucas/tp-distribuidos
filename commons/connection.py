@@ -33,10 +33,6 @@ class Connection:
         self.processor_config = processor_config
         self.processors = {}
 
-        # Healthcheck process
-        self.health = Process(target=HealthChecker().run)
-        self.health.start()
-
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
 
