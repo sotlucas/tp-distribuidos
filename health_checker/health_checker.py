@@ -5,11 +5,14 @@ import time
 from multiprocessing import Process
 
 HEALTH_CHECKER_PORT = 5000
+CONNECTION_RETRY_TIME = 2
+HEALTH_CHECK_INTERVAL = 5
 
 
 class HealthCheckerConfig:
-    def __init__(self, filter_general_replicas):
+    def __init__(self, filter_general_replicas, filter_multiple_replicas):
         self.filter_general_replicas = filter_general_replicas
+        self.filter_multiple_replicas = filter_multiple_replicas
 
 
 class HealthChecker:
@@ -26,7 +29,12 @@ class HealthChecker:
         # Call all the processors to check if they are healthy. Each in a new process.
         processor_checkers = []
         for i in range(1, self.config.filter_general_replicas + 1):
-            processor_checker = Process(target=self.check_processor, args=(i,))
+            processor_checker = Process(target=self.check_processor, args=(f"tp1-filter_general-{i}",))
+            processor_checker.start()
+            processor_checkers.append(processor_checker)
+
+        for i in range(1, self.config.filter_multiple_replicas + 1):
+            processor_checker = Process(target=self.check_processor, args=(f"tp1-filter_multiple-{i}",))
             processor_checker.start()
             processor_checkers.append(processor_checker)
 
@@ -35,33 +43,31 @@ class HealthChecker:
             processor_checker.join()
             logging.info("Processor checker finished")
 
-    def check_processor(self, processor_id):
+    def check_processor(self, processor_name):
         """
         Checks if a processor is healthy.
         """
         while True:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((f"tp1-filter_general-{processor_id}", HEALTH_CHECKER_PORT))
+                sock.connect((processor_name, HEALTH_CHECKER_PORT))
                 break
             except socket.error:
-                logging.info("Connection Failed, Retrying..")
-                time.sleep(2)
-        logging.info(f"Connected to processor {processor_id}")
+                logging.info(f"Connection Failed to processor {processor_name}, Retrying...")
+                time.sleep(CONNECTION_RETRY_TIME)
+        logging.info(f"Connected to processor {processor_name}")
         while self.running:
             try:
                 sock.sendall(b"CHECK\n")
-                logging.info(f"Sent check message to processor {processor_id}")
                 # While loop to read from socket to avoid short reads
                 data = b""
                 while b"\n" not in data:
                     data += sock.recv(1024)
-                logging.info(f"Received data from processor {processor_id}")
                 if data == b"OK\n":
-                    logging.info(f"Processor {processor_id} is healthy")
+                    logging.info(f"Processor {processor_name} is healthy")
                 else:
-                    logging.error(f"Processor {processor_id} is not healthy")
-                time.sleep(5)
+                    logging.error(f"Processor {processor_name} is not healthy")
+                time.sleep(HEALTH_CHECK_INTERVAL)
             except OSError as e:
                 logging.exception(f"Error: {e}")
                 return

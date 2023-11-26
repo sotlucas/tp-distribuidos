@@ -7,6 +7,7 @@ def main():
     config_inputs = {
         "logging_level": str,
         "filter_general_replicas": int,
+        "filter_multiple_replicas": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -15,6 +16,7 @@ def main():
 
     config = HealthCheckerConfig(
         config_params["filter_general_replicas"],
+        config_params["filter_multiple_replicas"],
     )
 
     HealthChecker(config).run()
