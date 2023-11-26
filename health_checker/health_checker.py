@@ -4,7 +4,7 @@ import logging
 import time
 from multiprocessing import Process
 
-from commons.protocol import CommunicationBuffer, Message
+from commons.protocol import CommunicationBuffer, Message, PeerDisconnected
 
 HEALTH_CHECKER_PORT = 5000
 CONNECTION_RETRY_TIME = 2
@@ -49,27 +49,30 @@ class HealthChecker:
         """
         Checks if a processor is healthy.
         """
-        while True:
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((processor_name, HEALTH_CHECKER_PORT))
-                buff = CommunicationBuffer(sock)
-                break
-            except socket.error:
-                logging.info(f"Connection Failed to processor {processor_name}, Retrying...")
-                time.sleep(CONNECTION_RETRY_TIME)
-        logging.info(f"Connected to processor {processor_name}")
         while self.running:
-            try:
-                buff.send_message(Message(None, "CHECK\n"))
-                if buff.get_message().content == b"OK\n":
-                    logging.info(f"Processor {processor_name} is healthy")
-                else:
+            logging.info(f"Connecting to processor {processor_name}...")
+            while True:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.connect((processor_name, HEALTH_CHECKER_PORT))
+                    buff = CommunicationBuffer(sock)
+                    break
+                except socket.error:
+                    logging.info(f"Connection Failed to processor {processor_name}, Retrying...")
+                    time.sleep(CONNECTION_RETRY_TIME)
+            logging.info(f"Connected to processor {processor_name}")
+            while self.running:
+                try:
+                    buff.send_message(Message(None, "CHECK\n"))
+                    if buff.get_message().content == b"OK\n":
+                        logging.info(f"Processor {processor_name} is healthy")
+                    time.sleep(HEALTH_CHECK_INTERVAL)
+                except OSError as e:
+                    logging.exception(f"Error: {e}")
+                    return
+                except PeerDisconnected:
                     logging.error(f"Processor {processor_name} is not healthy")
-                time.sleep(HEALTH_CHECK_INTERVAL)
-            except OSError as e:
-                logging.exception(f"Error: {e}")
-                return
+                    break
 
     def __stop(self, *args):
         """
