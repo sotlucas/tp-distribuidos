@@ -1,3 +1,6 @@
+from multiprocessing import Process
+
+from commons.health_checker import HealthChecker
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
@@ -23,6 +26,10 @@ def main():
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
 
+    # Healthcheck process
+    health = Process(target=HealthChecker().run)
+    health.start()
+
     communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
@@ -43,6 +50,8 @@ def main():
     Connection(
         connection_config, receiver, sender, MediaGeneral, media_general_config
     ).run()
+
+    health.join()
 
 
 if __name__ == "__main__":
