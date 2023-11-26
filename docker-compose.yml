@@ -970,6 +970,8 @@ services:
       - LOAD_BALANCER_REPLICAS=${LOAD_BALANCER_REPLICAS}
       - GROUPER_REPLICAS=${GROUPER_REPLICAS}
       - HEALTH_CHECKER_REPLICAS=${HEALTH_CHECKER_REPLICAS}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       rabbitmq:
         condition: service_healthy

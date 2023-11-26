@@ -3,6 +3,7 @@ import socket
 import logging
 import time
 from multiprocessing import Process
+import docker
 
 from commons.protocol import CommunicationBuffer, Message, PeerDisconnected
 
@@ -21,6 +22,9 @@ class HealthChecker:
     def __init__(self, config):
         self.config = config
         self.running = True
+        # reduce log level for docker
+        logging.getLogger("docker").setLevel(logging.WARNING)
+        self.docker = docker.from_env()
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
 
@@ -72,6 +76,9 @@ class HealthChecker:
                     return
                 except PeerDisconnected:
                     logging.error(f"Processor {processor_name} is not healthy")
+                    container = self.docker.containers.list(all=True, filters={"name": processor_name})[0]
+                    logging.info(f"Starting processor {processor_name}: {container}")
+                    container.start()
                     break
 
     def __stop(self, *args):
