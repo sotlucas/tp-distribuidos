@@ -18,7 +18,6 @@ class HealthChecker:
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(("", HEALTHCHECK_PORT))
-        self._server_socket.listen()  # TODO: move to run
 
         self.running = True
         self.client_handlers = []
@@ -29,6 +28,7 @@ class HealthChecker:
         """
         Runs the server and accepts new connections.
         """
+        self._server_socket.listen()
         while self.running:
             try:
                 client_sock = self.__accept_new_connection()
