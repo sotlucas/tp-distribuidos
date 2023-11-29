@@ -141,6 +141,8 @@ class CommunicationReceiver(Communication):
         # {client_id: [message_id]}
         self.local_possible_duplicates = {}
 
+        # TODO: Maybe this should be in the sender?
+        #       Or maybe we should merge the local_possible_duplicates and possible_duplicates_sent?
         # {client_id: [message_id]}
         self.possible_duplicates_sent = {}
 
@@ -221,7 +223,7 @@ class CommunicationReceiver(Communication):
             ack_type = self.handle_eof_finish(message)
 
         if ack_type == ACKType.NACK:
-            ch.basic_nack(delivery_tag=method.delivery_tag)
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         else:
             # Default is ACK
             ch.basic_ack(delivery_tag=method.delivery_tag)

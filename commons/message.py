@@ -125,7 +125,7 @@ class EOFMessage(Message):
     """
     EOF message structure:
 
-        0      2          10               18                         22                     X
+        0      2          10               18                         22                     N
         | type | client_id | messages_sent | possible_duplicates_count | possible_duplicates |
 
         A possible duplicate is the id of a message that was sent to the client but the client
@@ -368,7 +368,7 @@ class EOFFinishMessage(Message):
     """
     EOF finish message structure:
 
-        0      2           10                     14                 X
+        0      2           10                     14                 N
         | type | client_id | replica_id_seen_count | replica_id_seen |
 
     """
