@@ -1,0 +1,14 @@
+START 184 / 10
+SENT 184 / 10
+SAVE BEGIN
+"communication": {
+	"messages_received": {"10": 100}
+	"messages_sent": {"10": 50}
+	"eof_current_id": {"10": 0}
+	"posible_duplicates_sent": None
+	"posible_duplicates_remaining": None
+}
+"connection": {
+	"processors": {10: <pickle>}
+}
+SAVE DONE

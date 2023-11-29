@@ -58,32 +58,44 @@ class Logger:
         """
         with self.lock:
             lines = read_file_bottom_to_top_generator(self.log_file_path)
-            for line in lines:
-                if line.startswith("COMMIT"):
-                    # Go to the START of this message
-                    while not line.startswith("START"):
-                        line = next(lines)
-                    # TODO: restore the state of the processor
-                    print("Restoring state")
-                elif line.startswith("SAVE DONE"):
-                    # Go to the START of this message
-                    while not line.startswith("START"):
-                        line = next(lines)
-                    # TODO: restore the state of the processor
-                    print("Restoring state")
-                    # TODO: append meesage_id to the list of possible_duplicates
-                    print("Appending to possible duplicates")
-                elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
-                    # Go to the START of this message
-                    while not line.startswith("START"):
-                        line = next(lines)
-                    # TODO: append meesage_id to the list of possible_duplicates
-                    print("Appending to possible duplicates")
-                    while not line.startswith("START"):
-                        line = next(lines)
-                    # TODO: restore the state of the processor
-                    print("Restoring state")
-                    pass
+            line = next(lines)
+            if line.startswith("COMMIT"):
+                # Go to the START of this message
+                message_lines = []
+                while not line.startswith("START"):
+                    message_lines.append(line)
+                    line = next(lines)
+                # TODO: restore the state of the processor
+                state = message_lines[-3]
+                print(f"Restoring state: {state}")
+            elif line.startswith("SAVE DONE"):
+                # Go to the START of this message
+                message_lines = []
+                while not line.startswith("START"):
+                    message_lines.append(line)
+                    line = next(lines)
+                # TODO: restore the state of the processor
+                state = message_lines[-3]
+                print(f"Restoring state: {state}")
+                message_id, client_id = line.split("START")[1].split(" / ")
+                # TODO: append message_id to the list of possible_duplicates
+                print(f"Appending to possible duplicates: {message_id.strip()}")
+            elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
+                # Go to the START of this message
+                while not line.startswith("START"):
+                    line = next(lines)
+                message_id, client_id = line.split("START")[1].split(" / ")
+                # TODO: append message_id to the list of possible_duplicates
+                print(f"Appending to possible duplicates: {message_id.strip()}")
+                line = next(lines)
+                message_lines = []
+                while not line.startswith("START"):
+                    message_lines.append(line)
+                    line = next(lines)
+                # TODO: restore the state of the processor with the message before the last one
+                if len(message_lines) > 3:
+                    state = message_lines[-3]
+                    print(f"Restoring state: {state}")
 
 
 def read_file_bottom_to_top_generator(filename, chunk_size=1024):

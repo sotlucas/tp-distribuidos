@@ -36,8 +36,14 @@ def test_restore_from_save_done():
     assert True
 
 
-def test_restore_from_sent():
+def test_restore_from_sent_one_message_logged():
     logger = Logger("test_sent.txt")
+    logger.restore()
+    assert True
+
+
+def test_restore_from_sent_two_messages_logged():
+    logger = Logger("test_sent_two.txt")
     logger.restore()
     assert True
 
