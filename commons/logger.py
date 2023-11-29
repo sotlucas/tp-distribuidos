@@ -53,16 +53,43 @@ class Logger:
 
     def restore(self):
         """
-        Restores the state of the server from the log file.
-        Starts reading the log file from the end to the beginning
-        without loading the whole file into memory.
+        Restores the state of the processor from the log file.
+        Starts reading the log file from the end to the beginning.
         """
         with self.lock:
-            for line in read_file_bottom_to_top_generator(self.log_file_path):
-                print(f"line: {line.strip()}")
+            lines = read_file_bottom_to_top_generator(self.log_file_path)
+            for line in lines:
+                if line.startswith("COMMIT"):
+                    # Go to the START of this message
+                    while not line.startswith("START"):
+                        line = next(lines)
+                    # TODO: restore the state of the processor
+                    print("Restoring state")
+                elif line.startswith("SAVE DONE"):
+                    # Go to the START of this message
+                    while not line.startswith("START"):
+                        line = next(lines)
+                    # TODO: restore the state of the processor
+                    print("Restoring state")
+                    # TODO: append meesage_id to the list of possible_duplicates
+                    print("Appending to possible duplicates")
+                elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
+                    # Go to the START of this message
+                    while not line.startswith("START"):
+                        line = next(lines)
+                    # TODO: append meesage_id to the list of possible_duplicates
+                    print("Appending to possible duplicates")
+                    while not line.startswith("START"):
+                        line = next(lines)
+                    # TODO: restore the state of the processor
+                    print("Restoring state")
+                    pass
 
 
 def read_file_bottom_to_top_generator(filename, chunk_size=1024):
+    """
+    Generator that reads a file from the end to the beginning.
+    """
     with open(filename, 'rb') as f:
         f.seek(0, os.SEEK_END)
         file_size = f.tell()

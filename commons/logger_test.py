@@ -24,8 +24,20 @@ def test_save():
     assert True
 
 
-def test_read():
-    logger = Logger("test.txt")
+def test_restore_from_commit():
+    logger = Logger("test_commit.txt")
+    logger.restore()
+    assert True
+
+
+def test_restore_from_save_done():
+    logger = Logger("test_save_done.txt")
+    logger.restore()
+    assert True
+
+
+def test_restore_from_sent():
+    logger = Logger("test_sent.txt")
     logger.restore()
     assert True
 
