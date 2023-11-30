@@ -30,9 +30,7 @@ class Logger:
 
     def start(self, message_id, client_id):
         """
-        Starts a message in the log file.
-        With the format:
-        START <message_id> / <client_id>
+        Logs the start of a message in the log file.
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
@@ -40,9 +38,7 @@ class Logger:
 
     def sent(self, message_id, client_id):
         """
-        Sent a message in the log file.
-        With the format:
-        SENT <message_id> / <client_id>
+        Logs a message as sent in the log file.
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
@@ -51,8 +47,6 @@ class Logger:
     def save(self, message_id, client_id, message):
         """
         Saves a message in the log file.
-        With the format:
-        SAVE <Pickle or json of save information>
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
@@ -62,7 +56,7 @@ class Logger:
 
     def commit(self, message_id, client_id):
         """
-        Commits a message in the log file.
+        Logs a message as committed in the log file.
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
@@ -71,7 +65,6 @@ class Logger:
     def restore(self):
         """
         Restores the state of the processor from the log file.
-        Starts reading the log file from the end to the beginning.
 
         Returns:
             A tuple with the restore type, message_id, client_id and state.
