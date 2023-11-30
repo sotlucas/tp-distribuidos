@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing as mp
 import os
 from enum import Enum
@@ -8,6 +9,14 @@ class RestoreType(Enum):
     COMMIT = 0
     SAVE_DONE = 1
     SENT = 2
+
+
+class LoggerToken:
+    START = "START"
+    SENT = "SENT"
+    SAVE_BEGIN = "SAVE BEGIN"
+    SAVE_DONE = "SAVE DONE"
+    COMMIT = "COMMIT"
 
 
 class Logger:
@@ -27,7 +36,7 @@ class Logger:
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
-                f.write(f"START {message_id} / {client_id}\n")
+                f.write(f"{LoggerToken.START} {message_id} / {client_id}\n")
 
     def sent(self, message_id, client_id):
         """
@@ -37,7 +46,7 @@ class Logger:
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
-                f.write(f"SENT {message_id} / {client_id}\n")
+                f.write(f"{LoggerToken.SENT} {message_id} / {client_id}\n")
 
     def save(self, message_id, client_id, message):
         """
@@ -47,9 +56,9 @@ class Logger:
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
-                f.write(f"SAVE BEGIN {message_id} / {client_id}\n")
+                f.write(f"{LoggerToken.SAVE_BEGIN} {message_id} / {client_id}\n")
                 f.write(f"{json.dumps(message)}\n")
-                f.write(f"SAVE DONE {message_id} / {client_id}\n")
+                f.write(f"{LoggerToken.SAVE_DONE} {message_id} / {client_id}\n")
 
     def commit(self, message_id, client_id):
         """
@@ -57,7 +66,7 @@ class Logger:
         """
         with self.lock:
             with open(self.log_file_path, 'a') as f:
-                f.write(f"COMMIT {message_id} / {client_id}\n")
+                f.write(f"{LoggerToken.COMMIT} {message_id} / {client_id}\n")
 
     def restore(self):
         """
@@ -75,15 +84,20 @@ class Logger:
             try:
                 lines = read_file_bottom_to_top_generator(self.log_file_path)
                 line = next(lines)
-                if line.startswith("COMMIT"):
+                if line.startswith(LoggerToken.COMMIT):
+                    logging.debug("Restoring from COMMIT")
                     return self.__handle_commit(line, lines)
-                elif line.startswith("SAVE DONE"):
+                elif line.startswith(LoggerToken.SAVE_DONE):
+                    logging.debug("Restoring from SAVE DONE")
                     return self.__handle_save_done(line, lines)
-                elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
+                elif line.startswith(LoggerToken.SAVE_BEGIN) or line.startswith(LoggerToken.SENT) or line.startswith(
+                        LoggerToken.START):
+                    logging.debug("Restoring from SENT")
                     return self.__handle_sent(line, lines)
             except (StopIteration, FileNotFoundError):
                 # We reached the beggining of the file or the file doesn't exist
-                return None, None, None, None
+                pass
+            return None, None, None, None
 
     def __handle_commit(self, line, lines):
         return self.__get_last_message(RestoreType.COMMIT, line, lines)
@@ -93,15 +107,15 @@ class Logger:
 
     def __handle_sent(self, line, lines):
         # Go to the START of this message
-        while not line.startswith("START"):
+        while not line.startswith(LoggerToken.START):
             line = next(lines)
-        message_id, client_id = line.split("START")[1].split(" / ")
+        message_id, client_id = line.split(LoggerToken.START)[1].split(" / ")
         state = None
         try:
             # Restore from the last COMMITed message
             line = next(lines)
             message_lines = []
-            while not line.startswith("START"):
+            while not line.startswith(LoggerToken.START):
                 message_lines.append(line)
                 line = next(lines)
             if len(message_lines) > 3:
@@ -116,11 +130,11 @@ class Logger:
     def __get_last_message(self, restore_type, line, lines):
         # Go to the START of this message
         message_lines = []
-        while not line.startswith("START"):
+        while not line.startswith(LoggerToken.START):
             message_lines.append(line)
             line = next(lines)
         state = message_lines[-3]
-        message_id, client_id = line.split("START")[1].split(" / ")
+        message_id, client_id = line.split(LoggerToken.START)[1].split(" / ")
         return restore_type, int(message_id.strip()), int(client_id.strip()), json.loads(state)
 
 
