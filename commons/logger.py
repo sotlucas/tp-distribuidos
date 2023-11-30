@@ -1,6 +1,13 @@
 import json
 import multiprocessing as mp
 import os
+from enum import Enum
+
+
+class RestoreType(Enum):
+    COMMIT = 0
+    SAVE_DONE = 1
+    SENT = 2
 
 
 class Logger:
@@ -84,11 +91,9 @@ class Logger:
         while not line.startswith("START"):
             message_lines.append(line)
             line = next(lines)
-        # TODO: restore the state of the processor
         state = message_lines[-3]
-        print(f"Restoring state: {state}")
         message_id, client_id = line.split("START")[1].split(" / ")
-        return "COMMIT", int(message_id.strip()), int(client_id.strip()), json.loads(state)
+        return RestoreType.COMMIT, int(message_id.strip()), int(client_id.strip()), json.loads(state)
 
     def handle_save_done(self, line, lines):
         # Go to the START of this message
@@ -96,21 +101,15 @@ class Logger:
         while not line.startswith("START"):
             message_lines.append(line)
             line = next(lines)
-        # TODO: restore the state of the processor
         state = message_lines[-3]
-        print(f"Restoring state: {state}")
         message_id, client_id = line.split("START")[1].split(" / ")
-        # TODO: append message_id to the list of possible_duplicates
-        print(f"Appending to possible duplicates: {message_id.strip()}")
-        return "SAVE DONE", int(message_id.strip()), int(client_id.strip()), json.loads(state)
+        return RestoreType.SAVE_DONE, int(message_id.strip()), int(client_id.strip()), json.loads(state)
 
     def handle_sent(self, line, lines):
         # Go to the START of this message
         while not line.startswith("START"):
             line = next(lines)
         message_id, client_id = line.split("START")[1].split(" / ")
-        # TODO: append message_id to the list of possible_duplicates
-        print(f"Appending to possible duplicates: {message_id.strip()}")
         state = None
         try:
             line = next(lines)
@@ -118,21 +117,23 @@ class Logger:
             while not line.startswith("START"):
                 message_lines.append(line)
                 line = next(lines)
-            # TODO: restore the state of the processor with the message before the last one
             if len(message_lines) > 3:
                 state = message_lines[-3]
         except StopIteration:
             # We reached the beggining of the file
             pass
-        print(f"Restoring state: {state}")
         if state:
             state = json.loads(state)
-        return "SENT", int(message_id.strip()), int(client_id.strip()), state
+        return RestoreType.SENT, int(message_id.strip()), int(client_id.strip()), state
 
 
 def read_file_bottom_to_top_generator(filename, chunk_size=1024):
     """
     Generator that reads a file from the end to the beginning.
+
+    Parameters:
+        filename: The path of the file to read.
+        chunk_size: The size of the chunks to read.
     """
     with open(filename, 'rb') as f:
         f.seek(0, os.SEEK_END)

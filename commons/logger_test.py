@@ -1,6 +1,6 @@
 import random
 
-from commons.logger import Logger
+from commons.logger import Logger, RestoreType
 from commons.processor import Processor
 
 
@@ -38,7 +38,7 @@ def test_restore_from_commit():
 
     restore_type, message_id, client_id, state = logger.restore()
 
-    assert restore_type == "COMMIT"
+    assert restore_type == RestoreType.COMMIT
     assert message_id == expected_message_id
     assert client_id == expected_client_id
     assert state == expected_state
@@ -63,7 +63,7 @@ def test_restore_from_save_done():
 
     restore_type, message_id, client_id, state = logger.restore()
 
-    assert restore_type == "SAVE DONE"
+    assert restore_type == RestoreType.SAVE_DONE
     assert message_id == expected_message_id
     assert client_id == expected_client_id
     assert state == expected_state
@@ -78,7 +78,7 @@ def test_restore_from_sent_one_message_logged():
 
     restore_type, message_id, client_id, state = logger.restore()
 
-    assert restore_type == "SENT"
+    assert restore_type == RestoreType.SENT
     assert message_id == expected_message_id
     assert client_id == expected_client_id
     assert state is None
@@ -108,7 +108,7 @@ def test_restore_from_sent_two_messages_logged():
 
     restore_type, message_id, client_id, state = logger.restore()
 
-    assert restore_type == "SENT"
+    assert restore_type == RestoreType.SENT
     assert message_id == failed_message_id
     assert client_id == failed_client_id
     assert state == expected_state
