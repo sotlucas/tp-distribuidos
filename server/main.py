@@ -41,7 +41,7 @@ def main():
         config_params["connection_timeout"],
         config_params["vuelos_input"],
         config_params["input_type"],
-        config_params["max_clients"]
+        config_params["max_clients"],
     )
     Server(server_config, vuelos_initializer, resultados_sender, lat_long_sender).run()
 

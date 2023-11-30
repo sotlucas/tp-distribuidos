@@ -10,15 +10,15 @@ AVERAGE = "average"
 
 class GrouperConfig:
     def __init__(
-            self,
-            replica_id,
-            media_general_communication_initializer,
-            media_general_input,
-            input_type,
-            replicas_count,
-            input_diff_name,
-            media_general_output,
-            output_type,
+        self,
+        replica_id,
+        media_general_communication_initializer,
+        media_general_input,
+        input_type,
+        replicas_count,
+        input_diff_name,
+        media_general_output,
+        output_type,
     ):
         self.replica_id = replica_id
         self.media_general_communication_initializer = (
@@ -52,6 +52,7 @@ class Grouper(Processor):
             config.media_general_communication_initializer.initialize_receiver(
                 config.media_general_input,
                 config.input_type,
+                config.replica_id,
                 config.replicas_count,
                 input_diff_name=config.input_diff_name,
             )

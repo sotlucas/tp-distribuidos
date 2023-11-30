@@ -77,6 +77,8 @@ class Message:
             return EOFMessage.from_bytes(client_id, reader)
         elif type == MessageType.EOF_DISCOVERY.value:
             return EOFDiscoveryMessage.from_bytes(client_id, reader)
+        elif type == MessageType.EOF_AGGREGATION.value:
+            return EOFAggregationMessage.from_bytes(client_id, reader)
         elif type == MessageType.EOF_FINISH.value:
             return EOFFinishMessage.from_bytes(client_id, reader)
         else:

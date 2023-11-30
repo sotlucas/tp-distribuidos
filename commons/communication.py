@@ -259,7 +259,7 @@ class CommunicationReceiver(Communication):
         eof_message = EOFDiscoveryMessage(
             message.client_id,
             message.messages_sent,
-            message.posible_duplicates,
+            message.possible_duplicates,
             0,
             0,
             [],
@@ -279,17 +279,20 @@ class CommunicationReceiver(Communication):
 
         if len(new_discovery.replica_id_seen) < self.config.replicas_count:
             # The Discovery EOF has not finished propagating, so we requeue it
+            logging.debug("EOF discovery not finished propagating, requeueing")
             self.requeue_eof(new_discovery)
             return ACKType.ACK
         else:
             # The Discovery EOF has finished propagating
+            logging.debug("EOF discovery finished propagating")
+
             # We convert the EOFDiscoveryMessage to a EOFAggregationMessage to be able to handle it in the same way
             aggregation_message = EOFAggregationMessage(
                 new_discovery.client_id,
                 new_discovery.original_messages_sent,
+                new_discovery.original_possible_duplicates,
                 new_discovery.messages_received,
                 new_discovery.messages_sent,
-                new_discovery.original_possible_duplicates,
                 new_discovery.local_possible_duplicates,
                 new_discovery.possible_duplicates_sent,
                 [],
@@ -308,10 +311,12 @@ class CommunicationReceiver(Communication):
 
         if len(new_aggregation.replica_id_seen) < self.config.replicas_count:
             # The Discovery EOF has not finished propagating, so we requeue it
+            logging.debug("EOF aggregation not finished propagating, requeueing")
             self.requeue_eof(new_aggregation)
             return ACKType.ACK
         else:
             # The Aggregation EOF has finished propagating
+            logging.debug("EOF aggregation finished propagating")
 
             # TODO: here we count how many duplicates all the replicase processed
             #       with the possible_duplicate_processed_by list.
@@ -320,6 +325,7 @@ class CommunicationReceiver(Communication):
 
             if real_messages_received == new_aggregation.original_messages_sent:
                 # It means that all the messages have been received, so we call the eof_callback
+                logging.debug("All real messages received, calling eof_callback")
 
                 # We change the messages_sent of the sender to the new_messages_sent to sincronize the EOF propagation
                 # TODO: This breaks encapsulation, see if we can do it in a better way
@@ -333,8 +339,11 @@ class CommunicationReceiver(Communication):
                         message.client_id
                     ] = new_aggregation.messages_sent
 
-                # We call the eof_callback
-                self.eof_callback(message.client_id)
+                if not self.config.routing_key:
+                    # We call the eof_callback only if we are in a queue, because in a topic exchange we call it in the handle_eof_finish
+                    # This is because the Grouper hangs if we call the eof_callback here, withoud requeueing the EOF.
+                    # TODO: If we are deleating the data in the handle_eof_finish we might need to change this.
+                    self.eof_callback(message.client_id)
 
                 # We create a new EOFFinishMessage and handle it to notify the other replicas that the EOF has finished
                 eof_finish = EOFFinishMessage(
@@ -344,11 +353,14 @@ class CommunicationReceiver(Communication):
                 return self.handle_eof_finish(eof_finish)
             else:
                 # It means there are remaining messages to receive.
+                logging.debug("Not all real messages received, requeueing original EOF")
+
                 # We requeue the EOF with the original values, to start a new round of EOF propagation
 
                 eof_message = EOFMessage(
                     message.client_id,
                     message.original_messages_sent,
+                    message.original_possible_duplicates,
                 )
                 self.requeue_eof(eof_message)
                 return ACKType.ACK
@@ -367,11 +379,7 @@ class CommunicationReceiver(Communication):
 
         if self.config.routing_key:
             # We are in a topic exchange, so we execute the eof_callback
-            if len(new_finish.replica_id_seen) > 1:
-                # We only call the eof_callback if we are not the first replica
-                # because the first replica has already called the eof_callback
-
-                self.eof_callback(message.client_id)
+            self.eof_callback(message.client_id)
 
         # TODO: Here we should delete all the data related to the client_id and then save
         #       Watch out that if there are multiple EOF at the same time, they may never end, see if we can solve it
@@ -383,7 +391,7 @@ class CommunicationReceiver(Communication):
         """
         Updates the Discovery EOF message with the new data
         """
-        new_messages_received = message.messages_sent + self.messages_received.get(
+        new_messages_received = message.messages_received + self.messages_received.get(
             message.client_id, 0
         )
         # TODO: This breaks encapsulation, see if we can do it in a better way
@@ -395,7 +403,7 @@ class CommunicationReceiver(Communication):
         new_messages_sent = message.messages_sent + sender_messages_sent
 
         new_local_possible_duplicates = (
-            message.posible_duplicates
+            message.local_possible_duplicates
             + self.local_possible_duplicates.get(message.client_id, [])
         )
         new_possible_duplicates_sent = (
@@ -432,9 +440,9 @@ class CommunicationReceiver(Communication):
         return EOFAggregationMessage(
             message.client_id,
             message.original_messages_sent,
+            message.original_possible_duplicates,
             message.messages_received,
             message.messages_sent,
-            message.original_possible_duplicates,
             message.local_possible_duplicates,
             message.possible_duplicates_sent,
             new_replica_id_seen,
