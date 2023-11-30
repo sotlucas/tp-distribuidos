@@ -76,37 +76,22 @@ class Logger:
                 lines = read_file_bottom_to_top_generator(self.log_file_path)
                 line = next(lines)
                 if line.startswith("COMMIT"):
-                    return self.handle_commit(line, lines)
+                    return self.__handle_commit(line, lines)
                 elif line.startswith("SAVE DONE"):
-                    return self.handle_save_done(line, lines)
+                    return self.__handle_save_done(line, lines)
                 elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
-                    return self.handle_sent(line, lines)
+                    return self.__handle_sent(line, lines)
             except (StopIteration, FileNotFoundError):
                 # We reached the beggining of the file or the file doesn't exist
                 return None, None, None, None
 
-    def handle_commit(self, line, lines):
-        # Go to the START of this message
-        message_lines = []
-        while not line.startswith("START"):
-            message_lines.append(line)
-            line = next(lines)
-        state = message_lines[-3]
-        message_id, client_id = line.split("START")[1].split(" / ")
-        return RestoreType.COMMIT, int(message_id.strip()), int(client_id.strip()), json.loads(state)
+    def __handle_commit(self, line, lines):
+        return self.__get_last_message(RestoreType.COMMIT, line, lines)
 
-    def handle_save_done(self, line, lines):
-        # Go to the START of this message
-        message_lines = []
-        while not line.startswith("START"):
-            message_lines.append(line)
-            line = next(lines)
-        state = message_lines[-3]
-        message_id, client_id = line.split("START")[1].split(" / ")
-        return RestoreType.SAVE_DONE, int(message_id.strip()), int(client_id.strip()), json.loads(state)
+    def __handle_save_done(self, line, lines):
+        return self.__get_last_message(RestoreType.SAVE_DONE, line, lines)
 
-    def handle_sent(self, line, lines):
-        # Go to the START of this message
+    def __handle_sent(self, line, lines):
         while not line.startswith("START"):
             line = next(lines)
         message_id, client_id = line.split("START")[1].split(" / ")
@@ -125,6 +110,15 @@ class Logger:
         if state:
             state = json.loads(state)
         return RestoreType.SENT, int(message_id.strip()), int(client_id.strip()), state
+
+    def __get_last_message(self, restore_type, line, lines):
+        message_lines = []
+        while not line.startswith("START"):
+            message_lines.append(line)
+            line = next(lines)
+        state = message_lines[-3]
+        message_id, client_id = line.split("START")[1].split(" / ")
+        return restore_type, int(message_id.strip()), int(client_id.strip()), json.loads(state)
 
 
 def read_file_bottom_to_top_generator(filename, chunk_size=1024):
