@@ -107,12 +107,14 @@ class Logger:
         try:
             # Restore from the last COMMITed message
             line = next(lines)
+            while not line.startswith(LoggerToken.COMMIT):
+                line = next(lines)
+            # Go to the START of this message
             message_lines = []
             while not line.startswith(LoggerToken.START):
                 message_lines.append(line)
                 line = next(lines)
-            if len(message_lines) > 3:
-                state = message_lines[-3]
+            state = message_lines[-3]
         except StopIteration:
             # We reached the beggining of the file
             pass

@@ -114,6 +114,42 @@ def test_restore_from_sent_two_messages_logged():
     assert state == expected_state
 
 
+def test_restore_from_sent_two_uncommited_messages_in_a_row():
+    logger = Logger("test_sent_two_uncommited.txt")
+    # Save message 1 - committed
+    expected_message_id = 44
+    expected_client_id = 10
+    expected_state = {
+        "my_state": "my_state",
+        "client_id": expected_client_id,
+        "messages_received": 100,
+        "messages_sent": 50,
+        "eof_current_id": 0,
+        "posible_duplicates_sent": None,
+        "posible_duplicates_remaining": None,
+    }
+    save_message_test_log_file(logger, expected_message_id, expected_client_id, expected_state)
+
+    # Save message 2 - uncommited
+    failed_message_id = 81
+    failed_client_id = 10
+    logger.start(failed_message_id, failed_client_id)
+    logger.sent(failed_message_id, failed_client_id)
+
+    # Save message 3 - uncommited
+    failed_message_id = 99
+    failed_client_id = 10
+    logger.start(failed_message_id, failed_client_id)
+    logger.sent(failed_message_id, failed_client_id)
+
+    restore_type, message_id, client_id, state = logger.restore()
+
+    assert restore_type == RestoreType.SENT
+    assert message_id == failed_message_id
+    assert client_id == failed_client_id
+    assert state == expected_state
+
+
 def test_restore_empty_file():
     open("test_empty.txt", "w").close()
     logger = Logger("test_empty.txt")
