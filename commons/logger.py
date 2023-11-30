@@ -92,11 +92,13 @@ class Logger:
         return self.__get_last_message(RestoreType.SAVE_DONE, line, lines)
 
     def __handle_sent(self, line, lines):
+        # Go to the START of this message
         while not line.startswith("START"):
             line = next(lines)
         message_id, client_id = line.split("START")[1].split(" / ")
         state = None
         try:
+            # Restore from the last COMMITed message
             line = next(lines)
             message_lines = []
             while not line.startswith("START"):
@@ -112,6 +114,7 @@ class Logger:
         return RestoreType.SENT, int(message_id.strip()), int(client_id.strip()), state
 
     def __get_last_message(self, restore_type, line, lines):
+        # Go to the START of this message
         message_lines = []
         while not line.startswith("START"):
             message_lines.append(line)
