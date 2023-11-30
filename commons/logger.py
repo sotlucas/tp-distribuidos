@@ -56,6 +56,13 @@ class Logger:
         """
         Restores the state of the processor from the log file.
         Starts reading the log file from the end to the beginning.
+
+        Returns:
+            A tuple with the restore type, message_id, client_id and state.
+            restore_type: The type of the restore. It can be "COMMIT", "SAVE DONE" or "SENT".
+            message_id: The id of the message.
+            client_id: The id of the client.
+            state: The state to restore.
         """
         with self.lock:
             try:
