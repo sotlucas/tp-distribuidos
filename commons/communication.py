@@ -494,7 +494,7 @@ class CommunicationReceiver(Communication):
             routing_key=routing_key,
             body=message,
             properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Transient,
+                delivery_mode=pika.DeliveryMode.Persistent,
             ),
         )
 
@@ -514,12 +514,12 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         input_queue_name = (
             self.config.input + self.config.input_diff_name + self.config.routing_key
         )
-        input_queue = self.channel.queue_declare(queue=input_queue_name)
+        input_queue = self.channel.queue_declare(queue=input_queue_name, durable=True)
         self.input_queue = input_queue.method.queue
 
         exchange_type = "fanout" if self.config.routing_key == "" else "topic"
         self.channel.exchange_declare(
-            exchange=self.config.input, exchange_type=exchange_type
+            exchange=self.config.input, exchange_type=exchange_type, durable=True
         )
 
         self.channel.queue_bind(
@@ -532,7 +532,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
 class CommunicationReceiverQueue(CommunicationReceiver):
     def declare_input(self):
         self.input_queue = self.config.input
-        self.channel.queue_declare(queue=self.input_queue)
+        self.channel.queue_declare(queue=self.input_queue, durable=True)
 
 
 # ===================================================================================================================================================================================
@@ -603,7 +603,7 @@ class CommunicationSender(Communication):
             routing_key=routing_key,
             body=message.to_bytes(),
             properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Transient,
+                delivery_mode=pika.DeliveryMode.Persistent,
             ),
         )
         self.messages_sent[message.client_id] = (
@@ -658,7 +658,7 @@ class CommunicationSenderQueue(CommunicationSender):
     """
 
     def declare_output(self):
-        self.channel.queue_declare(queue=self.config.output)
+        self.channel.queue_declare(queue=self.config.output, durable=True)
 
     def send(self, message, routing_key=""):
         """
