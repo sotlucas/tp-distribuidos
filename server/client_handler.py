@@ -47,7 +47,11 @@ class ClientHandler:
         """
         Handles a specific message received from the client.
         """
-        uploader = self.flights_uploader if message.type == "flight" else self.lat_long_uploader
+        uploader = (
+            self.flights_uploader
+            if message.type == "flight"
+            else self.lat_long_uploader
+        )
         if message.content == protocol.EOF:
             # Send EOF to queue to communicate that all the file has been sent.
             uploader.finish_sending(self.id)
@@ -57,7 +61,13 @@ class ClientHandler:
         else:
             # TODO: Decoding here because send needs a string, find a better way
             #       And it is a list because send needs a list, find a better way
-            protocol_message = ProtocolMessage(self.id, [message.content.decode("utf-8")])
+
+            # TODO: This is a temporal solution to send the message, remove this
+            #       when the protocol is implemented
+            TEMPORAL_MESSAGE_ID = 1
+            protocol_message = ProtocolMessage(
+                self.id, TEMPORAL_MESSAGE_ID, [message.content.decode("utf-8")]
+            )
             uploader.send(protocol_message)
 
     def stop(self):

@@ -102,23 +102,26 @@ class ProtocolMessage(Message):
     """
     Protocol message structure:
 
-        0      2          10         N
-        | type | client_id | payload |
+        0      2          10           18         N
+        | type | client_id | message_id | payload |
 
     """
 
-    def __init__(self, client_id, payload):
+    def __init__(self, client_id, message_id, payload):
         message_type = MessageType.PROTOCOL
         super().__init__(message_type, client_id)
+        self.message_id = message_id
         self.payload = payload
 
     def from_bytes(client_id, reader):
+        message_id = reader.read_int(8)
         payload = reader.read_to_end()
         payload = payload.decode("utf-8")
 
-        return ProtocolMessage(client_id, payload)
+        return ProtocolMessage(client_id, message_id, payload)
 
     def to_bytes_impl(self, writer):
+        writer.write_int(self.message_id, 8)
         writer.write(self.payload.encode("utf-8"))
         return writer.get_bytes()
 
