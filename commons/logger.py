@@ -58,14 +58,18 @@ class Logger:
         Starts reading the log file from the end to the beginning.
         """
         with self.lock:
-            lines = read_file_bottom_to_top_generator(self.log_file_path)
-            line = next(lines)
-            if line.startswith("COMMIT"):
-                return self.handle_commit(line, lines)
-            elif line.startswith("SAVE DONE"):
-                return self.handle_save_done(line, lines)
-            elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
-                return self.handle_sent(line, lines)
+            try:
+                lines = read_file_bottom_to_top_generator(self.log_file_path)
+                line = next(lines)
+                if line.startswith("COMMIT"):
+                    return self.handle_commit(line, lines)
+                elif line.startswith("SAVE DONE"):
+                    return self.handle_save_done(line, lines)
+                elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
+                    return self.handle_sent(line, lines)
+            except (StopIteration, FileNotFoundError):
+                # We reached the beggining of the file or the file doesn't exist
+                return None, None, None, None
 
     def handle_commit(self, line, lines):
         # Go to the START of this message

@@ -109,9 +109,28 @@ def test_restore_from_sent_two_messages_logged():
     restore_type, message_id, client_id, state = logger.restore()
 
     assert restore_type == "SENT"
-    assert message_id == expected_message_id
-    assert client_id == expected_client_id
+    assert message_id == failed_message_id
+    assert client_id == failed_client_id
     assert state == expected_state
+
+
+def test_restore_empty_file():
+    open("test_empty.txt", "w").close()
+    logger = Logger("test_empty.txt")
+    restore_type, message_id, client_id, state = logger.restore()
+    assert restore_type is None
+    assert message_id is None
+    assert client_id is None
+    assert state is None
+
+
+def test_restore_non_existent_file():
+    logger = Logger("test_non_existent.txt")
+    restore_type, message_id, client_id, state = logger.restore()
+    assert restore_type is None
+    assert message_id is None
+    assert client_id is None
+    assert state is None
 
 
 # ---- Utils ----
