@@ -101,10 +101,10 @@ def test_restore_from_sent_two_messages_logged():
     save_message_test_log_file(logger, expected_message_id, expected_client_id, expected_state)
 
     # Save message 2
-    expected_message_id = 81
-    expected_client_id = 10
-    logger.start(expected_message_id, expected_client_id)
-    logger.sent(expected_message_id, expected_client_id)
+    failed_message_id = 81
+    failed_client_id = 10
+    logger.start(failed_message_id, failed_client_id)
+    logger.sent(failed_message_id, failed_client_id)
 
     restore_type, message_id, client_id, state = logger.restore()
 
