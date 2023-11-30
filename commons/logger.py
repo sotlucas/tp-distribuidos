@@ -1,3 +1,4 @@
+import json
 import multiprocessing as mp
 import os
 
@@ -40,7 +41,7 @@ class Logger:
         with self.lock:
             with open(self.log_file_path, 'a') as f:
                 f.write(f"SAVE BEGIN {message_id} / {client_id}\n")
-                f.write(f"{message}\n")
+                f.write(f"{json.dumps(message)}\n")
                 f.write(f"SAVE DONE {message_id} / {client_id}\n")
 
     def commit(self, message_id, client_id):
@@ -68,6 +69,8 @@ class Logger:
                 # TODO: restore the state of the processor
                 state = message_lines[-3]
                 print(f"Restoring state: {state}")
+                message_id, client_id = line.split("START")[1].split(" / ")
+                return "COMMIT", int(message_id.strip()), int(client_id.strip()), json.loads(state)
             elif line.startswith("SAVE DONE"):
                 # Go to the START of this message
                 message_lines = []
@@ -80,6 +83,7 @@ class Logger:
                 message_id, client_id = line.split("START")[1].split(" / ")
                 # TODO: append message_id to the list of possible_duplicates
                 print(f"Appending to possible duplicates: {message_id.strip()}")
+                return "SAVE DONE", int(message_id.strip()), int(client_id.strip()), json.loads(state)
             elif line.startswith("SAVE BEGIN") or line.startswith("SENT") or line.startswith("START"):
                 # Go to the START of this message
                 while not line.startswith("START"):
@@ -87,15 +91,23 @@ class Logger:
                 message_id, client_id = line.split("START")[1].split(" / ")
                 # TODO: append message_id to the list of possible_duplicates
                 print(f"Appending to possible duplicates: {message_id.strip()}")
-                line = next(lines)
-                message_lines = []
-                while not line.startswith("START"):
-                    message_lines.append(line)
+                state = None
+                try:
                     line = next(lines)
-                # TODO: restore the state of the processor with the message before the last one
-                if len(message_lines) > 3:
-                    state = message_lines[-3]
-                    print(f"Restoring state: {state}")
+                    message_lines = []
+                    while not line.startswith("START"):
+                        message_lines.append(line)
+                        line = next(lines)
+                    # TODO: restore the state of the processor with the message before the last one
+                    if len(message_lines) > 3:
+                        state = message_lines[-3]
+                except StopIteration:
+                    # We reached the beggining of the file
+                    pass
+                print(f"Restoring state: {state}")
+                if state:
+                    state = json.loads(state)
+                return "SENT", int(message_id.strip()), int(client_id.strip()), state
 
 
 def read_file_bottom_to_top_generator(filename, chunk_size=1024):
