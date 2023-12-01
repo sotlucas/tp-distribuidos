@@ -15,6 +15,7 @@ def main():
         "input_type": str,
         "replicas_count": int,
         "tag_name": str,
+        "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -25,6 +26,7 @@ def main():
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
+        config_params["replica_id"],
         config_params["replicas_count"],
     )
     sender = communication_initializer.initialize_sender(

@@ -21,10 +21,10 @@ class CommunicationInitializer:
         self,
         input,
         input_type,
+        replica_id,
         replicas_count,
         routing_key="",
         input_diff_name="",
-        replica_id=1,
         delimiter=",",
     ):
         """
@@ -32,10 +32,10 @@ class CommunicationInitializer:
         """
         communication_receiver_config = CommunicationReceiverConfig(
             input,
+            replica_id,
             replicas_count,
             routing_key=routing_key,
             input_diff_name=input_diff_name,
-            replica_id=replica_id,
             delimiter=delimiter,
         )
         if input_type == "QUEUE":

@@ -18,7 +18,9 @@ class ServerConfig:
 
 
 class Server:
-    def __init__(self, config, server_receiver_initializer, flights_sender, lat_long_sender):
+    def __init__(
+        self, config, server_receiver_initializer, flights_sender, lat_long_sender
+    ):
         self.config = config
         self.server_receiver_initializer = server_receiver_initializer
         self.flights_sender = flights_sender
@@ -43,6 +45,7 @@ class Server:
         receiver = self.server_receiver_initializer.initialize_receiver(
             "vuelos_resultados",
             "QUEUE",
+            1,  # REPLICA_ID
             1,  # REPLICAS_COUNT
         )
         sender = self.server_receiver_initializer.initialize_sender(
@@ -57,7 +60,9 @@ class Server:
         Runs the server and accepts new connections.
         """
         queue = Queue()
-        client_handler_tracker = Process(target=self.client_handler_tracker, args=(queue,))
+        client_handler_tracker = Process(
+            target=self.client_handler_tracker, args=(queue,)
+        )
         client_handler_tracker.start()
         while self.running:
             try:
@@ -96,12 +101,16 @@ class Server:
             vuelos_receiver = self.server_receiver_initializer.initialize_receiver(
                 self.config.vuelos_input,
                 self.config.input_type,
+                1,  # REPLICA_ID
                 1,  # REPLICAS_COUNT
                 routing_key=str(client_id),
-                replica_id=1,
             )
             client_handler = ClientHandler(
-                client_id, client_sock, vuelos_receiver, self.flights_sender, self.lat_long_sender
+                client_id,
+                client_sock,
+                vuelos_receiver,
+                self.flights_sender,
+                self.lat_long_sender,
             )
             client_handler.handle_client()
         finally:
@@ -111,9 +120,12 @@ class Server:
         """
         Creates a client id hashing the client ip and port
         """
-        client_id = int(hashlib.md5(
-            f"{client_sock.getpeername()[0]}:{client_sock.getpeername()[1]}".encode(),
-        ).hexdigest()[:8], 16)
+        client_id = int(
+            hashlib.md5(
+                f"{client_sock.getpeername()[0]}:{client_sock.getpeername()[1]}".encode(),
+            ).hexdigest()[:8],
+            16,
+        )
         logging.info(f"action: client_id | result: success | client_id: {client_id}")
         return client_id
 

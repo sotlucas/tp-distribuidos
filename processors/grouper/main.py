@@ -29,9 +29,9 @@ def main():
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
         config_params["input_type"],
+        config_params["replica_id"],
         config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
-        replica_id=config_params["replica_id"],
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["vuelos_output"], config_params["output_type"]
@@ -48,23 +48,22 @@ def main():
     ]
     vuelos_output_fields = ["route", "prices"]
 
-    grouper_config = GrouperConfig(config_params["replicas_count"], media_general_communication_initializer,
-                                   config_params["media_general_input"],
-                                   config_params["input_type"],
-                                   config_params["replicas_count"],
-                                   str(config_params["replica_id"]),
-                                   config_params["media_general_output"],
-                                   config_params["output_type"])
+    grouper_config = GrouperConfig(
+        config_params["replicas_count"],
+        media_general_communication_initializer,
+        config_params["media_general_input"],
+        config_params["input_type"],
+        config_params["replicas_count"],
+        str(config_params["replica_id"]),
+        config_params["media_general_output"],
+        config_params["output_type"],
+    )
 
     connection_config = ConnectionConfig(
         vuelos_input_fields, vuelos_output_fields, send_eof=False
     )
     Connection(
-        connection_config,
-        vuelos_receiver,
-        vuelos_sender,
-        Grouper,
-        grouper_config
+        connection_config, vuelos_receiver, vuelos_sender, Grouper, grouper_config
     ).run()
 
 
