@@ -1,8 +1,7 @@
 import logging
 import signal
-import socket
 
-from commons.protocol import Message, ResultMessage
+from commons.protocol import ResultMessage
 
 
 class ResultsUploader:
@@ -10,9 +9,9 @@ class ResultsUploader:
     It sends the results to the client through a socket
     """
 
-    def __init__(self, receiver, socket):
-        self.socket = socket
+    def __init__(self, receiver, buff):
         self.receiver = receiver
+        self.buff = buff
 
     def start(self):
         # Register signal handler for SIGTERM
@@ -28,7 +27,7 @@ class ResultsUploader:
     def output_single(self, content):
         try:
             message = ResultMessage(content)
-            self.socket.sendall(message.to_bytes())
+            self.buff.send_message(message)
             logging.debug(f"action: result_upload | result: success")
         except OSError as e:
             logging.error(f"action: result_upload | result: fail | error: {e}")
@@ -43,6 +42,5 @@ class ResultsUploader:
         """
         logging.info("action: results_uploader_shutdown | result: in_progress")
         self.receiver.stop()
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+        self.buff.stop()
         logging.info("action: results_uploader_shutdown | result: success")

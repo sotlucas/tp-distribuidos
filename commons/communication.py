@@ -246,6 +246,8 @@ class CommunicationReceiver(Communication):
             self.messages_received.get(message.client_id, 0) + 1
         )
 
+        logging.debug("Received message_id {}".format(message.message_id))
+
         try:
             self.input_callback(message)
         except Exception as e:

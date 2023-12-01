@@ -3,7 +3,7 @@ import logging
 import os
 import signal
 
-from commons.protocol import PeerDisconnected
+from commons.communication_buffer import PeerDisconnected
 
 
 class ResultHandler:

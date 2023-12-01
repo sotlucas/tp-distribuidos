@@ -2,13 +2,12 @@ import socket
 import logging
 import multiprocessing as mp
 
-import commons.protocol as protocol
+from commons.communication_buffer import CommunicationBuffer, PeerDisconnected
 from commons.message import ProtocolMessage
 from commons.protocol import (
     Message,
     MessageProtocolType,
     MessageType,
-    PeerDisconnected,
 )
 from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
@@ -16,26 +15,50 @@ from results_uploader import ResultsUploader
 
 class ClientHandler:
     def __init__(
-        self, client_id, client_sock, receiver, flights_sender, lat_long_sender
+        self,
+        client_sock,
+        server_receiver_initializer,
+        vuelos_input,
+        input_type,
+        flights_sender,
+        lat_long_sender,
     ):
-        self.client_id = client_id
         self.client_sock = client_sock
         self.flights_uploader = MessageUploader(flights_sender)
         self.lat_long_uploader = MessageUploader(lat_long_sender)
+        self.buff = CommunicationBuffer(self.client_sock)
+
+        self.client_id = ClientHandler.handle_announce(self.buff)
+        vuelos_receiver = server_receiver_initializer.initialize_receiver(
+            vuelos_input,
+            input_type,
+            1,  # REPLICA_ID
+            1,  # REPLICAS_COUNT
+            routing_key=str(self.client_id),
+        )
         self.results_uploader = mp.Process(
-            target=ResultsUploader(receiver, self.client_sock).start
+            target=ResultsUploader(vuelos_receiver, self.buff).start
         )
         self.results_uploader.start()
         self.running = True
+
+    def handle_announce(buff):
+        """
+        Handles the announce message received from the client.
+        """
+        announce_message = buff.get_message()
+        logging.info(
+            f"action: client_announce | client_id: {announce_message.client_id}"
+        )
+        return announce_message.client_id
 
     def handle_client(self):
         """
         Handles the messages received from the client.
         """
-        buff = protocol.CommunicationBuffer(self.client_sock)
         while self.running:
             try:
-                client_message = buff.get_message()
+                client_message = self.buff.get_message()
                 self.__handle_message(client_message)
             except OSError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")

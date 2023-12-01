@@ -1,11 +1,5 @@
-import logging
-import multiprocessing
-import socket
 from enum import Enum
 from commons.message_utils import MessageBytesReader, MessageBytesWriter
-
-BUFFER_SIZE = 8192  # 8 KiB
-END_OF_MESSAGE = b"\r\n\r\n"
 
 
 class MessageType(Enum):
@@ -48,7 +42,7 @@ class Message:
 
         writer.write_int(self.message_type.value, 1)
 
-        return self.to_bytes_impl(writer) + END_OF_MESSAGE
+        return self.to_bytes_impl(writer)
 
     def to_bytes_impl(self, writer):
         raise NotImplementedError(
@@ -57,7 +51,17 @@ class Message:
 
 
 class AnnounceMessage(Message):
-    pass
+    def __init__(self, client_id):
+        super().__init__(MessageType.ANNOUNCE)
+        self.client_id = client_id
+
+    def from_bytes(reader):
+        client_id = reader.read_int(8)
+        return AnnounceMessage(client_id)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.client_id, 8)
+        return writer.get_bytes()
 
 
 class ClientProtocolMessage(Message):
@@ -112,48 +116,3 @@ class EOFMessage(Message):
     def to_bytes_impl(self, writer):
         writer.write_int(self.protocol_type.value, 1)
         return writer.get_bytes()
-
-
-class CommunicationBuffer:
-    def __init__(self, sock):
-        self.sock = sock
-        self.sock.setblocking(True)
-        self.buffer = b""
-        self.lock = multiprocessing.Lock()
-
-    def get_message(self):
-        """
-        Get a message from the socket.
-        """
-        while END_OF_MESSAGE not in self.buffer:
-            data = self.sock.recv(BUFFER_SIZE)
-            if not data:  # socket is closed
-                raise PeerDisconnected
-            self.buffer += data
-        line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
-        return Message.from_bytes(line)
-
-    def send_message(self, message: Message):
-        """
-        Send a message through the socket.
-        """
-        with self.lock:
-            self.sock.sendall(message.to_bytes())
-
-    def send_eof(self, eof_type: MessageProtocolType):
-        """
-        Send an EOF message through the socket.
-        """
-        message = EOFMessage(eof_type)
-        self.send_message(message)
-
-    def stop(self):
-        """
-        Graceful shutdown. Closing all connections.
-        """
-        self.sock.shutdown(socket.SHUT_RDWR)
-        self.sock.close()
-
-
-class PeerDisconnected(Exception):
-    pass
