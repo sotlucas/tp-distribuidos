@@ -1,21 +1,117 @@
+import logging
 import multiprocessing
 import socket
+from enum import Enum
+from commons.message_utils import MessageBytesReader, MessageBytesWriter
 
 BUFFER_SIZE = 8192  # 8 KiB
 END_OF_MESSAGE = b"\r\n\r\n"
-EOF = b"\0"
+
+
+class MessageType(Enum):
+    ANNOUNCE = 0
+    PROTOCOL = 1
+    RESULT = 2
+    EOF = 3
+
+
+class MessageProtocolType(Enum):
+    FLIGHT = 0
+    AIRPORT = 1
 
 
 class Message:
-    def __init__(self, type, content):
-        self.type = type
+    def __init__(self, message_type):
+        self.message_type = message_type
+
+    def from_bytes(bytes):
+        """
+        Parse the message and return a Message object
+        """
+        reader = MessageBytesReader(bytes)
+
+        type = reader.read_int(1)
+
+        if type == MessageType.ANNOUNCE.value:
+            return AnnounceMessage.from_bytes(reader)
+        elif type == MessageType.PROTOCOL.value:
+            return ClientProtocolMessage.from_bytes(reader)
+        elif type == MessageType.RESULT.value:
+            return ResultMessage.from_bytes(reader)
+        elif type == MessageType.EOF.value:
+            return EOFMessage.from_bytes(reader)
+        else:
+            raise Exception("Unknown message type")
+
+    def to_bytes(self):
+        writer = MessageBytesWriter()
+
+        writer.write_int(self.message_type.value, 1)
+
+        return self.to_bytes_impl(writer) + END_OF_MESSAGE
+
+    def to_bytes_impl(self, writer):
+        raise NotImplementedError(
+            "to_bytes_impl not implemented, subclass must implement it"
+        )
+
+
+class AnnounceMessage(Message):
+    pass
+
+
+class ClientProtocolMessage(Message):
+    def __init__(self, message_id, protocol_type: MessageProtocolType, content):
+        super().__init__(MessageType.PROTOCOL)
+        self.message_id = message_id
+        self.protocol_type = protocol_type
         self.content = content
 
-    def serialize(self):
-        """
-        Serialize the message to be sent through the socket.
-        """
-        return serialize_message(self.type, self.content.encode())
+    def from_bytes(reader):
+        message_id = reader.read_int(8)
+        protocol_type_value = reader.read_int(1)
+        protocol_type = MessageProtocolType(protocol_type_value)
+        content_bytes = reader.read_to_end()
+        content = content_bytes.decode("utf-8")
+
+        return ClientProtocolMessage(message_id, protocol_type, content)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.message_id, 8)
+        writer.write_int(self.protocol_type.value, 1)
+        writer.write(self.content.encode("utf-8"))
+        return writer.get_bytes()
+
+
+class ResultMessage(Message):
+    def __init__(self, result):
+        super().__init__(MessageType.RESULT)
+        self.result = result
+
+    def from_bytes(reader):
+        result_bytes = reader.read_to_end()
+        result = result_bytes.decode("utf-8")
+
+        return ResultMessage(result)
+
+    def to_bytes_impl(self, writer):
+        writer.write(self.result.encode("utf-8"))
+        return writer.get_bytes()
+
+
+class EOFMessage(Message):
+    def __init__(self, protocol_type: MessageProtocolType):
+        super().__init__(MessageType.EOF)
+        self.protocol_type = protocol_type
+
+    def from_bytes(reader):
+        protocol_type_value = reader.read_int(1)
+        protocol_type = MessageProtocolType(protocol_type_value)
+        return EOFMessage(protocol_type)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.protocol_type.value, 1)
+        return writer.get_bytes()
 
 
 class CommunicationBuffer:
@@ -35,20 +131,20 @@ class CommunicationBuffer:
                 raise PeerDisconnected
             self.buffer += data
         line, sep, self.buffer = self.buffer.partition(END_OF_MESSAGE)
-        return deserialize_message(line)
+        return Message.from_bytes(line)
 
-    def send_message(self, message):
+    def send_message(self, message: Message):
         """
         Send a message through the socket.
         """
         with self.lock:
-            self.sock.sendall(message.serialize())
+            self.sock.sendall(message.to_bytes())
 
-    def send_eof(self, type):
+    def send_eof(self, eof_type: MessageProtocolType):
         """
         Send an EOF message through the socket.
         """
-        message = Message(type, EOF.decode())
+        message = EOFMessage(eof_type)
         self.send_message(message)
 
     def stop(self):
@@ -57,36 +153,6 @@ class CommunicationBuffer:
         """
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
-
-
-def deserialize_message(line):
-    """
-    Deserialize the message received through the socket.
-    """
-    if line[0] == 1:
-        message_type = "airport"
-        message = line[1:]
-    elif line[0] == 2:
-        message_type = "flight"
-        message = line[1:]
-    else:
-        message_type = None
-        message = line
-    return Message(message_type, message)
-
-
-def serialize_message(type, content_bytes):
-    """
-    Serialize the message to be sent through the socket.
-    """
-    # Add the type of message to the beginning of the line
-    if type == "airport":
-        type_bytes = int.to_bytes(1, 1, byteorder="big")
-    elif type == "flight":
-        type_bytes = int.to_bytes(2, 1, byteorder="big")
-    else:
-        type_bytes = b""
-    return type_bytes + content_bytes + END_OF_MESSAGE
 
 
 class PeerDisconnected(Exception):

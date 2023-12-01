@@ -1,12 +1,14 @@
 import logging
 
+from commons.communication import CommunicationSender
+
 
 class MessageUploader:
     """
     Sends messages to a queue.
     """
 
-    def __init__(self, sender):
+    def __init__(self, sender: CommunicationSender):
         self.sender = sender
 
     def send(self, message):

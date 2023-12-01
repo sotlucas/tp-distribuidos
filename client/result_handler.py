@@ -7,11 +7,11 @@ from commons.protocol import PeerDisconnected
 
 
 class ResultHandler:
-    def __init__(self, buff, replica_id):
+    def __init__(self, buff, client_id):
         self.tstamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.running = True
         self.buff = buff
-        self.replica_id = replica_id
+        self.client_id = client_id
 
     def receive_results(self):
         """
@@ -26,8 +26,8 @@ class ResultHandler:
                 message = self.buff.get_message()
                 if not message:
                     break
-                logging.debug(f"Result received: {message.type} | {message.content}")
-                self.save_results(message.content.decode())
+                logging.debug(f"Result received: {message.result}")
+                self.__save_results(message.result)
             except PeerDisconnected:
                 logging.info("action: server_disconected")
                 self.running = False
@@ -40,24 +40,34 @@ class ResultHandler:
 
         logging.info("Results received")
 
-    def save_results(self, data):
+    def __save_results(self, data):
         """
         Saves the results in the corresponding file.
         """
         results = data.split("\n")
         for result in results:
-            self.save_result_single(result)
+            self.__save_result_single(result)
 
-    def save_result_single(self, data):
-        # get the tag between [] to identify the file
+    def __save_result_single(self, data):
+        """
+        Saves a single result in the corresponding file.
+        """
         logging.info(f"Saving result: {data}")
-        file_name = data.split("[")[1].split("]")[0].lower()
+        file_name = self.__get_message_tag(data)
 
-        if not os.path.exists(f"results/client_{self.replica_id}"):
-            os.makedirs(f"results/client_{self.replica_id}")
+        if not os.path.exists(f"results/client_{self.client_id}"):
+            os.makedirs(f"results/client_{self.client_id}")
 
-        with open(f"results/client_{self.replica_id}/{self.tstamp}_{file_name}.txt", "a") as f:
+        with open(
+            f"results/client_{self.client_id}/{self.tstamp}_{file_name}.txt", "a"
+        ) as f:
             f.write(data + "\n")
+
+    def __get_message_tag(self, data):
+        """
+        Gets the tag between [] to identify the file.
+        """
+        return data.split("[")[1].split("]")[0].lower()
 
     def __stop(self, *args):
         """
