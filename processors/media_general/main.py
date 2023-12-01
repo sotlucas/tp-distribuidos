@@ -19,6 +19,7 @@ def main():
         "output_type": str,
         "input_type": str,
         "grouper_replicas_count": int,
+        "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -33,6 +34,7 @@ def main():
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
+        config_params["replica_id"],
         MEDIA_GENERAL_REPLICAS_COUNT,
     )
     sender = communication_initializer.initialize_sender(
@@ -45,7 +47,13 @@ def main():
     media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(input_fields, output_fields)
-    Connection(connection_config, receiver, sender, MediaGeneral, media_general_config).run()
+    Connection(
+        connection_config, receiver, sender, MediaGeneral, media_general_config
+    ).run()
+
+    health.join()
+
+    health.join()
 
     health.join()
 

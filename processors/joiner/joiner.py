@@ -37,10 +37,15 @@ class Joiner(Processor):
             self.airports = self.config.state.get_airports(self.client_id)
 
         if self.flights_cache:
+            # Process the cached messages
             messages = []
             for flight in self.flights_cache:
                 messages.append(self.process_flight(flight))
             self.flights_cache = []
+
+            # Process the message that triggered the cache
+            messages.append(self.process_flight(message))
+            
             return Response(ResponseType.MULTIPLE, messages)
 
         message = self.process_flight(message)

@@ -1,10 +1,12 @@
 import logging
 import signal
-from multiprocessing import Process
 
-from commons.health_checker import HealthChecker
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
+
+# TODO: Maybe we should change to other value
+#       This requires that the client starts sending messages with message_id 1
+EOF_MESSAGE_ID = 0
 
 
 class ConnectionConfig:
@@ -69,11 +71,15 @@ class Connection:
         if not processed_messages:
             return
         if self.config.is_topic:
-            self.send_messages_topic(processed_messages, messages.client_id)
+            self.send_messages_topic(
+                processed_messages, messages.client_id, messages.message_id
+            )
         else:
-            self.send_messages(processed_messages, messages.client_id)
+            self.send_messages(
+                processed_messages, messages.client_id, messages.message_id
+            )
 
-    def send_messages_topic(self, messages, client_id):
+    def send_messages_topic(self, messages, client_id, message_id):
         # message: (topic, message)
         messages_by_topic = {}
         for message in messages:
@@ -81,15 +87,15 @@ class Connection:
                 message[1]
             ]
         for topic, messages in messages_by_topic.items():
-            message_to_send = ProtocolMessage(client_id, messages)
+            message_to_send = ProtocolMessage(client_id, message_id, messages)
             self.communication_sender.send_all(
                 message_to_send,
                 routing_key=str(topic),
                 output_fields_order=self.config.output_fields,
             )
 
-    def send_messages(self, messages, client_id):
-        message_to_send = ProtocolMessage(client_id, messages)
+    def send_messages(self, messages, client_id, message_id):
+        message_to_send = ProtocolMessage(client_id, message_id, messages)
         self.communication_sender.send_all(
             message_to_send, output_fields_order=self.config.output_fields
         )
@@ -109,7 +115,7 @@ class Connection:
             self.communication_sender.send_eof(client_id, routing_key=DEFAULT_TOPIC_EOF)
             return
         if messages:
-            self.send_messages(messages, client_id)
+            self.send_messages(messages, client_id, EOF_MESSAGE_ID)
         if self.config.send_eof:
             self.communication_sender.send_eof(client_id)
 

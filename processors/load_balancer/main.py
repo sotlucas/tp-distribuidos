@@ -18,6 +18,7 @@ def main():
         "input_type": str,
         "replicas_count": int,
         "grouper_replicas_count": int,
+        "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -32,6 +33,7 @@ def main():
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
+        config_params["replica_id"],
         config_params["replicas_count"],
     )
     sender = communication_initializer.initialize_sender(
@@ -49,11 +51,7 @@ def main():
 
     connection_config = ConnectionConfig(input_fields, output_fields, is_topic=True)
     Connection(
-        connection_config,
-        receiver,
-        sender,
-        LoadBalancer,
-        load_balancer_config
+        connection_config, receiver, sender, LoadBalancer, load_balancer_config
     ).run()
 
     health.join()

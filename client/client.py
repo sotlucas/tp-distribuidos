@@ -3,21 +3,33 @@ import socket
 import logging
 from multiprocessing import Process
 
+from commons.communication_buffer import CommunicationBuffer
 from file_uploader import FileUploader
 from result_handler import ResultHandler
-from commons.protocol import CommunicationBuffer
+from commons.protocol import (
+    AnnounceMessage,
+    MessageProtocolType,
+)
 
 
 class ClientConfig:
-    def __init__(self, server_ip, server_port, flights_file_path, airports_file_path, remove_file_header, batch_size,
-                 replica_id):
+    def __init__(
+        self,
+        server_ip,
+        server_port,
+        flights_file_path,
+        airports_file_path,
+        remove_file_header,
+        batch_size,
+        client_id,
+    ):
         self.server_ip = server_ip
         self.server_port = server_port
         self.flights_file_path = flights_file_path
         self.airports_file_path = airports_file_path
         self.remove_file_header = remove_file_header
         self.batch_size = batch_size
-        self.replica_id = replica_id
+        self.client_id = client_id
 
 
 class Client:
@@ -35,20 +47,43 @@ class Client:
         logging.info("Connected to server")
         self.buff = CommunicationBuffer(self.sock)
 
+        # TODO: Send the announce message every time we reconnect.
+        #       When we support server fault tolerance
+
+        # Send the announce message
+        announce_message = AnnounceMessage(self.config.client_id)
+        self.buff.send_message(announce_message)
+
         # Start the process to send the airports
         self.airports_sender = Process(
-            target=FileUploader("airport", self.config.airports_file_path, self.config.remove_file_header,
-                                self.config.batch_size, self.buff).start)
+            target=FileUploader(
+                MessageProtocolType.AIRPORT,
+                self.config.airports_file_path,
+                self.config.remove_file_header,
+                self.config.batch_size,
+                self.buff,
+                self.config.client_id,
+            ).start
+        )
         self.airports_sender.start()
 
         # Start the process to send the flights
         self.flights_sender = Process(
-            target=FileUploader("flight", self.config.flights_file_path, self.config.remove_file_header,
-                                self.config.batch_size, self.buff).start)
+            target=FileUploader(
+                MessageProtocolType.FLIGHT,
+                self.config.flights_file_path,
+                self.config.remove_file_header,
+                self.config.batch_size,
+                self.buff,
+                self.config.client_id,
+            ).start
+        )
         self.flights_sender.start()
 
         # Start the process to receive the results
-        self.results_receiver = Process(target=ResultHandler(self.buff, self.config.replica_id).receive_results)
+        self.results_receiver = Process(
+            target=ResultHandler(self.buff, self.config.client_id).receive_results
+        )
         self.results_receiver.start()
 
         # Wait for the processes to finish

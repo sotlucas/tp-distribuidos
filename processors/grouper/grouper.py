@@ -10,15 +10,15 @@ AVERAGE = "average"
 
 class GrouperConfig:
     def __init__(
-            self,
-            replica_id,
-            media_general_communication_initializer,
-            media_general_input,
-            input_type,
-            replicas_count,
-            input_diff_name,
-            media_general_output,
-            output_type,
+        self,
+        replica_id,
+        media_general_communication_initializer,
+        media_general_input,
+        input_type,
+        replicas_count,
+        input_diff_name,
+        media_general_output,
+        output_type,
     ):
         self.replica_id = replica_id
         self.media_general_communication_initializer = (
@@ -48,10 +48,12 @@ class Grouper(Processor):
     def __init__(self, config, client_id):
         self.replica_id = config.replica_id
         self.client_id = client_id
+        self.replica_id = config.replica_id
         self.media_general_receiver = (
             config.media_general_communication_initializer.initialize_receiver(
                 config.media_general_input,
                 config.input_type,
+                config.replica_id,
                 config.replicas_count,
                 input_diff_name=config.input_diff_name,
             )
@@ -106,7 +108,10 @@ class Grouper(Processor):
             total_fare += sum(prices)
             amount += len(prices)
         message = {"totalFare": total_fare, "amount": amount}
-        message_to_send = ProtocolMessage(self.client_id, [message])
+
+        # TODO: The message_id is the replica_id, to differentiate the messages
+        #       sent by other replicas, see if this is the best way to do it.
+        message_to_send = ProtocolMessage(self.client_id, self.replica_id, [message])
         self.media_general_sender.send_all(
             message_to_send,
             output_fields_order=self.media_general_output_fields,

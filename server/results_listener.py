@@ -19,7 +19,9 @@ class ResultsListener:
         self.receiver.start()
 
     def output_callback(self, messages):
-        logging.debug(f"action: results_listener | messages: {messages.payload}")
+        logging.debug(
+            f"action: results_listener | client_id: {messages.client_id} | messages: {messages.payload}"
+        )
         self.sender.send_all(messages, routing_key=str(messages.client_id))
 
     def handle_eof(self):

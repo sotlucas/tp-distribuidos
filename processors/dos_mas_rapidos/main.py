@@ -19,6 +19,7 @@ def main():
         "rabbit_host": str,
         "output_type": str,
         "input_type": str,
+        "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -33,6 +34,7 @@ def main():
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
+        config_params["replica_id"],
         DOS_MAS_RAPIDOS_REPLICAS_COUNT,
     )
     sender = communication_initializer.initialize_sender(
