@@ -1,3 +1,6 @@
+from multiprocessing import Process
+
+from commons.health_checker import HealthChecker
 from joiner import Joiner, JoinerConfig
 from lat_long import LatLong, LatLongConfig
 from commons.log_initializer import initialize_log
@@ -31,6 +34,10 @@ def main():
 
     logging_level = config_params["logging_level"]
     initialize_log(logging_level)
+
+    # Healthcheck process
+    health = Process(target=HealthChecker().run)
+    health.start()
 
     state = State()
 
@@ -101,6 +108,7 @@ def main():
 
     lat_long_thread.join()
     joiner_thread.join()
+    health.join()
 
 
 if __name__ == "__main__":

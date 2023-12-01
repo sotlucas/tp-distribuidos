@@ -7,6 +7,8 @@ class MessageType(Enum):
     PROTOCOL = 1
     RESULT = 2
     EOF = 3
+    HEALTH_CHECK = 4
+    HEALTH_OK = 5
 
 
 class MessageProtocolType(Enum):
@@ -34,6 +36,10 @@ class Message:
             return ResultMessage.from_bytes(reader)
         elif type == MessageType.EOF.value:
             return EOFMessage.from_bytes(reader)
+        elif type == MessageType.HEALTH_CHECK.value:
+            return HealthCheckMessage.from_bytes(reader)
+        elif type == MessageType.HEALTH_OK.value:
+            return HealthOkMessage.from_bytes(reader)
         else:
             raise Exception("Unknown message type")
 
@@ -115,4 +121,26 @@ class EOFMessage(Message):
 
     def to_bytes_impl(self, writer):
         writer.write_int(self.protocol_type.value, 1)
+        return writer.get_bytes()
+
+
+class HealthCheckMessage(Message):
+    def __init__(self):
+        super().__init__(MessageType.HEALTH_CHECK)
+
+    def from_bytes(reader):
+        return HealthCheckMessage()
+
+    def to_bytes_impl(self, writer):
+        return writer.get_bytes()
+
+
+class HealthOkMessage(Message):
+    def __init__(self):
+        super().__init__(MessageType.HEALTH_OK)
+
+    def from_bytes(reader):
+        return HealthOkMessage()
+
+    def to_bytes_impl(self, writer):
         return writer.get_bytes()

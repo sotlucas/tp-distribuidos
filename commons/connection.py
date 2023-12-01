@@ -1,5 +1,6 @@
 import logging
 import signal
+
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
 
@@ -10,7 +11,7 @@ EOF_MESSAGE_ID = 0
 
 class ConnectionConfig:
     def __init__(
-        self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
+            self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
     ):
         self.input_fields = input_fields
         self.output_fields = output_fields
@@ -20,12 +21,12 @@ class ConnectionConfig:
 
 class Connection:
     def __init__(
-        self,
-        config,
-        communication_receiver,
-        communication_sender,
-        processor_name,
-        processor_config=None,
+            self,
+            config,
+            communication_receiver,
+            communication_sender,
+            processor_name,
+            processor_config=None,
     ):
         self.config = config
         self.communication_receiver = communication_receiver
@@ -33,6 +34,7 @@ class Connection:
         self.processor_name = processor_name
         self.processor_config = processor_config
         self.processors = {}
+
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
 
