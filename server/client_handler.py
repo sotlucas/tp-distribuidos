@@ -4,14 +4,21 @@ import multiprocessing as mp
 
 import commons.protocol as protocol
 from commons.message import ProtocolMessage
-from commons.protocol import PeerDisconnected
+from commons.protocol import (
+    Message,
+    MessageProtocolType,
+    MessageType,
+    PeerDisconnected,
+)
 from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
 
 
 class ClientHandler:
-    def __init__(self, corr_id, client_sock, receiver, flights_sender, lat_long_sender):
-        self.id = corr_id
+    def __init__(
+        self, client_id, client_sock, receiver, flights_sender, lat_long_sender
+    ):
+        self.client_id = client_id
         self.client_sock = client_sock
         self.flights_uploader = MessageUploader(flights_sender)
         self.lat_long_uploader = MessageUploader(lat_long_sender)
@@ -43,20 +50,21 @@ class ClientHandler:
         self.client_sock.close()
         logging.info(f"action: handle_client | result: complete")
 
-    def __handle_message(self, message):
+    def __handle_message(self, message: Message):
         """
         Handles a specific message received from the client.
         """
         uploader = (
             self.flights_uploader
-            if message.type == "flight"
+            if message.protocol_type == MessageProtocolType.FLIGHT
             else self.lat_long_uploader
         )
-        if message.content == protocol.EOF:
+        if message.message_type == MessageType.EOF:
             # Send EOF to queue to communicate that all the file has been sent.
-            uploader.finish_sending(self.id)
-            if message.type == "flight" and message.content == protocol.EOF:
+            uploader.finish_sending(self.client_id)
+            if message.protocol_type == MessageProtocolType.FLIGHT:
                 # The client will not send any more messages
+                # TODO: If the airpors file is large, the client will send more messages, fix this
                 raise PeerDisconnected
         else:
             # TODO: Decoding here because send needs a string, find a better way
@@ -64,9 +72,8 @@ class ClientHandler:
 
             # TODO: This is a temporal solution to send the message, remove this
             #       when the protocol is implemented
-            TEMPORAL_MESSAGE_ID = 1
             protocol_message = ProtocolMessage(
-                self.id, TEMPORAL_MESSAGE_ID, [message.content.decode("utf-8")]
+                self.client_id, message.message_id, [message.content]
             )
             uploader.send(protocol_message)
 
