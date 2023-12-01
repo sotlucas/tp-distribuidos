@@ -2,7 +2,7 @@ import logging
 import signal
 import socket
 
-from commons.protocol import Message
+from commons.protocol import Message, ResultMessage
 
 
 class ResultsUploader:
@@ -27,8 +27,8 @@ class ResultsUploader:
 
     def output_single(self, content):
         try:
-            message = Message(None, content)
-            self.socket.sendall(message.serialize())
+            message = ResultMessage(content)
+            self.socket.sendall(message.to_bytes())
             logging.debug(f"action: result_upload | result: success")
         except OSError as e:
             logging.error(f"action: result_upload | result: fail | error: {e}")

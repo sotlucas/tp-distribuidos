@@ -113,6 +113,8 @@ class Server:
                 self.lat_long_sender,
             )
             client_handler.handle_client()
+        except Exception as e:
+            logging.exception(f"Error: {e}")
         finally:
             sema.release()  # allow a new process to be started now that this one is exiting
 
