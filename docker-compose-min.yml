@@ -20,12 +20,11 @@ services:
       - "5672:5672"
       - "15672:15672"
 
-  client:
-    deploy:
-      replicas: ${CLIENT_REPLICAS}
+  client_1:
     image: client:latest
     entrypoint: python3 /main.py archivo.csv airports-codepublic.csv
     environment:
+      - REPLICA_ID=1
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
     depends_on:
@@ -97,6 +96,39 @@ services:
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${TAGGER_MAX_AVG_REPLICAS}
       - TAG_NAME=MAX_AVG
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+  health_checker:
+    image: health_checker:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+      - FILTER_GENERAL_REPLICAS=${FILTER_GENERAL_REPLICAS}
+      - FILTER_MULTIPLE_REPLICAS=${FILTER_MULTIPLE_REPLICAS}
+      - FILTER_AVG_MAX_REPLICAS=${FILTER_AVG_MAX_REPLICAS}
+      - FILTER_DISTANCIA_REPLICAS=${FILTER_DISTANCIA_REPLICAS}
+      - FILTER_TRES_ESCALAS_O_MAS_REPLICAS=${FILTER_TRES_ESCALAS_O_MAS_REPLICAS}
+      - FILTER_DOS_MAS_RAPIDOS_REPLICAS=${FILTER_DOS_MAS_RAPIDOS_REPLICAS}
+      - FILTER_LAT_LONG_REPLICAS=${FILTER_LAT_LONG_REPLICAS}
+      - PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS=${PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS}
+      - PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS=${PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS}
+      - PROCESSOR_DISTANCIAS_REPLICAS=${PROCESSOR_DISTANCIAS_REPLICAS}
+      - PROCESSOR_MAX_AVG_REPLICAS=${PROCESSOR_MAX_AVG_REPLICAS}
+      - TAGGER_DOS_MAS_RAPIDOS_REPLICAS=${TAGGER_DOS_MAS_RAPIDOS_REPLICAS}
+      - TAGGER_TRES_ESCALAS_O_MAS_REPLICAS=${TAGGER_TRES_ESCALAS_O_MAS_REPLICAS}
+      - TAGGER_DISTANCIAS_REPLICAS=${TAGGER_DISTANCIAS_REPLICAS}
+      - TAGGER_MAX_AVG_REPLICAS=${TAGGER_MAX_AVG_REPLICAS}
+      - LOAD_BALANCER_REPLICAS=${LOAD_BALANCER_REPLICAS}
+      - GROUPER_REPLICAS=${GROUPER_REPLICAS}
+      - JOINER_REPLICAS=${JOINER_REPLICAS}
+      - HEALTH_CHECKER_REPLICAS=${HEALTH_CHECKER_REPLICAS}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       rabbitmq:
         condition: service_healthy

@@ -55,6 +55,8 @@ def main():
 
     health.join()
 
+    health.join()
+
 
 if __name__ == "__main__":
     main()
