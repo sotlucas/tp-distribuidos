@@ -1,8 +1,6 @@
 import logging
 import signal
-from multiprocessing import Process
 
-from commons.health_checker import HealthChecker
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
 

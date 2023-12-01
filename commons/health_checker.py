@@ -3,7 +3,8 @@ import signal
 import socket
 from multiprocessing import Process
 
-from commons.protocol import CommunicationBuffer, Message
+from commons.communication_buffer import CommunicationBuffer
+from commons.protocol import MessageType, HealthOkMessage
 
 HEALTHCHECK_PORT = 5000
 CONNECTION_TIMEOUT = 20
@@ -48,9 +49,9 @@ class HealthChecker:
         while self.running:
             try:
                 logging.info("action: handle_client | result: in_progress")
-                data = buff.get_message()
-                if data.content == b"CHECK\n":
-                    buff.send_message(Message(None, "OK\n"))
+                message = buff.get_message()
+                if message.message_type == MessageType.HEALTH_CHECK:
+                    buff.send_message(HealthOkMessage())
                 logging.info("action: handle_client | result: success")
             except socket.timeout:
                 logging.info("action: handle_client | result: timeout")

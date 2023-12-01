@@ -5,7 +5,8 @@ import time
 from multiprocessing import Process
 import docker
 
-from commons.protocol import CommunicationBuffer, Message, PeerDisconnected
+from commons.communication_buffer import CommunicationBuffer, PeerDisconnected
+from commons.protocol import HealthCheckMessage, MessageType
 
 HEALTH_CHECKER_PORT = 5000
 CONNECTION_RETRY_TIME = 5
@@ -58,39 +59,39 @@ class HealthChecker:
         """
         # Call all the processors to check if they are healthy. Each in a new process.
         processor_checkers = []
-        self.init_checker("tp1-filter_general-", self.config.filter_general_replicas, processor_checkers)
-        self.init_checker("tp1-filter_multiple-", self.config.filter_multiple_replicas, processor_checkers)
-        self.init_checker("tp1-filter_avg_max-", self.config.filter_avg_max_replicas, processor_checkers)
-        self.init_checker("tp1-filter_distancia-", self.config.filter_distancia_replicas, processor_checkers)
-        self.init_checker("tp1-filter_tres_escalas_o_mas-", self.config.filter_tres_escalas_o_mas_replicas,
+        self.init_checker("tp1-filter_general_", self.config.filter_general_replicas, processor_checkers)
+        self.init_checker("tp1-filter_multiple_", self.config.filter_multiple_replicas, processor_checkers)
+        self.init_checker("tp1-filter_avg_max_", self.config.filter_avg_max_replicas, processor_checkers)
+        self.init_checker("tp1-filter_distancia_", self.config.filter_distancia_replicas, processor_checkers)
+        self.init_checker("tp1-filter_tres_escalas_o_mas_", self.config.filter_tres_escalas_o_mas_replicas,
                           processor_checkers)
-        self.init_checker("tp1-filter_dos_mas_rapidos-", self.config.filter_dos_mas_rapidos_replicas,
+        self.init_checker("tp1-filter_dos_mas_rapidos_", self.config.filter_dos_mas_rapidos_replicas,
                           processor_checkers)
-        self.init_checker("tp1-filter_lat_long-", self.config.filter_lat_long_replicas, processor_checkers)
-        self.init_checker("tp1-processor_tres_escalas_o_mas-", self.config.processor_tres_escalas_o_mas_replicas,
+        self.init_checker("tp1-filter_lat_long_", self.config.filter_lat_long_replicas, processor_checkers)
+        self.init_checker("tp1-processor_tres_escalas_o_mas_", self.config.processor_tres_escalas_o_mas_replicas,
                           processor_checkers)
-        self.init_checker("tp1-processor_dos_mas_rapidos-", self.config.processor_dos_mas_rapidos_replicas,
+        self.init_checker("tp1-processor_dos_mas_rapidos_", self.config.processor_dos_mas_rapidos_replicas,
                           processor_checkers)
-        self.init_checker("tp1-processor_distancias-", self.config.processor_distancias_replicas, processor_checkers)
-        self.init_checker("tp1-processor_max_avg-", self.config.processor_max_avg_replicas, processor_checkers)
-        self.init_checker("tp1-processor_media_general-", self.config.processor_media_general_replicas,
+        self.init_checker("tp1-processor_distancias_", self.config.processor_distancias_replicas, processor_checkers)
+        self.init_checker("tp1-processor_max_avg_", self.config.processor_max_avg_replicas, processor_checkers)
+        self.init_checker("tp1-processor_media_general_", self.config.processor_media_general_replicas,
                           processor_checkers)
-        self.init_checker("tp1-tagger_dos_mas_rapidos-", self.config.tagger_dos_mas_rapidos_replicas,
+        self.init_checker("tp1-tagger_dos_mas_rapidos_", self.config.tagger_dos_mas_rapidos_replicas,
                           processor_checkers)
-        self.init_checker("tp1-tagger_tres_escalas_o_mas-", self.config.tagger_tres_escalas_o_mas_replicas,
+        self.init_checker("tp1-tagger_tres_escalas_o_mas_", self.config.tagger_tres_escalas_o_mas_replicas,
                           processor_checkers)
-        self.init_checker("tp1-tagger_distancias-", self.config.tagger_distancias_replicas, processor_checkers)
-        self.init_checker("tp1-tagger_max_avg-", self.config.tagger_max_avg_replicas, processor_checkers)
-        self.init_checker("tp1-load_balancer-", self.config.load_balancer_replicas, processor_checkers)
-        self.init_checker("tp1-grouper_", self.config.grouper_replicas, processor_checkers, processor_suffix="-1")
-        self.init_checker("tp1-joiner_", self.config.joiner_replicas, processor_checkers, processor_suffix="-1")
+        self.init_checker("tp1-tagger_distancias_", self.config.tagger_distancias_replicas, processor_checkers)
+        self.init_checker("tp1-tagger_max_avg_", self.config.tagger_max_avg_replicas, processor_checkers)
+        self.init_checker("tp1-load_balancer_", self.config.load_balancer_replicas, processor_checkers)
+        self.init_checker("tp1-grouper_", self.config.grouper_replicas, processor_checkers)
+        self.init_checker("tp1-joiner_", self.config.joiner_replicas, processor_checkers)
 
         # Wait for the processes to finish
         for processor_checker in processor_checkers:
             processor_checker.join()
             logging.info("Processor checker finished")
 
-    def init_checker(self, processor_prefix, replicas, processor_checkers, processor_suffix=""):
+    def init_checker(self, processor_prefix, replicas, processor_checkers, processor_suffix="-1"):
         for i in range(1, replicas + 1):
             processor_checker = Process(target=self.check_processor,
                                         args=(f"{processor_prefix}{i}{processor_suffix}",))
@@ -115,8 +116,8 @@ class HealthChecker:
             logging.info(f"Connected to processor {processor_name}")
             while self.running:
                 try:
-                    buff.send_message(Message(None, "CHECK\n"))
-                    if buff.get_message().content == b"OK\n":
+                    buff.send_message(HealthCheckMessage())
+                    if buff.get_message().message_type == MessageType.HEALTH_OK:
                         logging.info(f"Processor {processor_name} is healthy")
                     time.sleep(HEALTH_CHECK_INTERVAL)
                 except OSError as e:
