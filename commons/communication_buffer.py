@@ -12,6 +12,10 @@ END_OF_MESSAGE = b"\r\n\r\n"
 
 
 class CommunicationBuffer:
+    """
+    Communication buffer for a socket.
+    """
+
     def __init__(self, sock):
         self.sock = sock
         self.sock.setblocking(True)

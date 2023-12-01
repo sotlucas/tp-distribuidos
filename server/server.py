@@ -30,14 +30,14 @@ class Server:
         self._server_socket.bind(("", config.port))
         self._server_socket.listen()
 
-        self.results_listener = Process(target=self.results_listener_initializer)
+        self.results_listener = Process(target=self.__results_listener_initializer)
         self.results_listener.start()
         self.running = True
         self.client_handlers = []
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
 
-    def results_listener_initializer(self):
+    def __results_listener_initializer(self):
         """
         Initializes the results listener.
         """
@@ -61,7 +61,7 @@ class Server:
         """
         queue = Queue()
         client_handler_tracker = Process(
-            target=self.client_handler_tracker, args=(queue,)
+            target=self.__client_handler_tracker, args=(queue,)
         )
         client_handler_tracker.start()
         while self.running:
@@ -74,7 +74,7 @@ class Server:
                 return
         client_handler_tracker.join()
 
-    def client_handler_tracker(self, queue):
+    def __client_handler_tracker(self, queue):
         """
         Creates a new process for each client connection and keeps track of them.
         """
@@ -83,7 +83,7 @@ class Server:
         while True:
             client_sock = queue.get()
             sema.acquire()  # wait to start until another process is finished
-            procs.append(Process(target=self.worker, args=(sema, client_sock)))
+            procs.append(Process(target=self.__worker, args=(sema, client_sock)))
             procs[-1].start()
 
             # cleanup completed processes TODO: check this
@@ -92,23 +92,16 @@ class Server:
         for p in procs:
             p.join()
 
-    def worker(self, sema, client_sock):
+    def __worker(self, sema, client_sock):
         """
         Worker that handles a client connection and releases the semaphore when it finishes
         """
         try:
-            client_id = self.get_client_id(client_sock)
-            vuelos_receiver = self.server_receiver_initializer.initialize_receiver(
+            client_handler = ClientHandler(
+                client_sock,
+                self.server_receiver_initializer,
                 self.config.vuelos_input,
                 self.config.input_type,
-                1,  # REPLICA_ID
-                1,  # REPLICAS_COUNT
-                routing_key=str(client_id),
-            )
-            client_handler = ClientHandler(
-                client_id,
-                client_sock,
-                vuelos_receiver,
                 self.flights_sender,
                 self.lat_long_sender,
             )
@@ -117,19 +110,6 @@ class Server:
             logging.exception(f"Error: {e}")
         finally:
             sema.release()  # allow a new process to be started now that this one is exiting
-
-    def get_client_id(self, client_sock):
-        """
-        Creates a client id hashing the client ip and port
-        """
-        client_id = int(
-            hashlib.md5(
-                f"{client_sock.getpeername()[0]}:{client_sock.getpeername()[1]}".encode(),
-            ).hexdigest()[:8],
-            16,
-        )
-        logging.info(f"action: client_id | result: success | client_id: {client_id}")
-        return client_id
 
     def __accept_new_connection(self):
         """

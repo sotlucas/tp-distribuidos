@@ -3,9 +3,13 @@ import socket
 import logging
 from multiprocessing import Process
 
+from commons.communication_buffer import CommunicationBuffer
 from file_uploader import FileUploader
 from result_handler import ResultHandler
-from commons.protocol import CommunicationBuffer, MessageProtocolType, MessageType
+from commons.protocol import (
+    AnnounceMessage,
+    MessageProtocolType,
+)
 
 
 class ClientConfig:
@@ -42,6 +46,13 @@ class Client:
         self.sock.connect((self.config.server_ip, self.config.server_port))
         logging.info("Connected to server")
         self.buff = CommunicationBuffer(self.sock)
+
+        # TODO: Send the announce message every time we reconnect.
+        #       When we support server fault tolerance
+
+        # Send the announce message
+        announce_message = AnnounceMessage(self.config.client_id)
+        self.buff.send_message(announce_message)
 
         # Start the process to send the airports
         self.airports_sender = Process(

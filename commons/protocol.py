@@ -51,7 +51,17 @@ class Message:
 
 
 class AnnounceMessage(Message):
-    pass
+    def __init__(self, client_id):
+        super().__init__(MessageType.ANNOUNCE)
+        self.client_id = client_id
+
+    def from_bytes(reader):
+        client_id = reader.read_int(8)
+        return AnnounceMessage(client_id)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.client_id, 8)
+        return writer.get_bytes()
 
 
 class ClientProtocolMessage(Message):
