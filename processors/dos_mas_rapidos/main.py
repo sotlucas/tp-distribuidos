@@ -49,7 +49,9 @@ def main():
         "segmentsArrivalAirportCode",
     ]
 
-    connection_config = ConnectionConfig(input_output_fields, input_output_fields)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"], input_output_fields, input_output_fields
+    )
     Connection(
         connection_config,
         receiver,

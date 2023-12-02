@@ -56,7 +56,9 @@ def main():
 
     lat_long_config = LatLongConfig(state)
 
-    connection_config = ConnectionConfig(lat_long_input_fields, None, send_eof=False)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"], lat_long_input_fields, None, send_eof=False
+    )
     connection = Connection(
         connection_config,
         lat_long_receiver,
@@ -99,7 +101,9 @@ def main():
 
     joiner_config = JoinerConfig(state)
 
-    connection_config = ConnectionConfig(vuelos_input_fields, vuelos_output_fields)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"], vuelos_input_fields, vuelos_output_fields
+    )
     connection = Connection(
         connection_config, vuelos_receiver, vuelos_sender, Joiner, joiner_config
     )

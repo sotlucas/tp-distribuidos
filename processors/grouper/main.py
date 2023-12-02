@@ -67,7 +67,10 @@ def main():
     )
 
     connection_config = ConnectionConfig(
-        vuelos_input_fields, vuelos_output_fields, send_eof=False
+        config_params["replica_id"],
+        vuelos_input_fields,
+        vuelos_output_fields,
+        send_eof=False,
     )
     Connection(
         connection_config, vuelos_receiver, vuelos_sender, Grouper, grouper_config

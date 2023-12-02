@@ -52,6 +52,7 @@ def main():
     filter_config = FilterConfig(output_fields)
 
     connection_config = ConnectionConfig(
+        config_params["replica_id"],
         input_fields,
         output_fields,
     )

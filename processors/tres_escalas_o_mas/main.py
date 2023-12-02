@@ -49,7 +49,7 @@ def main():
     ]
     output_fields = input_fields
 
-    config = ConnectionConfig(input_fields, output_fields)
+    config = ConnectionConfig(config_params["replica_id"], input_fields, output_fields)
     Connection(config, receiver, sender, TresEscalasOMas).run()
 
     health.join()

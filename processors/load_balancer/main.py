@@ -49,7 +49,9 @@ def main():
 
     load_balancer_config = LoadBalancerConfig(config_params["grouper_replicas_count"])
 
-    connection_config = ConnectionConfig(input_fields, output_fields, is_topic=True)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"], input_fields, output_fields, is_topic=True
+    )
     Connection(
         connection_config, receiver, sender, LoadBalancer, load_balancer_config
     ).run()

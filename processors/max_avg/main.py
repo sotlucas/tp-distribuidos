@@ -42,7 +42,9 @@ def main():
     input_fields = ["route", "prices"]
     output_fields = ["route", "avg", "max_price"]
 
-    connection_config = ConnectionConfig(input_fields, output_fields)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"], input_fields, output_fields
+    )
     Connection(connection_config, receiver, sender, MaxAvg).run()
 
     health.join()
