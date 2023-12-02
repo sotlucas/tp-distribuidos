@@ -46,7 +46,9 @@ def main():
 
     media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
-    connection_config = ConnectionConfig(input_fields, output_fields)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"], input_fields, output_fields
+    )
     Connection(
         connection_config, receiver, sender, MediaGeneral, media_general_config
     ).run()

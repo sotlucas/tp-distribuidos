@@ -3,37 +3,44 @@ import signal
 
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
-
-# TODO: Maybe we should change to other value
-#       This requires that the client starts sending messages with message_id 1
-EOF_MESSAGE_ID = 0
+from commons.duplicate_catcher import DuplicateCatcher
 
 
 class ConnectionConfig:
     def __init__(
-            self, input_fields=None, output_fields=None, send_eof=True, is_topic=False
+        self,
+        replica_id,
+        input_fields=None,
+        output_fields=None,
+        send_eof=True,
+        is_topic=False,
+        duplicate_catcher=False,
     ):
+        self.replica_id = replica_id
         self.input_fields = input_fields
         self.output_fields = output_fields
         self.send_eof = send_eof
         self.is_topic = is_topic
+        self.duplicate_catcher = duplicate_catcher
 
 
 class Connection:
     def __init__(
-            self,
-            config,
-            communication_receiver,
-            communication_sender,
-            processor_name,
-            processor_config=None,
+        self,
+        config,
+        communication_receiver,
+        communication_sender,
+        processor_name,
+        processor_config=None,
     ):
         self.config = config
         self.communication_receiver = communication_receiver
         self.communication_sender = communication_sender
         self.processor_name = processor_name
         self.processor_config = processor_config
+
         self.processors = {}
+        self.duplicate_catchers = {}
 
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
@@ -57,7 +64,18 @@ class Connection:
             self.processors[client_id] = processor
         return self.processors[client_id]
 
+    def get_duplicate_catcher(self, client_id):
+        if client_id not in self.duplicate_catchers:
+            duplicate_catcher = DuplicateCatcher()
+            self.duplicate_catchers[client_id] = duplicate_catcher
+        return self.duplicate_catchers[client_id]
+
     def process(self, messages):
+        if self.config.duplicate_catcher:
+            if self.process_duplicate_catcher(messages):
+                # It means that the message is a duplicate
+                return
+
         processor = self.get_processor(messages.client_id)
         processed_messages = []
         for message in messages.payload:
@@ -78,6 +96,13 @@ class Connection:
             self.send_messages(
                 processed_messages, messages.client_id, messages.message_id
             )
+
+    def process_duplicate_catcher(self, messages):
+        """
+        Returns True if the message is a duplicate.
+        """
+        duplicate_catcher = self.get_duplicate_catcher(messages.client_id)
+        return duplicate_catcher.is_duplicate(messages.message_id)
 
     def send_messages_topic(self, messages, client_id, message_id):
         # message: (topic, message)
@@ -115,7 +140,9 @@ class Connection:
             self.communication_sender.send_eof(client_id, routing_key=DEFAULT_TOPIC_EOF)
             return
         if messages:
-            self.send_messages(messages, client_id, EOF_MESSAGE_ID)
+            # TODO: We send the message with message_id as the replica_id to differentiate the protocol EOF messages sent by other replicas.
+            #       Maybe we should change this to other value.
+            self.send_messages(messages, client_id, self.config.replica_id)
         if self.config.send_eof:
             self.communication_sender.send_eof(client_id)
 
