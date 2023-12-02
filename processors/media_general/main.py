@@ -33,23 +33,23 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    log_storer = LogStorer()
     restore_state = Restorer().restore()
 
     communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"], log_storer
+        config_params["rabbit_host"],
     )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
         config_params["replica_id"],
         MEDIA_GENERAL_REPLICAS_COUNT,
-        restore_state=restore_state,
+        messages_received_restore_state=restore_state.get_messages_received(),
+        possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"],
         config_params["output_type"],
-        restore_state=restore_state,
+        messages_sent_restore_state=restore_state.get_messages_sent(),
     )
 
     input_fields = ["sum", "amount"]
@@ -66,8 +66,7 @@ def main():
         sender,
         MediaGeneral,
         media_general_config,
-        log_storer=log_storer,
-        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher_state(),
+        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher(),
     ).run()
 
     health.join()

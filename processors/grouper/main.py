@@ -32,12 +32,10 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    log_storer = LogStorer()
     restore_state = Restorer().restore()
 
     vuelos_communication_initializer = CommunicationInitializer(
         config_params["rabbit_host"],
-        log_storer=log_storer,
     )
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
@@ -45,12 +43,13 @@ def main():
         config_params["replica_id"],
         config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
-        restore_state=restore_state,
+        messages_received_restore_state=restore_state.get_messages_received(),
+        possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["vuelos_output"],
         config_params["output_type"],
-        restore_state=restore_state,
+        messages_sent_restore_state=restore_state.get_messages_sent(),
     )
 
     media_general_communication_initializer = CommunicationInitializer(
@@ -88,8 +87,7 @@ def main():
         vuelos_sender,
         Grouper,
         grouper_config,
-        log_storer,
-        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher_state(),
+        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher(),
     ).run()
 
     health.join()

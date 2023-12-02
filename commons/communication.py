@@ -72,15 +72,17 @@ class Communication:
         The config for the sender
     - connection : CommunicationConnection
         The connection to the RabbitMQ server
-    - log_storer : LogStorer
-        The log storer to store the state logs
+
+    ### Optional parameters
+    - log_storer_suffix : str
+        The suffix to add to the log file name
     """
 
-    def __init__(self, config, connection, log_storer: LogStorer):
+    def __init__(self, config, connection, log_storer_suffix=""):
         self.config = config
         self.connection = connection
         self.parser = FlightParser(self.config.delimiter)
-        self.log_storer = log_storer
+        self.log_storer = LogStorer(log_storer_suffix)
 
     def close(self):
         """
@@ -109,20 +111,16 @@ class CommunicationReceiverConfig:
         The input_diff_name used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
     - delimiter : str
         The delimiter used to parse the messages
-    - client_id : str
-        The client_id used to differentiate the input queues between different clients, it is used in topic exchanges, more specifically
-        when receiving the respone from the media general to the gouper.
     """
 
     def __init__(
-            self,
-            input,
-            replica_id,  # TODO: Now every replica needs to know the replica_id, removed default
-            replicas_count,
-            routing_key="",
-            input_diff_name="",
-            delimiter=",",
-            client_id="",
+        self,
+        input,
+        replica_id,  # TODO: Now every replica needs to know the replica_id, removed default
+        replicas_count,
+        routing_key="",
+        input_diff_name="",
+        delimiter=",",
     ):
         self.input = input
         self.replica_id = replica_id
@@ -130,7 +128,6 @@ class CommunicationReceiverConfig:
         self.routing_key = routing_key
         self.input_diff_name = input_diff_name
         self.delimiter = delimiter
-        self.client_id = client_id
 
 
 class CommunicationReceiver(Communication):
@@ -142,14 +139,14 @@ class CommunicationReceiver(Communication):
     """
 
     def __init__(
-            self,
-            config,
-            connection,
-            log_storer: LogStorer,
-            messages_received_restore_state={},
-            possible_duplicates_restore_state={},
+        self,
+        config,
+        connection,
+        messages_received_restore_state={},
+        possible_duplicates_restore_state={},
+        log_storer_suffix="",
     ):
-        super().__init__(config, connection, log_storer)
+        super().__init__(config, connection, log_storer_suffix)
 
         # {client_id: messages_received}
         self.messages_received = messages_received_restore_state
@@ -272,7 +269,7 @@ class CommunicationReceiver(Communication):
             message.payload = messages_parsed
 
         self.messages_received[message.client_id] = (
-                self.messages_received.get(message.client_id, 0) + 1
+            self.messages_received.get(message.client_id, 0) + 1
         )
 
         logging.debug("Received message_id {}".format(message.message_id))
@@ -434,12 +431,12 @@ class CommunicationReceiver(Communication):
         new_messages_sent = message.messages_sent + sender_messages_sent
 
         new_local_possible_duplicates = (
-                message.local_possible_duplicates
-                + self.local_possible_duplicates.get(message.client_id, [])
+            message.local_possible_duplicates
+            + self.local_possible_duplicates.get(message.client_id, [])
         )
         new_possible_duplicates_sent = (
-                message.possible_duplicates_sent
-                + self.possible_duplicates_sent.get(message.client_id, [])
+            message.possible_duplicates_sent
+            + self.possible_duplicates_sent.get(message.client_id, [])
         )
 
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
@@ -465,7 +462,7 @@ class CommunicationReceiver(Communication):
         duplicate_processed = []
 
         new_possible_duplicate_processed_by = (
-                message.possible_duplicate_processed_by + duplicate_processed
+            message.possible_duplicate_processed_by + duplicate_processed
         )
 
         return EOFAggregationMessage(
@@ -543,10 +540,7 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-                self.config.input
-                + self.config.input_diff_name
-                + self.config.routing_key
-                + str(self.config.replica_id)
+            self.config.input + self.config.input_diff_name + self.config.routing_key
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name, durable=True)
         self.input_queue = input_queue.method.queue
@@ -561,9 +555,6 @@ class CommunicationReceiverExchange(CommunicationReceiver):
             queue=self.input_queue,
             routing_key=self.config.routing_key,
         )
-
-        # remove the input queue
-        self.channel.queue_delete(queue=self.input_queue)
 
 
 class CommunicationReceiverQueue(CommunicationReceiver):
@@ -598,8 +589,14 @@ class CommunicationSender(Communication):
     Abstract class to be used by the CommunicationSender classes
     """
 
-    def __init__(self, config, connection, log_storer, messages_sent_restore_state={}):
-        super().__init__(config, connection, log_storer)
+    def __init__(
+        self,
+        config,
+        connection,
+        messages_sent_restore_state={},
+        log_storer_suffix="",
+    ):
+        super().__init__(config, connection, log_storer_suffix)
         self.active = False
 
         # {client_id: messages_sent}
@@ -644,7 +641,7 @@ class CommunicationSender(Communication):
             ),
         )
         self.messages_sent[message.client_id] = (
-                self.messages_sent.get(message.client_id, 0) + 1
+            self.messages_sent.get(message.client_id, 0) + 1
         )
 
     def send_eof(self, client_id, routing_key=""):

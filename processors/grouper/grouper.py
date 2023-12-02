@@ -49,20 +49,20 @@ class Grouper(Processor):
         self.replica_id = config.replica_id
         self.client_id = client_id
         self.replica_id = config.replica_id
-        self.media_general_receiver = (
-            config.media_general_communication_initializer.initialize_receiver(
-                config.media_general_input,
-                config.input_type,
-                config.replica_id,
-                config.replicas_count,
-                input_diff_name=config.input_diff_name,
-                client_id=client_id,
-            )
+        self.media_general_receiver = config.media_general_communication_initializer.initialize_receiver(
+            config.media_general_input,
+            config.input_type,
+            config.replica_id,
+            config.replicas_count,
+            # TODO: This is to differentiate the queues between clients, see if this is the best way to do it
+            input_diff_name=config.input_diff_name + "_" + str(client_id),
+            client_id=client_id,
+            log_storer_suffix=f"_{client_id}",  # TODO: Check if this is the best way to do it, if log is needed
         )
-        self.media_general_sender = (
-            config.media_general_communication_initializer.initialize_sender(
-                config.media_general_output, config.output_type
-            )
+        self.media_general_sender = config.media_general_communication_initializer.initialize_sender(
+            config.media_general_output,
+            config.output_type,
+            log_storer_suffix=f"_{client_id}",  # TODO: Check if this is the best way to do it,  if log is needed
         )
 
         self.media_general_input_fields = ["average"]

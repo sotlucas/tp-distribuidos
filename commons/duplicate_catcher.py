@@ -15,3 +15,6 @@ class DuplicateCatcher:
         self.messages_id.add(message_id)
 
         return False
+
+    def get_state(self):
+        return list(self.messages_id)

@@ -13,10 +13,9 @@ from commons.communication import (
 
 
 class CommunicationInitializer:
-    def __init__(self, rabbit_host, log_storer):
+    def __init__(self, rabbit_host):
         self.rabbit_host = rabbit_host
         self.connection = CommunicationConnection(self.rabbit_host)
-        self.log_storer = log_storer
 
     def initialize_receiver(
         self,
@@ -27,8 +26,9 @@ class CommunicationInitializer:
         routing_key="",
         input_diff_name="",
         delimiter=",",
-        client_id="",
-        restore_state=None,
+        messages_received_restore_state={},
+        possible_duplicates_restore_state={},
+        log_storer_suffix="",
     ):
         """
         Initialize the receiver based on the input type
@@ -40,31 +40,22 @@ class CommunicationInitializer:
             routing_key=routing_key,
             input_diff_name=input_diff_name,
             delimiter=delimiter,
-            client_id=str(client_id),
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(
                 communication_receiver_config,
                 self.connection,
-                self.log_storer,
-                messages_received_restore_state=restore_state.get_messages_received()
-                if restore_state
-                else {},
-                possible_duplicates_restore_state=restore_state.get_possible_duplicates()
-                if restore_state
-                else {},
+                messages_received_restore_state=messages_received_restore_state,
+                possible_duplicates_restore_state=possible_duplicates_restore_state,
+                log_storer_suffix=log_storer_suffix,
             )
         elif input_type == "EXCHANGE":
             communication_receiver = CommunicationReceiverExchange(
                 communication_receiver_config,
                 self.connection,
-                self.log_storer,
-                messages_received_restore_state=restore_state.get_messages_received()
-                if restore_state
-                else {},
-                possible_duplicates_restore_state=restore_state.get_possible_duplicates()
-                if restore_state
-                else {},
+                messages_received_restore_state=messages_received_restore_state,
+                possible_duplicates_restore_state=possible_duplicates_restore_state,
+                log_storer_suffix=log_storer_suffix,
             )
         return communication_receiver
 
@@ -73,7 +64,8 @@ class CommunicationInitializer:
         output,
         output_type,
         delimiter=",",
-        restore_state=None,
+        messages_sent_restore_state={},
+        log_storer_suffix="",
     ):
         """
         Initialize the sender based on the output type
@@ -85,18 +77,14 @@ class CommunicationInitializer:
             communication_sender = CommunicationSenderQueue(
                 communication_sender_config,
                 self.connection,
-                self.log_storer,
-                messages_sent_restore_state=restore_state.get_messages_sent()
-                if restore_state
-                else {},
+                messages_sent_restore_state=messages_sent_restore_state,
+                log_storer_suffix=log_storer_suffix,
             )
         elif output_type == "EXCHANGE":
             communication_sender = CommunicationSenderExchange(
                 communication_sender_config,
                 self.connection,
-                self.log_storer,
-                messages_sent_restore_state=restore_state.get_messages_sent()
-                if restore_state
-                else {},
+                messages_sent_restore_state=messages_sent_restore_state,
+                log_storer_suffix=log_storer_suffix,
             )
         return communication_sender

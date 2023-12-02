@@ -34,25 +34,28 @@ def main():
     health.start()
 
     # TODO: The server should not even have log storer or a state to restore, check this
-    log_storer = LogStorer()
     restore_state = Restorer().restore()
 
     vuelos_initializer = CommunicationInitializer(
-        config_params["rabbit_host"], log_storer
+        config_params["rabbit_host"],
     )
 
-    resultados_initializer = CommunicationInitializer(config_params["rabbit_host"], log_storer)
+    resultados_initializer = CommunicationInitializer(
+        config_params["rabbit_host"],
+    )
     resultados_sender = resultados_initializer.initialize_sender(
         config_params["vuelos_output"],
         config_params["output_type"],
-        restore_state=restore_state,
+        messages_sent_restore_state=restore_state.get_messages_sent(),
     )
 
-    lat_long_initializer = CommunicationInitializer(config_params["rabbit_host"], log_storer)
+    lat_long_initializer = CommunicationInitializer(
+        config_params["rabbit_host"],
+    )
     lat_long_sender = lat_long_initializer.initialize_sender(
         config_params["lat_long_output"],
         config_params["output_type"],
-        restore_state=restore_state,
+        messages_sent_restore_state=restore_state.get_messages_sent(),
     )
 
     server_config = ServerConfig(
