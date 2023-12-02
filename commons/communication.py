@@ -105,6 +105,9 @@ class CommunicationReceiverConfig:
         The input_diff_name used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
     - delimiter : str
         The delimiter used to parse the messages
+    - client_id : str
+        The client_id used to differentiate the input queues between different clients, it is used in topic exchanges, more specifically
+        when receiving the respone from the media general to the gouper.
     """
 
     def __init__(
@@ -115,6 +118,7 @@ class CommunicationReceiverConfig:
         routing_key="",
         input_diff_name="",
         delimiter=",",
+        client_id="",
     ):
         self.input = input
         self.replica_id = replica_id
@@ -122,6 +126,7 @@ class CommunicationReceiverConfig:
         self.routing_key = routing_key
         self.input_diff_name = input_diff_name
         self.delimiter = delimiter
+        self.client_id = client_id
 
 
 class CommunicationReceiver(Communication):
@@ -188,6 +193,7 @@ class CommunicationReceiver(Communication):
         Stops the receiver
         """
         logging.debug("Stopping receiver")
+        self.channel.queue_delete(queue=self.input_queue)
         self.channel.stop_consuming()
 
     def callback(self, ch, method, properties, body):
@@ -514,7 +520,10 @@ class CommunicationReceiverExchange(CommunicationReceiver):
         # So we do this to replicate the filters and function as workers.
         # TODO: See if adding an environment variable to solve this in a better way.
         input_queue_name = (
-            self.config.input + self.config.input_diff_name + self.config.routing_key
+            self.config.input
+            + self.config.input_diff_name
+            + self.config.routing_key
+            + str(self.config.replica_id)
         )
         input_queue = self.channel.queue_declare(queue=input_queue_name, durable=True)
         self.input_queue = input_queue.method.queue
@@ -529,6 +538,9 @@ class CommunicationReceiverExchange(CommunicationReceiver):
             queue=self.input_queue,
             routing_key=self.config.routing_key,
         )
+
+        # remove the input queue
+        self.channel.queue_delete(queue=self.input_queue)
 
 
 class CommunicationReceiverQueue(CommunicationReceiver):

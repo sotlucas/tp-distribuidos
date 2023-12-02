@@ -56,6 +56,7 @@ class Grouper(Processor):
                 config.replica_id,
                 config.replicas_count,
                 input_diff_name=config.input_diff_name,
+                client_id=client_id,
             )
         )
         self.media_general_sender = (
@@ -67,8 +68,8 @@ class Grouper(Processor):
         self.media_general_input_fields = ["average"]
         self.media_general_output_fields = ["totalFare", "amount"]
         logging.info(f"Starting grouper {self.replica_id}")
+
         self.routes = {}
-        self.waiting_for_media_general = False
         self.vuelos_message_to_send = []
 
     def process(self, message):
@@ -94,6 +95,10 @@ class Grouper(Processor):
         return float(message[TOTAL_FARE])
 
     def finish_processing(self):
+        if self.vuelos_message_to_send:
+            # It means we already processed the EOF but we didn't send the results
+            return Response(ResponseType.MULTIPLE, self.vuelos_message_to_send)
+
         # 2. Suma todos los precios
         # 3. Envía el resultado junto con la cantidad al procesador de media general.
         self.media_general_receiver.bind(
@@ -116,7 +121,6 @@ class Grouper(Processor):
             message_to_send,
             output_fields_order=self.media_general_output_fields,
         )
-        self.waiting_for_media_general = True
         self.media_general_receiver.start()
         return Response(ResponseType.MULTIPLE, self.vuelos_message_to_send)
 
@@ -124,10 +128,39 @@ class Grouper(Processor):
         for message in messages.payload:
             results = self.process_single(message)
             self.vuelos_message_to_send.extend(results)
-        self.routes.clear()
-        self.waiting_for_media_general = False
+
+        # TODO: Save state con el logger
+        # sefl.save_especial_de_groupers(vuelos_message_to_send : list, client_id : int)
+
         # Stop media general receiver because it's not needed anymore & it doesn't send EOF
         self.media_general_receiver.stop()
+
+    # def save_especial_de_groupers(vuelos_message_to_send : list, client_id : int):
+    #     restore = self.restore()
+    #     restore["connection"]["processors"][client_id]["vuelos_message_to_send"] = vuelos_message_to_send
+    #     communication_receiver = {
+    #             "messages_received": {
+    #                 "1": 10,
+    #             },
+    #             "local_possible_duplicates": {"1": [1, 2, 3]},
+    #             "possible_duplicates_sent": {"1": [1, 2, 3, 4, 5]},
+    #         }
+    #         communication_sender = {
+    #             "messages_sent": {
+    #                 "1": 0,
+    #             }
+    #         }
+    #         connection = {
+    #             "processors": {
+    #                 "1": {
+    #                     "routes": {
+    #                         "EZE-MAD": [121, 203],
+    #                     },
+    #                     "vuelos_message_to_send" : []
+    #                 }
+    #             }
+    #         }
+    #     self.save(restore)
 
     def process_single(self, message):
         # 4. Filtra los precios que estén por encima de la media general.

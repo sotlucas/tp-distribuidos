@@ -26,6 +26,7 @@ class CommunicationInitializer:
         routing_key="",
         input_diff_name="",
         delimiter=",",
+        client_id="",
     ):
         """
         Initialize the receiver based on the input type
@@ -37,6 +38,7 @@ class CommunicationInitializer:
             routing_key=routing_key,
             input_diff_name=input_diff_name,
             delimiter=delimiter,
+            client_id=str(client_id),
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(
