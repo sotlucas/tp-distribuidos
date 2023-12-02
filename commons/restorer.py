@@ -1,9 +1,10 @@
+import logging
 from commons.logger import Logger, RestoreType
 
 
 class RestoreState:
     def __init__(
-            self, messages_received, messages_sent, possible_duplicates, duplicate_catcher
+        self, messages_received, messages_sent, possible_duplicates, duplicate_catcher
     ):
         self.messages_received = messages_received
         self.messages_sent = messages_sent
@@ -11,16 +12,22 @@ class RestoreState:
         self.duplicate_catcher = duplicate_catcher
 
     def get_messages_received(self):
-        return self.messages_received
+        logging.info("RESTORING MESSAGES_RECEIVED: {}".format(self.messages_received))
+        return self.messages_received.copy()
 
     def get_messages_sent(self):
-        return self.messages_sent
+        logging.info("RESTORING MESSAGES_SENT: {}".format(self.messages_sent))
+        return self.messages_sent.copy()
 
     def get_possible_duplicates(self):
-        return self.possible_duplicates
+        logging.info(
+            "RESTORING POSSIBLE_DUPLICATES: {}".format(self.possible_duplicates)
+        )
+        return self.possible_duplicates.copy()
 
     def get_duplicate_catcher(self):
-        return self.duplicate_catcher
+        logging.info("RESTORING DUPLICATE_CATCHER: {}".format(self.duplicate_catcher))
+        return self.duplicate_catcher.copy()
 
 
 class Restorer:
@@ -44,7 +51,7 @@ class Restorer:
                 state.get("messages_received", {}),
                 state.get("messages_sent", {}),
                 state.get("possible_duplicates", {}),
-                state.get("duplicate_catcher", {})
+                state.get("duplicate_catcher", {}),
             )
         else:
             return RestoreState({}, {}, {}, {})
@@ -63,6 +70,7 @@ class Restorer:
             }
         }
         """
+
 
 # # Log Communication
 # START 83

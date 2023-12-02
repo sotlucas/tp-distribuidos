@@ -382,6 +382,10 @@ class CommunicationReceiver(Communication):
             else:
                 # It means there are remaining messages to receive.
                 logging.debug("Not all real messages received, requeueing original EOF")
+                logging.debug(f"Real messages received: {real_messages_received}")
+                logging.debug(
+                    f"Original messages sent: {new_aggregation.original_messages_sent}"
+                )
 
                 # We requeue the EOF with the original values, to start a new round of EOF propagation
 
@@ -656,7 +660,9 @@ class CommunicationSender(Communication):
         0     1               9
         """
         logging.debug("Sending EOF")
-        message = EOFMessage(client_id, self.get_client_messages_sent(client_id))
+        messages_sent = self.get_client_messages_sent(client_id)
+        logging.debug("Messages sent: {}".format(messages_sent))
+        message = EOFMessage(client_id, messages_sent)
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):
