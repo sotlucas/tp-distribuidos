@@ -13,9 +13,10 @@ from commons.communication import (
 
 
 class CommunicationInitializer:
-    def __init__(self, rabbit_host):
+    def __init__(self, rabbit_host, log_storer):
         self.rabbit_host = rabbit_host
         self.connection = CommunicationConnection(self.rabbit_host)
+        self.log_storer = log_storer
 
     def initialize_receiver(
         self,
@@ -45,15 +46,25 @@ class CommunicationInitializer:
             communication_receiver = CommunicationReceiverQueue(
                 communication_receiver_config,
                 self.connection,
-                messages_received_restore_state=restore_state.get_messages_received(),
-                possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
+                self.log_storer,
+                messages_received_restore_state=restore_state.get_messages_received()
+                if restore_state
+                else {},
+                possible_duplicates_restore_state=restore_state.get_possible_duplicates()
+                if restore_state
+                else {},
             )
         elif input_type == "EXCHANGE":
             communication_receiver = CommunicationReceiverExchange(
                 communication_receiver_config,
                 self.connection,
-                messages_received_restore_state=restore_state.get_messages_received(),
-                possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
+                self.log_storer,
+                messages_received_restore_state=restore_state.get_messages_received()
+                if restore_state
+                else {},
+                possible_duplicates_restore_state=restore_state.get_possible_duplicates()
+                if restore_state
+                else {},
             )
         return communication_receiver
 
@@ -74,12 +85,18 @@ class CommunicationInitializer:
             communication_sender = CommunicationSenderQueue(
                 communication_sender_config,
                 self.connection,
-                messages_sent_restore_state=restore_state.get_messages_sent(),
+                self.log_storer,
+                messages_sent_restore_state=restore_state.get_messages_sent()
+                if restore_state
+                else {},
             )
         elif output_type == "EXCHANGE":
             communication_sender = CommunicationSenderExchange(
                 communication_sender_config,
                 self.connection,
-                messages_sent_restore_state=restore_state.get_messages_sent(),
+                self.log_storer,
+                messages_sent_restore_state=restore_state.get_messages_sent()
+                if restore_state
+                else {},
             )
         return communication_sender

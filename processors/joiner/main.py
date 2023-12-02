@@ -8,6 +8,8 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
 from state import State
+from commons.restorer import Restorer
+from commons.log_storer import LogStorer
 
 import threading
 
@@ -39,10 +41,14 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
+    lat_long_log_storer = LogStorer(suffix="lat_long")
+    lat_long_restore_state = Restorer(suffix="lat_long").restore()
+
+    # TODO: When restoring we need that the lat longs send the airports to the state.
     state = State()
 
     lat_long_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], lat_long_log_storer
     )
     lat_long_receiver = lat_long_communication_initializer.initialize_receiver(
         config_params["lat_long_input"],
@@ -50,6 +56,7 @@ def main():
         config_params["replica_id"],
         JOINER_REPLICA_COUNT,
         input_diff_name=str(config_params["replica_id"]),
+        restore_state=lat_long_restore_state,
     )
 
     lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
@@ -57,7 +64,11 @@ def main():
     lat_long_config = LatLongConfig(state)
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], lat_long_input_fields, None, send_eof=False
+        config_params["replica_id"],
+        lat_long_input_fields,
+        None,
+        send_eof=False,
+        duplicate_catcher=True,
     )
     connection = Connection(
         connection_config,
@@ -65,21 +76,29 @@ def main():
         None,
         LatLong,
         lat_long_config,
+        lat_long_log_storer,
+        duplicate_catcher_restore_state=lat_long_restore_state.get_duplicate_catcher_state(),
     )
     lat_long_thread = threading.Thread(target=connection.run)
     lat_long_thread.start()
 
+    joiner_log_storer = LogStorer(suffix="joiner")
+    joiner_restore_state = Restorer(suffix="joiner").restore()
+
     vuelos_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], joiner_log_storer
     )
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
         config_params["input_type_vuelos"],
         config_params["replica_id"],
         config_params["replicas_count"],
+        restore_state=joiner_restore_state,
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
-        config_params["output"], config_params["output_type"]
+        config_params["output"],
+        config_params["output_type"],
+        restore_state=joiner_restore_state,
     )
 
     vuelos_input_fields = [

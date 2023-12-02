@@ -6,6 +6,9 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from media_general import MediaGeneral, MediaGeneralConfig
 from commons.connection import ConnectionConfig, Connection
+from commons.restorer import Restorer
+from commons.log_storer import LogStorer
+
 
 MEDIA_GENERAL_REPLICAS_COUNT = 1
 
@@ -30,15 +33,23 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    log_storer = LogStorer()
+    restore_state = Restorer().restore()
+
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_storer
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
         config_params["replica_id"],
         MEDIA_GENERAL_REPLICAS_COUNT,
+        restore_state=restore_state,
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"], config_params["output_type"]
+        config_params["output"],
+        config_params["output_type"],
+        restore_state=restore_state,
     )
 
     input_fields = ["sum", "amount"]
@@ -47,10 +58,16 @@ def main():
     media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], input_fields, output_fields
+        config_params["replica_id"], input_fields, output_fields, duplicate_catcher=True
     )
     Connection(
-        connection_config, receiver, sender, MediaGeneral, media_general_config
+        connection_config,
+        receiver,
+        sender,
+        MediaGeneral,
+        media_general_config,
+        log_storer=log_storer,
+        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher_state(),
     ).run()
 
     health.join()

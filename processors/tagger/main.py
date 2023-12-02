@@ -6,6 +6,8 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from tagger import Tagger, TaggerConfig
 from commons.connection import ConnectionConfig, Connection
+from commons.restorer import Restorer
+from commons.log_storer import LogStorer
 
 
 def main():
@@ -29,15 +31,23 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    log_storer = LogStorer()
+    restore_state = Restorer().restore()
+
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_storer
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
         config_params["replica_id"],
         config_params["replicas_count"],
+        restore_state=restore_state,
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"], config_params["output_type"]
+        config_params["output"],
+        config_params["output_type"],
+        restore_state=restore_state,
     )
 
     tagger_config = TaggerConfig(config_params["tag_name"])
@@ -49,7 +59,15 @@ def main():
         send_eof=False,
         duplicate_catcher=True,
     )
-    Connection(connection_config, receiver, sender, Tagger, tagger_config).run()
+    Connection(
+        connection_config,
+        receiver,
+        sender,
+        Tagger,
+        tagger_config,
+        log_storer=log_storer,
+        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher_state(),
+    ).run()
 
     health.join()
 

@@ -1,12 +1,13 @@
 from multiprocessing import Process
 
 from commons.health_checker import HealthChecker
-from commons.restorer import Restorer
 from grouper import Grouper, GrouperConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
+from commons.restorer import Restorer
+from commons.log_storer import LogStorer
 
 
 def main():
@@ -31,10 +32,12 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    restore_state = Restorer.restore()
+    log_storer = LogStorer()
+    restore_state = Restorer().restore()
 
     vuelos_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"],
+        log_storer=log_storer,
     )
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
@@ -77,6 +80,7 @@ def main():
         vuelos_input_fields,
         vuelos_output_fields,
         send_eof=False,
+        duplicate_catcher=True,
     )
     Connection(
         connection_config,
@@ -84,6 +88,7 @@ def main():
         vuelos_sender,
         Grouper,
         grouper_config,
+        log_storer,
         duplicate_catcher_restore_state=restore_state.get_duplicate_catcher_state(),
     ).run()
 

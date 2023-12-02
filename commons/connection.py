@@ -32,6 +32,7 @@ class Connection:
         communication_sender,
         processor_name,
         processor_config=None,
+        log_storer=None,
         duplicate_catcher_restore_state={},
     ):
         self.config = config
@@ -39,6 +40,7 @@ class Connection:
         self.communication_sender = communication_sender
         self.processor_name = processor_name
         self.processor_config = processor_config
+        self.log_storer = log_storer
 
         self.processors = {}
 
@@ -97,6 +99,11 @@ class Connection:
 
         if not processed_messages:
             return
+
+        if self.log_storer:
+            for message in processed_messages:
+                self.log_storer.store_new_connection_message(message.payload)
+
         if self.config.is_topic:
             self.send_messages_topic(
                 processed_messages, messages.client_id, messages.message_id
@@ -105,6 +112,8 @@ class Connection:
             self.send_messages(
                 processed_messages, messages.client_id, messages.message_id
             )
+        if self.log_storer:
+            self.log_storer.message_sent()
 
     def process_duplicate_catcher(self, messages):
         """
