@@ -12,21 +12,21 @@ class RestoreState:
         self.duplicate_catcher = duplicate_catcher
 
     def get_messages_received(self):
-        logging.info("RESTORING MESSAGES_RECEIVED: {}".format(self.messages_received))
+        logging.info("restoring messages_received: {}".format(self.messages_received))
         return self.messages_received.copy()
 
     def get_messages_sent(self):
-        logging.info("RESTORING MESSAGES_SENT: {}".format(self.messages_sent))
+        logging.info("restoring messages_sent: {}".format(self.messages_sent))
         return self.messages_sent.copy()
 
     def get_possible_duplicates(self):
         logging.info(
-            "RESTORING POSSIBLE_DUPLICATES: {}".format(self.possible_duplicates)
+            "restoring possible_duplicates: {}".format(self.possible_duplicates)
         )
         return self.possible_duplicates.copy()
 
     def get_duplicate_catcher(self):
-        logging.info("RESTORING DUPLICATE_CATCHER: {}".format(self.duplicate_catcher))
+        logging.info("restoring duplicate_catcher: {}".format(self.duplicate_catcher))
         return self.duplicate_catcher.copy()
 
 

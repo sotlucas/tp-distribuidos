@@ -64,7 +64,7 @@ def main():
     vuelos_output_fields = ["route", "prices"]
 
     grouper_config = GrouperConfig(
-        config_params["replicas_count"],
+        config_params["replica_id"],
         media_general_communication_initializer,
         config_params["media_general_input"],
         config_params["input_type"],
