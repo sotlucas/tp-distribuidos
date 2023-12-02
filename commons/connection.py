@@ -32,6 +32,7 @@ class Connection:
         communication_sender,
         processor_name,
         processor_config=None,
+        duplicate_catcher_restore_state={},
     ):
         self.config = config
         self.communication_receiver = communication_receiver
@@ -40,7 +41,15 @@ class Connection:
         self.processor_config = processor_config
 
         self.processors = {}
+
         self.duplicate_catchers = {}
+        # Restore duplicate catcher state
+        for (
+            client_id,
+            duplicate_catcher_state,
+        ) in duplicate_catcher_restore_state.items():
+            duplicate_catcher = DuplicateCatcher(duplicate_catcher_state)
+            self.duplicate_catchers[client_id] = duplicate_catcher
 
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)

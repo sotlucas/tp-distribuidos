@@ -1,6 +1,7 @@
 from multiprocessing import Process
 
 from commons.health_checker import HealthChecker
+from commons.restorer import Restorer
 from grouper import Grouper, GrouperConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
@@ -30,6 +31,8 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
+    restore_state = Restorer.restore()
+
     vuelos_communication_initializer = CommunicationInitializer(
         config_params["rabbit_host"]
     )
@@ -39,9 +42,12 @@ def main():
         config_params["replica_id"],
         config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
+        restore_state=restore_state,
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
-        config_params["vuelos_output"], config_params["output_type"]
+        config_params["vuelos_output"],
+        config_params["output_type"],
+        restore_state=restore_state,
     )
 
     media_general_communication_initializer = CommunicationInitializer(
@@ -73,7 +79,12 @@ def main():
         send_eof=False,
     )
     Connection(
-        connection_config, vuelos_receiver, vuelos_sender, Grouper, grouper_config
+        connection_config,
+        vuelos_receiver,
+        vuelos_sender,
+        Grouper,
+        grouper_config,
+        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher_state(),
     ).run()
 
     health.join()

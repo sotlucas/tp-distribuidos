@@ -27,6 +27,7 @@ class CommunicationInitializer:
         input_diff_name="",
         delimiter=",",
         client_id="",
+        restore_state=None,
     ):
         """
         Initialize the receiver based on the input type
@@ -42,15 +43,27 @@ class CommunicationInitializer:
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(
-                communication_receiver_config, self.connection
+                communication_receiver_config,
+                self.connection,
+                messages_received_restore_state=restore_state.get_messages_received(),
+                possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
             )
         elif input_type == "EXCHANGE":
             communication_receiver = CommunicationReceiverExchange(
-                communication_receiver_config, self.connection
+                communication_receiver_config,
+                self.connection,
+                messages_received_restore_state=restore_state.get_messages_received(),
+                possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
             )
         return communication_receiver
 
-    def initialize_sender(self, output, output_type, delimiter=","):
+    def initialize_sender(
+        self,
+        output,
+        output_type,
+        delimiter=",",
+        restore_state=None,
+    ):
         """
         Initialize the sender based on the output type
         """
@@ -59,10 +72,14 @@ class CommunicationInitializer:
         )
         if output_type == "QUEUE":
             communication_sender = CommunicationSenderQueue(
-                communication_sender_config, self.connection
+                communication_sender_config,
+                self.connection,
+                messages_sent_restore_state=restore_state.get_messages_sent(),
             )
         elif output_type == "EXCHANGE":
             communication_sender = CommunicationSenderExchange(
-                communication_sender_config, self.connection
+                communication_sender_config,
+                self.connection,
+                messages_sent_restore_state=restore_state.get_messages_sent(),
             )
         return communication_sender

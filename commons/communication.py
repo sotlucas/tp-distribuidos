@@ -137,19 +137,25 @@ class CommunicationReceiver(Communication):
     and then the `start` method to start receiving messages
     """
 
-    def __init__(self, config, connection):
+    def __init__(
+        self,
+        config,
+        connection,
+        messages_received_restore_state={},
+        possible_duplicates_restore_state={},
+    ):
         super().__init__(config, connection)
 
         # {client_id: messages_received}
-        self.messages_received = {}
+        self.messages_received = messages_received_restore_state
 
         # {client_id: [message_id]}
-        self.local_possible_duplicates = {}
+        self.local_possible_duplicates = possible_duplicates_restore_state
 
         # TODO: Maybe this should be in the sender?
         #       Or maybe we should merge the local_possible_duplicates and possible_duplicates_sent?
         # {client_id: [message_id]}
-        self.possible_duplicates_sent = {}
+        self.possible_duplicates_sent = possible_duplicates_restore_state
 
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
@@ -575,12 +581,12 @@ class CommunicationSender(Communication):
     Abstract class to be used by the CommunicationSender classes
     """
 
-    def __init__(self, config, connection):
+    def __init__(self, config, connection, messages_sent_restore_state={}):
         super().__init__(config, connection)
         self.active = False
 
         # {client_id: messages_sent}
-        self.messages_sent = {}
+        self.messages_sent = messages_sent_restore_state
 
     def activate(self):
         if not self.active:
