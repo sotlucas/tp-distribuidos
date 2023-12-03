@@ -1,7 +1,5 @@
 import logging
 import signal
-from commons.log_storer import LogStorer
-
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
 from commons.duplicate_catcher import DuplicateCatcher
@@ -31,17 +29,16 @@ class Connection:
         config,
         communication_receiver,
         communication_sender,
+        log_guardian,
         processor_name,
         processor_config=None,
-        duplicate_catcher_restore_state={},
-        log_storer_suffix="",
     ):
         self.config = config
         self.communication_receiver = communication_receiver
         self.communication_sender = communication_sender
         self.processor_name = processor_name
         self.processor_config = processor_config
-        self.log_storer = LogStorer(suffix=log_storer_suffix)
+        self.log_guardian = log_guardian
 
         self.processors = {}
 
@@ -50,7 +47,7 @@ class Connection:
         for (
             client_id,
             duplicate_catcher_state,
-        ) in duplicate_catcher_restore_state.items():
+        ) in log_guardian.get_duplicate_catchers().items():
             duplicate_catcher = DuplicateCatcher(duplicate_catcher_state)
             self.duplicate_catchers[client_id] = duplicate_catcher
 
@@ -103,7 +100,7 @@ class Connection:
             for message in processed_messages:
                 pass
                 # TODO: See how we should store the messages
-                # self.log_storer.store_new_connection_message(message.payload)
+                # self.log_guardian.store_new_connection_message(message.payload)
 
         if processed_messages:
             if self.config.is_topic:
@@ -115,14 +112,14 @@ class Connection:
                     processed_messages, messages.client_id, messages.message_id
                 )
             # Log the messages sent
-            self.log_storer.message_sent()
+            self.log_guardian.message_sent()
 
         if self.config.duplicate_catcher:
             # If we are using duplicate catcher, it means that we have a state to save, so we need to store the messages.
             duplicate_catcher_states = {}
             for client_id, duplicate_catcher in self.duplicate_catchers.items():
                 duplicate_catcher_states[client_id] = duplicate_catcher.get_state()
-            self.log_storer.store_duplicate_catcher(duplicate_catcher_states)
+            self.log_guardian.store_duplicate_catchers(duplicate_catcher_states)
 
     def process_duplicate_catcher(self, messages):
         """

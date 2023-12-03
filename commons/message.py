@@ -119,11 +119,11 @@ class EOFDiscoveryMessage(Message):
         0      2          10                       18                                   22                              N
         | type | client_id | original_messages_sent | original_possible_duplicates_count | original_possible_duplicates |
 
-        N                  N+8             N+16                             N+24                          X
-        | messages_received | messages_sent | local_possible_duplicates_count | local_possible_duplicates |
+        N                  N+8             N+16                        N+24                   X
+        | messages_received | messages_sent | possible_duplicates_count | possible_duplicates |
 
-        X                               X+4                         Y                      Y+4                Z
-        | possible_duplicates_sent_count | possible_duplicates_sent | replica_id_seen_count | replica_id_seen |
+        X                      X+4                Y
+        | replica_id_seen_count | replica_id_seen |
     """
 
     def __init__(
@@ -133,8 +133,7 @@ class EOFDiscoveryMessage(Message):
         original_possible_duplicates,
         messages_received,
         messages_sent,
-        local_possible_duplicates,
-        possible_duplicates_sent,
+        possible_duplicates,
         replica_id_seen,
     ):
         message_type = MessageType.EOF_DISCOVERY
@@ -146,9 +145,7 @@ class EOFDiscoveryMessage(Message):
         self.messages_received = messages_received
         self.messages_sent = messages_sent
 
-        self.local_possible_duplicates = local_possible_duplicates
-
-        self.possible_duplicates_sent = possible_duplicates_sent
+        self.possible_duplicates = possible_duplicates
 
         self.replica_id_seen = replica_id_seen
 
@@ -163,15 +160,8 @@ class EOFDiscoveryMessage(Message):
         messages_received = reader.read_int(8)
         messages_sent = reader.read_int(8)
 
-        local_possible_duplicates_count = reader.read_int(4)
-        local_possible_duplicates = reader.read_multiple_int(
-            8, local_possible_duplicates_count
-        )
-
-        possible_duplicates_sent_count = reader.read_int(4)
-        possible_duplicates_sent = reader.read_multiple_int(
-            8, possible_duplicates_sent_count
-        )
+        possible_duplicates_count = reader.read_int(4)
+        possible_duplicates = reader.read_multiple_int(8, possible_duplicates_count)
 
         replica_id_seen_count = reader.read_int(4)
         replica_id_seen = reader.read_multiple_int(8, replica_id_seen_count)
@@ -182,8 +172,7 @@ class EOFDiscoveryMessage(Message):
             original_possible_duplicates,
             messages_received,
             messages_sent,
-            local_possible_duplicates,
-            possible_duplicates_sent,
+            possible_duplicates,
             replica_id_seen,
         )
 
@@ -196,11 +185,8 @@ class EOFDiscoveryMessage(Message):
         writer.write_int(self.messages_received, 8)
         writer.write_int(self.messages_sent, 8)
 
-        writer.write_int(len(self.local_possible_duplicates), 4)
-        writer.write_multiple_int(self.local_possible_duplicates, 8)
-
-        writer.write_int(len(self.possible_duplicates_sent), 4)
-        writer.write_multiple_int(self.possible_duplicates_sent, 8)
+        writer.write_int(len(self.possible_duplicates), 4)
+        writer.write_multiple_int(self.possible_duplicates, 8)
 
         writer.write_int(len(self.replica_id_seen), 4)
         writer.write_multiple_int(self.replica_id_seen, 8)
@@ -215,14 +201,11 @@ class EOFAggregationMessage(Message):
         0      2          10                       18                                   22                              N
         | type | client_id | original_messages_sent | original_possible_duplicates_count | original_possible_duplicates |
 
-        N                  N+8             N+16                             N+20                          X
-        | messages_received | messages_sent | local_possible_duplicates_count | local_possible_duplicates |
+        N                  N+8             N+16                        N+20                   X
+        | messages_received | messages_sent | possible_duplicates_count | possible_duplicates |
 
-        X                               X+4                         Y                      Y+4                Z
-        | possible_duplicates_sent_count | possible_duplicates_sent | replica_id_seen_count | replica_id_seen |
-
-        Z                                      Z+4                                M
-        | possible_duplicate_processed_by_count | possible_duplicate_processed_by |
+        X                      X+4                Y                                      Y+4                                Z
+        | replica_id_seen_count | replica_id_seen | possible_duplicates_processed_by_count | possible_duplicates_processed_by |
 
     """
 
@@ -235,10 +218,9 @@ class EOFAggregationMessage(Message):
         original_possible_duplicates,
         messages_received,
         messages_sent,
-        local_possible_duplicates,
-        possible_duplicates_sent,
+        possible_duplicates,
         replica_id_seen,
-        possible_duplicate_processed_by,
+        possible_duplicates_processed_by,
     ):
         message_type = MessageType.EOF_AGGREGATION
         super().__init__(message_type, client_id)
@@ -249,13 +231,11 @@ class EOFAggregationMessage(Message):
         self.messages_received = messages_received
         self.messages_sent = messages_sent
 
-        self.local_possible_duplicates = local_possible_duplicates
-
-        self.possible_duplicates_sent = possible_duplicates_sent
+        self.possible_duplicates = possible_duplicates
 
         self.replica_id_seen = replica_id_seen
 
-        self.possible_duplicate_processed_by = possible_duplicate_processed_by
+        self.possible_duplicates_processed_by = possible_duplicates_processed_by
 
     def from_bytes(client_id, reader):
         original_messages_sent = reader.read_int(8)
@@ -268,22 +248,15 @@ class EOFAggregationMessage(Message):
         messages_received = reader.read_int(8)
         messages_sent = reader.read_int(8)
 
-        local_possible_duplicates_count = reader.read_int(4)
-        local_possible_duplicates = reader.read_multiple_int(
-            8, local_possible_duplicates_count
-        )
-
-        possible_duplicates_sent_count = reader.read_int(4)
-        possible_duplicates_sent = reader.read_multiple_int(
-            8, possible_duplicates_sent_count
-        )
+        possible_duplicates_count = reader.read_int(4)
+        possible_duplicates = reader.read_multiple_int(8, possible_duplicates_count)
 
         replica_id_seen_count = reader.read_int(4)
         replica_id_seen = reader.read_multiple_int(8, replica_id_seen_count)
 
-        possible_duplicate_processed_by_count = reader.read_int(4)
-        possible_duplicate_processed_by = reader.read_multiple_int(
-            8, possible_duplicate_processed_by_count
+        possible_duplicates_processed_by_count = reader.read_int(4)
+        possible_duplicates_processed_by = reader.read_multiple_int(
+            8, possible_duplicates_processed_by_count
         )
 
         return EOFAggregationMessage(
@@ -292,10 +265,9 @@ class EOFAggregationMessage(Message):
             original_possible_duplicates,
             messages_received,
             messages_sent,
-            local_possible_duplicates,
-            possible_duplicates_sent,
+            possible_duplicates,
             replica_id_seen,
-            possible_duplicate_processed_by,
+            possible_duplicates_processed_by,
         )
 
     def to_bytes_impl(self, writer):
@@ -307,17 +279,14 @@ class EOFAggregationMessage(Message):
         writer.write_int(self.messages_received, 8)
         writer.write_int(self.messages_sent, 8)
 
-        writer.write_int(len(self.local_possible_duplicates), 4)
-        writer.write_multiple_int(self.local_possible_duplicates, 8)
-
-        writer.write_int(len(self.possible_duplicates_sent), 4)
-        writer.write_multiple_int(self.possible_duplicates_sent, 8)
+        writer.write_int(len(self.possible_duplicates), 4)
+        writer.write_multiple_int(self.possible_duplicates, 8)
 
         writer.write_int(len(self.replica_id_seen), 4)
         writer.write_multiple_int(self.replica_id_seen, 8)
 
-        writer.write_int(len(self.possible_duplicate_processed_by), 4)
-        writer.write_multiple_int(self.possible_duplicate_processed_by, 8)
+        writer.write_int(len(self.possible_duplicates_processed_by), 4)
+        writer.write_multiple_int(self.possible_duplicates_processed_by, 8)
 
         return writer.get_bytes()
 

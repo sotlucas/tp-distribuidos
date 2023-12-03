@@ -6,8 +6,7 @@ from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
-from commons.restorer import Restorer
-from commons.log_storer import LogStorer
+from commons.log_guardian import LogGuardian
 
 
 def main():
@@ -32,10 +31,10 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
-    restore_state = Restorer().restore()
+    vuelos_log_guardian = LogGuardian("vuelos")
 
     vuelos_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"],
+        config_params["rabbit_host"], vuelos_log_guardian
     )
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
@@ -43,24 +42,18 @@ def main():
         config_params["replica_id"],
         config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
-        messages_received_restore_state=restore_state.get_messages_received(),
-        possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
-        config_params["vuelos_output"],
-        config_params["output_type"],
-        messages_sent_restore_state=restore_state.get_messages_sent(),
+        config_params["vuelos_output"], config_params["output_type"]
     )
+
+    media_general_log_guardian = LogGuardian("media_general")
 
     media_general_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], media_general_log_guardian
     )
 
-    vuelos_input_fields = [
-        "startingAirport",
-        "destinationAirport",
-        "totalFare",
-    ]
+    vuelos_input_fields = ["startingAirport", "destinationAirport", "totalFare"]
     vuelos_output_fields = ["route", "prices"]
 
     grouper_config = GrouperConfig(
@@ -85,9 +78,9 @@ def main():
         connection_config,
         vuelos_receiver,
         vuelos_sender,
+        vuelos_log_guardian,
         Grouper,
         grouper_config,
-        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher(),
     ).run()
 
     health.join()

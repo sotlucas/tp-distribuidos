@@ -13,9 +13,10 @@ from commons.communication import (
 
 
 class CommunicationInitializer:
-    def __init__(self, rabbit_host):
+    def __init__(self, rabbit_host, log_guardian):
         self.rabbit_host = rabbit_host
         self.connection = CommunicationConnection(self.rabbit_host)
+        self.log_guardian = log_guardian
 
     def initialize_receiver(
         self,
@@ -26,9 +27,6 @@ class CommunicationInitializer:
         routing_key="",
         input_diff_name="",
         delimiter=",",
-        messages_received_restore_state={},
-        possible_duplicates_restore_state={},
-        log_storer_suffix="",
     ):
         """
         Initialize the receiver based on the input type
@@ -43,30 +41,15 @@ class CommunicationInitializer:
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(
-                communication_receiver_config,
-                self.connection,
-                messages_received_restore_state=messages_received_restore_state,
-                possible_duplicates_restore_state=possible_duplicates_restore_state,
-                log_storer_suffix=log_storer_suffix,
+                communication_receiver_config, self.connection, self.log_guardian
             )
         elif input_type == "EXCHANGE":
             communication_receiver = CommunicationReceiverExchange(
-                communication_receiver_config,
-                self.connection,
-                messages_received_restore_state=messages_received_restore_state,
-                possible_duplicates_restore_state=possible_duplicates_restore_state,
-                log_storer_suffix=log_storer_suffix,
+                communication_receiver_config, self.connection, self.log_guardian
             )
         return communication_receiver
 
-    def initialize_sender(
-        self,
-        output,
-        output_type,
-        delimiter=",",
-        messages_sent_restore_state={},
-        log_storer_suffix="",
-    ):
+    def initialize_sender(self, output, output_type, delimiter=","):
         """
         Initialize the sender based on the output type
         """
@@ -75,16 +58,10 @@ class CommunicationInitializer:
         )
         if output_type == "QUEUE":
             communication_sender = CommunicationSenderQueue(
-                communication_sender_config,
-                self.connection,
-                messages_sent_restore_state=messages_sent_restore_state,
-                log_storer_suffix=log_storer_suffix,
+                communication_sender_config, self.connection, self.log_guardian
             )
         elif output_type == "EXCHANGE":
             communication_sender = CommunicationSenderExchange(
-                communication_sender_config,
-                self.connection,
-                messages_sent_restore_state=messages_sent_restore_state,
-                log_storer_suffix=log_storer_suffix,
+                communication_sender_config, self.connection, self.log_guardian
             )
         return communication_sender
