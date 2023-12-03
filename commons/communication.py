@@ -397,7 +397,7 @@ class CommunicationReceiver(Communication):
             duplicates_counter[processed_message] = count - 1
             if count == 0:
                 duplicates_counter.pop(processed_message)
-        
+
         duplicate_messages_received = sum(duplicates_counter.values())
         duplicate_messages_sent = sum([count for processed_message, count in duplicates_counter.items() if processed_message.sent])
         return duplicate_messages_received, duplicate_messages_sent
@@ -466,10 +466,8 @@ class CommunicationReceiver(Communication):
         duplicates_processed = self.log_guardian.search_for_duplicate_messages(
             message.client_id, message.possible_duplicates
         )
-        duplicates_processed_str = [duplicate.to_str() for duplicate in duplicates_processed]
-
         new_possible_duplicates_processed_by = (
-            message.possible_duplicates_processed_by + duplicates_processed_str
+            message.possible_duplicates_processed_by + duplicates_processed
         )
 
         return EOFAggregationMessage(

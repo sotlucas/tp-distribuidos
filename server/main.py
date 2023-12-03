@@ -1,6 +1,7 @@
 from multiprocessing import Process
 
-from commons.health_checker import HealthChecker
+
+from commons.health_checker_server import HealthCheckerServer
 from server import Server, ServerConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
@@ -30,7 +31,7 @@ def main():
     initialize_log(logging_level)
 
     # Healthcheck process
-    health = Process(target=HealthChecker().run)
+    health = Process(target=HealthCheckerServer().run)
     health.start()
 
     # TODO: Should the server even have a log storer or a state to restore? Check this
@@ -66,6 +67,8 @@ def main():
         config_params["max_clients"],
     )
     Server(server_config, vuelos_initializer, resultados_sender, lat_long_sender).run()
+
+    health.join()
 
 
 if __name__ == "__main__":
