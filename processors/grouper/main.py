@@ -1,6 +1,6 @@
 from multiprocessing import Process
 
-from commons.health_checker import HealthChecker
+from commons.health_checker_server import HealthCheckerServer
 from grouper import Grouper, GrouperConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
@@ -27,7 +27,7 @@ def main():
     initialize_log(logging_level)
 
     # Healthcheck process
-    health = Process(target=HealthChecker().run)
+    health = Process(target=HealthCheckerServer().run)
     health.start()
 
     vuelos_communication_initializer = CommunicationInitializer(
