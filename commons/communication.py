@@ -12,7 +12,6 @@ from commons.message import (
     EOFAggregationMessage,
     EOFFinishMessage,
 )
-
 from pika.exceptions import ConnectionWrongStateError
 
 
@@ -71,12 +70,15 @@ class Communication:
         The config for the sender
     - connection : CommunicationConnection
         The connection to the RabbitMQ server
+    - log_guardian : LogGuardian
+        The log guardian to store the messages received and sent
     """
 
-    def __init__(self, config, connection):
+    def __init__(self, config, connection, log_guardian):
         self.config = config
         self.connection = connection
         self.parser = FlightParser(self.config.delimiter)
+        self.log_guardian = log_guardian
 
     def close(self):
         """
@@ -132,19 +134,14 @@ class CommunicationReceiver(Communication):
     and then the `start` method to start receiving messages
     """
 
-    def __init__(self, config, connection):
-        super().__init__(config, connection)
+    def __init__(self, config, connection, log_guardian):
+        super().__init__(config, connection, log_guardian)
 
         # {client_id: messages_received}
-        self.messages_received = {}
+        self.messages_received = self.log_guardian.get_messages_received()
 
         # {client_id: [message_id]}
-        self.local_possible_duplicates = {}
-
-        # TODO: Maybe this should be in the sender?
-        #       Or maybe we should merge the local_possible_duplicates and possible_duplicates_sent?
-        # {client_id: [message_id]}
-        self.possible_duplicates_sent = {}
+        self.possible_duplicates = self.log_guardian.get_possible_duplicates()
 
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
@@ -188,6 +185,7 @@ class CommunicationReceiver(Communication):
         Stops the receiver
         """
         logging.debug("Stopping receiver")
+        self.channel.queue_delete(queue=self.input_queue)
         self.channel.stop_consuming()
 
     def callback(self, ch, method, properties, body):
@@ -204,7 +202,17 @@ class CommunicationReceiver(Communication):
 
         if message.message_type == MessageType.PROTOCOL:
             logging.debug("Received protocol message")
+            self.log_guardian.new_message_received(
+                message.message_id, message.client_id
+            )
+
             ack_type = self.handle_protocol(message)
+
+            self.log_guardian.store_messages_received(self.messages_received)
+            self.log_guardian.store_possible_duplicates(self.possible_duplicates)
+            if self.sender:
+                self.log_guardian.store_messages_sent(self.sender.messages_sent)
+            self.log_guardian.finish_storing_message()
 
         elif message.message_type == MessageType.EOF:
             logging.debug("Received EOF")
@@ -227,6 +235,10 @@ class CommunicationReceiver(Communication):
         else:
             # Default is ACK
             ch.basic_ack(delivery_tag=method.delivery_tag)
+
+            if message.message_type == MessageType.PROTOCOL:
+                # We only commit the message if it is a protocol message, because the EOF messages are requeued
+                self.log_guardian.commit_message()
 
     def handle_protocol(self, message):
         """
@@ -266,7 +278,6 @@ class CommunicationReceiver(Communication):
             0,
             [],
             [],
-            [],
         )
         return self.handle_eof_discovery(eof_message)
 
@@ -295,8 +306,7 @@ class CommunicationReceiver(Communication):
                 new_discovery.original_possible_duplicates,
                 new_discovery.messages_received,
                 new_discovery.messages_sent,
-                new_discovery.local_possible_duplicates,
-                new_discovery.possible_duplicates_sent,
+                new_discovery.possible_duplicates,
                 [],
                 [],
             )
@@ -356,6 +366,10 @@ class CommunicationReceiver(Communication):
             else:
                 # It means there are remaining messages to receive.
                 logging.debug("Not all real messages received, requeueing original EOF")
+                logging.debug(f"Real messages received: {real_messages_received}")
+                logging.debug(
+                    f"Original messages sent: {new_aggregation.original_messages_sent}"
+                )
 
                 # We requeue the EOF with the original values, to start a new round of EOF propagation
 
@@ -404,13 +418,9 @@ class CommunicationReceiver(Communication):
         )
         new_messages_sent = message.messages_sent + sender_messages_sent
 
-        new_local_possible_duplicates = (
-            message.local_possible_duplicates
-            + self.local_possible_duplicates.get(message.client_id, [])
-        )
-        new_possible_duplicates_sent = (
-            message.possible_duplicates_sent
-            + self.possible_duplicates_sent.get(message.client_id, [])
+        new_possible_duplicates = (
+            message.possible_duplicates
+            + self.possible_duplicates.get(message.client_id, [])
         )
 
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
@@ -421,8 +431,7 @@ class CommunicationReceiver(Communication):
             message.original_possible_duplicates,
             new_messages_received,
             new_messages_sent,
-            new_local_possible_duplicates,
-            new_possible_duplicates_sent,
+            new_possible_duplicates,
             new_replica_id_seen,
         )
 
@@ -433,10 +442,10 @@ class CommunicationReceiver(Communication):
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
 
         # TODO: Here we need to search if we processed any of the possible duplicates
-        duplicate_processed = []
+        duplicates_processed = []
 
-        new_possible_duplicate_processed_by = (
-            message.possible_duplicate_processed_by + duplicate_processed
+        new_possible_duplicates_processed_by = (
+            message.possible_duplicates_processed_by + duplicates_processed
         )
 
         return EOFAggregationMessage(
@@ -445,10 +454,9 @@ class CommunicationReceiver(Communication):
             message.original_possible_duplicates,
             message.messages_received,
             message.messages_sent,
-            message.local_possible_duplicates,
-            message.possible_duplicates_sent,
+            message.possible_duplicates,
             new_replica_id_seen,
-            new_possible_duplicate_processed_by,
+            new_possible_duplicates_processed_by,
         )
 
     def update_finish_eof(self, message):
@@ -563,12 +571,12 @@ class CommunicationSender(Communication):
     Abstract class to be used by the CommunicationSender classes
     """
 
-    def __init__(self, config, connection):
-        super().__init__(config, connection)
+    def __init__(self, config, connection, log_guardian):
+        super().__init__(config, connection, log_guardian)
         self.active = False
 
         # {client_id: messages_sent}
-        self.messages_sent = {}
+        self.messages_sent = self.log_guardian.get_messages_sent()
 
     def activate(self):
         if not self.active:
@@ -624,7 +632,9 @@ class CommunicationSender(Communication):
         0     1               9
         """
         logging.debug("Sending EOF")
-        message = EOFMessage(client_id, self.get_client_messages_sent(client_id))
+        messages_sent = self.get_client_messages_sent(client_id)
+        logging.debug("Messages sent: {}".format(messages_sent))
+        message = EOFMessage(client_id, messages_sent)
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):

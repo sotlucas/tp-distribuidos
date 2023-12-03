@@ -2,8 +2,8 @@ import logging
 
 
 class DuplicateCatcher:
-    def __init__(self):
-        self.messages_id = set()
+    def __init__(self, initial_messages_id=None):
+        self.messages_id = set(initial_messages_id) if initial_messages_id else set()
 
     def is_duplicate(self, message_id):
         """
@@ -15,3 +15,6 @@ class DuplicateCatcher:
         self.messages_id.add(message_id)
 
         return False
+
+    def get_state(self):
+        return list(self.messages_id)

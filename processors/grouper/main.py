@@ -6,6 +6,7 @@ from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
+from commons.log_guardian import LogGuardian
 
 
 def main():
@@ -30,8 +31,10 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
+    vuelos_log_guardian = LogGuardian("vuelos")
+
     vuelos_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], vuelos_log_guardian
     )
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
@@ -44,19 +47,17 @@ def main():
         config_params["vuelos_output"], config_params["output_type"]
     )
 
+    media_general_log_guardian = LogGuardian("media_general")
+
     media_general_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], media_general_log_guardian
     )
 
-    vuelos_input_fields = [
-        "startingAirport",
-        "destinationAirport",
-        "totalFare",
-    ]
+    vuelos_input_fields = ["startingAirport", "destinationAirport", "totalFare"]
     vuelos_output_fields = ["route", "prices"]
 
     grouper_config = GrouperConfig(
-        config_params["replicas_count"],
+        config_params["replica_id"],
         media_general_communication_initializer,
         config_params["media_general_input"],
         config_params["input_type"],
@@ -71,9 +72,15 @@ def main():
         vuelos_input_fields,
         vuelos_output_fields,
         send_eof=False,
+        duplicate_catcher=True,
     )
     Connection(
-        connection_config, vuelos_receiver, vuelos_sender, Grouper, grouper_config
+        connection_config,
+        vuelos_receiver,
+        vuelos_sender,
+        vuelos_log_guardian,
+        Grouper,
+        grouper_config,
     ).run()
 
     health.join()

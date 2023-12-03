@@ -6,6 +6,8 @@ from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
+from commons.restorer import Restorer
+from commons.log_guardian import LogGuardian
 
 
 def main():
@@ -29,7 +31,11 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    log_guardian = LogGuardian()
+
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_guardian
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
@@ -53,7 +59,12 @@ def main():
         config_params["replica_id"], input_fields, output_fields, is_topic=True
     )
     Connection(
-        connection_config, receiver, sender, LoadBalancer, load_balancer_config
+        connection_config,
+        receiver,
+        sender,
+        log_guardian,
+        LoadBalancer,
+        load_balancer_config,
     ).run()
 
     health.join()

@@ -6,6 +6,9 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from media_general import MediaGeneral, MediaGeneralConfig
 from commons.connection import ConnectionConfig, Connection
+from commons.restorer import Restorer
+from commons.log_guardian import LogGuardian
+
 
 MEDIA_GENERAL_REPLICAS_COUNT = 1
 
@@ -30,7 +33,11 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    log_guardian = LogGuardian()
+
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_guardian
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
@@ -47,10 +54,15 @@ def main():
     media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], input_fields, output_fields
+        config_params["replica_id"], input_fields, output_fields, duplicate_catcher=True
     )
     Connection(
-        connection_config, receiver, sender, MediaGeneral, media_general_config
+        connection_config,
+        receiver,
+        sender,
+        log_guardian,
+        MediaGeneral,
+        media_general_config,
     ).run()
 
     health.join()

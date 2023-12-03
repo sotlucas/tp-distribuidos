@@ -8,6 +8,7 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from commons.connection import ConnectionConfig, Connection
 from state import State
+from commons.log_guardian import LogGuardian
 
 import threading
 
@@ -39,10 +40,14 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
+    LAT_LONG_LOG_STORER_SUFFIX = "lat_long"
+    lat_long_log_guardian = LogGuardian(LAT_LONG_LOG_STORER_SUFFIX)
+
+    # TODO: When restoring we need that the lat longs send the airports to the state.
     state = State()
 
     lat_long_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], lat_long_log_guardian
     )
     lat_long_receiver = lat_long_communication_initializer.initialize_receiver(
         config_params["lat_long_input"],
@@ -57,20 +62,28 @@ def main():
     lat_long_config = LatLongConfig(state)
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], lat_long_input_fields, None, send_eof=False
+        config_params["replica_id"],
+        lat_long_input_fields,
+        None,
+        send_eof=False,
+        duplicate_catcher=True,
     )
     connection = Connection(
         connection_config,
         lat_long_receiver,
         None,
+        lat_long_log_guardian,
         LatLong,
         lat_long_config,
     )
     lat_long_thread = threading.Thread(target=connection.run)
     lat_long_thread.start()
 
+    JOINER_LOG_STORER_SUFFIX = "joiner"
+    joiner_log_guardian = LogGuardian(JOINER_LOG_STORER_SUFFIX)
+
     vuelos_communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"]
+        config_params["rabbit_host"], joiner_log_guardian
     )
     vuelos_receiver = vuelos_communication_initializer.initialize_receiver(
         config_params["vuelos_input"],
@@ -105,7 +118,12 @@ def main():
         config_params["replica_id"], vuelos_input_fields, vuelos_output_fields
     )
     connection = Connection(
-        connection_config, vuelos_receiver, vuelos_sender, Joiner, joiner_config
+        connection_config,
+        vuelos_receiver,
+        vuelos_sender,
+        joiner_log_guardian,
+        Joiner,
+        joiner_config,
     )
     joiner_thread = threading.Thread(target=connection.run)
     joiner_thread.start()

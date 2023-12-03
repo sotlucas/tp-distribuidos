@@ -6,6 +6,7 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from tagger import Tagger, TaggerConfig
 from commons.connection import ConnectionConfig, Connection
+from commons.log_guardian import LogGuardian
 
 
 def main():
@@ -29,7 +30,11 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    log_guardian = LogGuardian()
+
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_guardian
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
@@ -37,7 +42,8 @@ def main():
         config_params["replicas_count"],
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"], config_params["output_type"]
+        config_params["output"],
+        config_params["output_type"],
     )
 
     tagger_config = TaggerConfig(config_params["tag_name"])
@@ -49,7 +55,9 @@ def main():
         send_eof=False,
         duplicate_catcher=True,
     )
-    Connection(connection_config, receiver, sender, Tagger, tagger_config).run()
+    Connection(
+        connection_config, receiver, sender, log_guardian, Tagger, tagger_config
+    ).run()
 
     health.join()
 

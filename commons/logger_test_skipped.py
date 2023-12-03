@@ -5,7 +5,7 @@ from commons.processor import Processor
 
 
 def _test_save():
-    logger = Logger("test.txt")
+    logger = Logger()
     processor = MockedProcessor()
     message = {
         "my_state": processor.my_state,
@@ -22,7 +22,7 @@ def _test_save():
 
 
 def _test_restore_from_commit():
-    logger = Logger("test_commit.txt")
+    logger = Logger()
     expected_message_id = 81
     expected_client_id = 10
     expected_state = {
@@ -34,7 +34,9 @@ def _test_restore_from_commit():
         "posible_duplicates_sent": None,
         "posible_duplicates_remaining": None,
     }
-    save_message_test_log_file(logger, expected_message_id, expected_client_id, expected_state)
+    save_message_test_log_file(
+        logger, expected_message_id, expected_client_id, expected_state
+    )
 
     restore_type, message_id, client_id, state = logger.restore()
 
@@ -45,7 +47,7 @@ def _test_restore_from_commit():
 
 
 def _test_restore_from_save_done():
-    logger = Logger("test_save_done.txt")
+    logger = Logger()
     expected_message_id = 81
     expected_client_id = 10
     expected_state = {
@@ -70,7 +72,7 @@ def _test_restore_from_save_done():
 
 
 def _test_restore_from_sent_one_message_logged():
-    logger = Logger("test_sent.txt")
+    logger = Logger()
     expected_message_id = 81
     expected_client_id = 10
     logger.start(expected_message_id, expected_client_id)
@@ -85,7 +87,7 @@ def _test_restore_from_sent_one_message_logged():
 
 
 def _test_restore_from_sent_two_messages_logged():
-    logger = Logger("test_sent_two.txt")
+    logger = Logger()
     # Save message 1
     expected_message_id = 44
     expected_client_id = 12
@@ -98,7 +100,9 @@ def _test_restore_from_sent_two_messages_logged():
         "posible_duplicates_sent": None,
         "posible_duplicates_remaining": None,
     }
-    save_message_test_log_file(logger, expected_message_id, expected_client_id, expected_state)
+    save_message_test_log_file(
+        logger, expected_message_id, expected_client_id, expected_state
+    )
 
     # Save message 2
     failed_message_id = 81
@@ -115,7 +119,7 @@ def _test_restore_from_sent_two_messages_logged():
 
 
 def _test_restore_from_sent_two_uncommited_messages_in_a_row():
-    logger = Logger("test_sent_two_uncommited.txt")
+    logger = Logger()
     # Save message 1 - committed
     expected_message_id = 44
     expected_client_id = 10
@@ -128,7 +132,9 @@ def _test_restore_from_sent_two_uncommited_messages_in_a_row():
         "posible_duplicates_sent": None,
         "posible_duplicates_remaining": None,
     }
-    save_message_test_log_file(logger, expected_message_id, expected_client_id, expected_state)
+    save_message_test_log_file(
+        logger, expected_message_id, expected_client_id, expected_state
+    )
 
     # Save message 2 - uncommited
     failed_message_id = 81
@@ -169,7 +175,20 @@ def _test_restore_non_existent_file():
     assert state is None
 
 
+def test_truncate():
+    client_id = 1
+    logger = Logger()
+    logger.save_connection(1, client_id, "message1.1")
+    logger.save_connection(1, client_id, "message1.2")
+    logger.save_connection(2, client_id, "message2.1")
+    logger.save_connection(2, client_id, "message2.2")
+    logger.save_connection(2, client_id, "message2.3")
+    logger.delete_connection_messages(1, client_id)
+    assert True
+
+
 # ---- Utils ----
+
 
 class MockedProcessor(Processor):
     def __init__(self):

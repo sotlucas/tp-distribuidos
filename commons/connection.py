@@ -1,6 +1,5 @@
 import logging
 import signal
-
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
 from commons.duplicate_catcher import DuplicateCatcher
@@ -30,6 +29,7 @@ class Connection:
         config,
         communication_receiver,
         communication_sender,
+        log_guardian,
         processor_name,
         processor_config=None,
     ):
@@ -38,9 +38,18 @@ class Connection:
         self.communication_sender = communication_sender
         self.processor_name = processor_name
         self.processor_config = processor_config
+        self.log_guardian = log_guardian
 
         self.processors = {}
+
         self.duplicate_catchers = {}
+        # Restore duplicate catcher state
+        for (
+            client_id,
+            duplicate_catcher_state,
+        ) in log_guardian.get_duplicate_catchers().items():
+            duplicate_catcher = DuplicateCatcher(duplicate_catcher_state)
+            self.duplicate_catchers[client_id] = duplicate_catcher
 
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
@@ -86,16 +95,31 @@ class Connection:
                 elif processed_message.type == ResponseType.MULTIPLE:
                     processed_messages.extend(processed_message.payload)
 
-        if not processed_messages:
-            return
-        if self.config.is_topic:
-            self.send_messages_topic(
-                processed_messages, messages.client_id, messages.message_id
-            )
-        else:
-            self.send_messages(
-                processed_messages, messages.client_id, messages.message_id
-            )
+        if self.config.duplicate_catcher:
+            # If we are using duplicate catcher, it means that we have a state to save, so we need to store the messages.
+            for message in processed_messages:
+                pass
+                # TODO: See how we should store the messages
+                # self.log_guardian.store_new_connection_message(message.payload)
+
+        if processed_messages:
+            if self.config.is_topic:
+                self.send_messages_topic(
+                    processed_messages, messages.client_id, messages.message_id
+                )
+            else:
+                self.send_messages(
+                    processed_messages, messages.client_id, messages.message_id
+                )
+            # Log the messages sent
+            self.log_guardian.message_sent()
+
+        if self.config.duplicate_catcher:
+            # If we are using duplicate catcher, it means that we have a state to save, so we need to store the messages.
+            duplicate_catcher_states = {}
+            for client_id, duplicate_catcher in self.duplicate_catchers.items():
+                duplicate_catcher_states[client_id] = duplicate_catcher.get_state()
+            self.log_guardian.store_duplicate_catchers(duplicate_catcher_states)
 
     def process_duplicate_catcher(self, messages):
         """

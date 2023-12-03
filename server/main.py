@@ -1,10 +1,13 @@
 from multiprocessing import Process
 
+
 from commons.health_checker_server import HealthCheckerServer
 from server import Server, ServerConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
+from commons.restorer import Restorer
+from commons.log_guardian import LogGuardian
 
 SERVER_REPLICAS_COUNT = 1
 
@@ -31,14 +34,27 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
-    vuelos_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    # TODO: Should the server even have a log storer or a state to restore? Check this
+    vuelos_log_guardian = LogGuardian("vuelos")
 
-    resultados_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    vuelos_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], vuelos_log_guardian
+    )
+
+    resultados_log_guardian = LogGuardian("resultados")
+
+    resultados_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], resultados_log_guardian
+    )
     resultados_sender = resultados_initializer.initialize_sender(
         config_params["vuelos_output"], config_params["output_type"]
     )
 
-    lat_long_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    lat_long_log_guardian = LogGuardian("lat_long")
+
+    lat_long_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], lat_long_log_guardian
+    )
     lat_long_sender = lat_long_initializer.initialize_sender(
         config_params["lat_long_output"], config_params["output_type"]
     )

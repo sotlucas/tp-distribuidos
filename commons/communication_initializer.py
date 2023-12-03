@@ -13,9 +13,10 @@ from commons.communication import (
 
 
 class CommunicationInitializer:
-    def __init__(self, rabbit_host):
+    def __init__(self, rabbit_host, log_guardian):
         self.rabbit_host = rabbit_host
         self.connection = CommunicationConnection(self.rabbit_host)
+        self.log_guardian = log_guardian
 
     def initialize_receiver(
         self,
@@ -40,11 +41,11 @@ class CommunicationInitializer:
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(
-                communication_receiver_config, self.connection
+                communication_receiver_config, self.connection, self.log_guardian
             )
         elif input_type == "EXCHANGE":
             communication_receiver = CommunicationReceiverExchange(
-                communication_receiver_config, self.connection
+                communication_receiver_config, self.connection, self.log_guardian
             )
         return communication_receiver
 
@@ -57,10 +58,10 @@ class CommunicationInitializer:
         )
         if output_type == "QUEUE":
             communication_sender = CommunicationSenderQueue(
-                communication_sender_config, self.connection
+                communication_sender_config, self.connection, self.log_guardian
             )
         elif output_type == "EXCHANGE":
             communication_sender = CommunicationSenderExchange(
-                communication_sender_config, self.connection
+                communication_sender_config, self.connection, self.log_guardian
             )
         return communication_sender

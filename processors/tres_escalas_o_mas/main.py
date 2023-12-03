@@ -6,6 +6,8 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from tres_escalas_o_mas import TresEscalasOMas
 from commons.connection import Connection, ConnectionConfig
+from commons.restorer import Restorer
+from commons.log_guardian import LogGuardian
 
 
 def main():
@@ -28,7 +30,11 @@ def main():
     health = Process(target=HealthCheckerServer().run)
     health.start()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    log_guardian = LogGuardian()
+
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_guardian
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
@@ -50,7 +56,7 @@ def main():
     output_fields = input_fields
 
     config = ConnectionConfig(config_params["replica_id"], input_fields, output_fields)
-    Connection(config, receiver, sender, TresEscalasOMas).run()
+    Connection(config, receiver, sender, log_guardian, TresEscalasOMas).run()
 
     health.join()
 
