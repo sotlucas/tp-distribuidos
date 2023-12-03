@@ -80,6 +80,9 @@ class Communication:
         self.parser = FlightParser(self.config.delimiter)
         self.log_guardian = log_guardian
 
+        # {client_id: [message_id]}
+        self.possible_duplicates = self.log_guardian.get_possible_duplicates()
+
     def close(self):
         """
         Closes the connection sending all messages waiting on the buffer
@@ -140,9 +143,6 @@ class CommunicationReceiver(Communication):
         # {client_id: messages_received}
         self.messages_received = self.log_guardian.get_messages_received()
 
-        # {client_id: [message_id]}
-        self.possible_duplicates = self.log_guardian.get_possible_duplicates()
-
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
         Binds the receiver to the input queue or exchange
@@ -192,8 +192,6 @@ class CommunicationReceiver(Communication):
         """
         Callback to be called when a message is received, it calls the input_callback function with the message as parameter
         """
-        logging.debug("Received {}".format(body))
-
         try:
             message = Message.from_bytes(body)
         except Exception as e:
@@ -216,18 +214,22 @@ class CommunicationReceiver(Communication):
 
         elif message.message_type == MessageType.EOF:
             logging.debug("Received EOF")
+            logging.debug("Received {}".format(body))
             ack_type = self.handle_eof(message)
 
         elif message.message_type == MessageType.EOF_DISCOVERY:
             logging.debug("Received EOF discovery")
+            logging.debug("Received {}".format(body))
             ack_type = self.handle_eof_discovery(message)
 
         elif message.message_type == MessageType.EOF_AGGREGATION:
             logging.debug("Received EOF aggregation")
+            logging.debug("Received {}".format(body))
             ack_type = self.handle_eof_aggregation(message)
 
         elif message.message_type == MessageType.EOF_FINISH:
             logging.debug("Received EOF finish")
+            logging.debug("Received {}".format(body))
             ack_type = self.handle_eof_finish(message)
 
         if ack_type == ACKType.NACK:
@@ -330,8 +332,13 @@ class CommunicationReceiver(Communication):
             # The Aggregation EOF has finished propagating
             logging.debug("EOF aggregation finished propagating")
 
-            duplicate_messages_received, duplicate_messages_sent = self.count_duplicates(new_aggregation.possible_duplicates_processed_by)
-            real_messages_received = new_aggregation.messages_received - duplicate_messages_received
+            (
+                duplicate_messages_received,
+                duplicate_messages_sent,
+            ) = self.count_duplicates(new_aggregation.possible_duplicates_processed_by)
+            real_messages_received = (
+                new_aggregation.messages_received - duplicate_messages_received
+            )
             real_messages_sent = new_aggregation.messages_sent - duplicate_messages_sent
             logging.debug(f"Duplicate messages received: {duplicate_messages_received}")
             logging.debug(f"Duplicate messages sent: {duplicate_messages_sent}")
@@ -346,13 +353,27 @@ class CommunicationReceiver(Communication):
                 # TODO: This breaks encapsulation, see if we can do it in a better way
                 if self.sender:
                     logging.debug(
-                        "Updating messages_sent to {}".format(
-                            real_messages_sent
+                        "Updating messages_sent to {}".format(real_messages_sent)
+                    )
+                    self.sender.messages_sent[message.client_id] = real_messages_sent
+
+                # We change the messages_sent of the sender to the new_messages_sent to sincronize the EOF propagation
+                # TODO: This breaks encapsulation, see if we can do it in a better way
+                if self.sender:
+                    logging.debug(
+                        "Updating possible_duplicates to {}".format(
+                            new_aggregation.possible_duplicates
                         )
                     )
-                    self.sender.messages_sent[
+                    self.possible_duplicates[
                         message.client_id
-                    ] = real_messages_sent
+                    ] = new_aggregation.possible_duplicates
+
+                # We update our possible_duplicates
+                # TODO: maybe this is not needed
+                self.possible_duplicates[
+                    message.client_id
+                ] = new_aggregation.possible_duplicates
 
                 if not self.config.routing_key:
                     # We call the eof_callback only if we are in a queue, because in a topic exchange we call it in the handle_eof_finish
@@ -390,16 +411,23 @@ class CommunicationReceiver(Communication):
         Counts the duplicates message received and sent
         """
         duplicates_counter = {}
-        for duplicate in possible_duplicates_processed_by:
-            processed_message = ProcessedMessage.from_str(duplicate)
-            duplicates_counter[processed_message] = duplicates_counter.get(processed_message, 0) + 1
+        for processed_message in possible_duplicates_processed_by:
+            duplicates_counter[processed_message] = (
+                duplicates_counter.get(processed_message, 0) + 1
+            )
         for processed_message, count in duplicates_counter.items():
             duplicates_counter[processed_message] = count - 1
             if count == 0:
                 duplicates_counter.pop(processed_message)
-        
+
         duplicate_messages_received = sum(duplicates_counter.values())
-        duplicate_messages_sent = sum([count for processed_message, count in duplicates_counter.items() if processed_message.sent])
+        duplicate_messages_sent = sum(
+            [
+                count
+                for processed_message, count in duplicates_counter.items()
+                if processed_message.sent
+            ]
+        )
         return duplicate_messages_received, duplicate_messages_sent
 
     def handle_eof_finish(self, message):
@@ -466,10 +494,8 @@ class CommunicationReceiver(Communication):
         duplicates_processed = self.log_guardian.search_for_duplicate_messages(
             message.client_id, message.possible_duplicates
         )
-        duplicates_processed_str = [duplicate.to_str() for duplicate in duplicates_processed]
-
         new_possible_duplicates_processed_by = (
-            message.possible_duplicates_processed_by + duplicates_processed_str
+            message.possible_duplicates_processed_by + duplicates_processed
         )
 
         return EOFAggregationMessage(
@@ -658,7 +684,9 @@ class CommunicationSender(Communication):
         logging.debug("Sending EOF")
         messages_sent = self.get_client_messages_sent(client_id)
         logging.debug("Messages sent: {}".format(messages_sent))
-        message = EOFMessage(client_id, messages_sent)
+        message = EOFMessage(
+            client_id, messages_sent, self.possible_duplicates.get(client_id, [])
+        )
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):

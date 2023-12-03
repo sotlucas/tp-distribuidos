@@ -26,18 +26,43 @@ class Restorer:
         Restore the state of the processors from the log file.
         """
         restore_type, message_id, client_id, state = logger.restore()
-        if restore_type == RestoreType.SAVE_DONE or restore_type == RestoreType.SENT:
-            state["possible_duplicates"][client_id].append(message_id)
+        if not state:
+            # The log file has not state
+            state = {
+                "messages_received": {},
+                "messages_sent": {},
+                "possible_duplicates": {},
+                "duplicate_catchers": {},
+            }
 
-        if state:
-            return RestoreState(
-                state.get("messages_received", {}),
-                state.get("messages_sent", {}),
-                state.get("possible_duplicates", {}),
-                state.get("duplicates_catchers", {}),
+        if restore_type == RestoreType.SAVE_DONE or restore_type == RestoreType.SENT:
+            logging.debug(
+                f"Restorer: Message: {message_id} did not finish correctly, adding it to the possible duplicates"
             )
-        else:
-            return RestoreState({}, {}, {}, {})
+            state["possible_duplicates"][client_id] = state["possible_duplicates"].get(
+                client_id, []
+            ) + [message_id]
+
+        # convert the keys to int
+        state["messages_received"] = {
+            int(k): v for k, v in state.get("messages_received", {}).items()
+        }
+        state["messages_sent"] = {
+            int(k): v for k, v in state.get("messages_sent", {}).items()
+        }
+        state["possible_duplicates"] = {
+            int(k): v for k, v in state.get("possible_duplicates", {}).items()
+        }
+        state["duplicate_catchers"] = {
+            int(k): v for k, v in state.get("duplicate_catchers", {}).items()
+        }
+
+        return RestoreState(
+            state.get("messages_received", {}),
+            state.get("messages_sent", {}),
+            state.get("possible_duplicates", {}),
+            state.get("duplicate_catchers", {}),
+        )
 
     def get_messages_received(self):
         logging.info(
