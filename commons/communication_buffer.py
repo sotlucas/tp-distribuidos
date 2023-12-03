@@ -16,9 +16,12 @@ class CommunicationBuffer:
     Communication buffer for a socket.
     """
 
-    def __init__(self, sock):
+    def __init__(self, sock, timeout=None):
         self.sock = sock
-        self.sock.setblocking(True)
+        if timeout:
+            self.sock.settimeout(timeout)
+        else:
+            self.sock.setblocking(True)
         self.buffer = b""
         self.lock = mp.Lock()
 

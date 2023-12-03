@@ -271,6 +271,18 @@ def test_truncate():
     assert True
 
 
+def test_truncate():
+    client_id = 1
+    logger = Logger()
+    logger.save_connection(1, client_id, "message1.1")
+    logger.save_connection(1, client_id, "message1.2")
+    logger.save_connection(2, client_id, "message2.1")
+    logger.save_connection(2, client_id, "message2.2")
+    logger.save_connection(2, client_id, "message2.3")
+    logger.delete_connection_messages(1, client_id)
+    assert True
+
+
 # ---- Utils ----
 
 

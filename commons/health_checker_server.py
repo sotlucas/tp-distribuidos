@@ -10,7 +10,7 @@ HEALTHCHECK_PORT = 5000
 CONNECTION_TIMEOUT = 20
 
 
-class HealthChecker:
+class HealthCheckerServer:
     """
     Server that sends a message to indicate that the processor is running.
     """
@@ -30,32 +30,33 @@ class HealthChecker:
         Runs the server and accepts new connections.
         """
         self._server_socket.listen()
+        logging.info("Health checker server started")
         while self.running:
             try:
                 client_sock = self.__accept_new_connection()
                 client_sock.settimeout(CONNECTION_TIMEOUT)
                 buff = CommunicationBuffer(client_sock)
                 # TODO: check pool of processes
-                client_proc = Process(target=self.__handle_client, args=(buff,))
+                client_proc = Process(target=self.__handle_health_check, args=(buff,))
                 client_proc.start()
             except OSError as e:
                 logging.error(f"Error: {e}")
-                return
+                self.running = False
 
-    def __handle_client(self, buff):
+    def __handle_health_check(self, buff):
         """
         Handles a client connection.
         """
         while self.running:
             try:
-                logging.info("action: handle_client | result: in_progress")
+                logging.debug("action: handle_health_check | result: in_progress")
                 message = buff.get_message()
                 if message.message_type == MessageType.HEALTH_CHECK:
                     buff.send_message(HealthOkMessage())
-                logging.info("action: handle_client | result: success")
+                logging.debug("action: handle_health_check | result: success")
             except socket.timeout:
-                logging.info("action: handle_client | result: timeout")
-                break
+                logging.debug("action: handle_health_check | result: timeout")
+                self.running = False
 
     def __accept_new_connection(self):
         """
@@ -64,16 +65,16 @@ class HealthChecker:
         Function blocks until a connection to a client is made.
         Then connection created is printed and returned
         """
-        logging.info("action: accept_connections | result: in_progress")
+        logging.debug("action: health_checker_accept_connections | result: in_progress")
         c, addr = self._server_socket.accept()
-        logging.info(f"action: accept_connections | result: success | ip: {addr[0]}")
+        logging.debug(f"action: health_checker_accept_connections | result: success | client: {addr}")
         return c
 
     def __stop(self, *args):
         """
         Stop server closing the server socket.
         """
-        logging.info("action: server_shutdown | result: in_progress")
+        logging.info("action: health_checker_server_shutdown | result: in_progress")
         self.running = False
         self._server_socket.close()
-        logging.info("action: server_shutdown | result: success")
+        logging.info("action: health_checker_server_shutdown | result: success")
