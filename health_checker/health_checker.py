@@ -21,7 +21,8 @@ class HealthCheckerConfig:
                  processor_dos_mas_rapidos_replicas, processor_distancias_replicas,
                  processor_max_avg_replicas, processor_media_general_replicas, tagger_dos_mas_rapidos_replicas,
                  tagger_tres_escalas_o_mas_replicas, tagger_distancias_replicas,
-                 tagger_max_avg_replicas, load_balancer_replicas, grouper_replicas, joiner_replicas, health_checker_replicas):
+                 tagger_max_avg_replicas, load_balancer_replicas, grouper_replicas, joiner_replicas,
+                 server_replicas, health_checker_replicas):
         self.replica_id = replica_id
         self.filter_general_replicas = filter_general_replicas
         self.filter_multiple_replicas = filter_multiple_replicas
@@ -42,6 +43,7 @@ class HealthCheckerConfig:
         self.load_balancer_replicas = load_balancer_replicas
         self.grouper_replicas = grouper_replicas
         self.joiner_replicas = joiner_replicas
+        self.server_replicas = server_replicas
         self.health_checker_replicas = health_checker_replicas
 
 
@@ -87,8 +89,8 @@ class HealthChecker:
         self.init_checker("tp1-load_balancer_", self.config.load_balancer_replicas, processor_checkers)
         self.init_checker("tp1-grouper_", self.config.grouper_replicas, processor_checkers)
         self.init_checker("tp1-joiner_", self.config.joiner_replicas, processor_checkers)
+        self.init_checker("tp1-server_", self.config.server_replicas, processor_checkers)
         self.init_checker_hc("tp1-health_checker_", self.config.replica_id, processor_checkers)
-        # TODO: add the server
 
         # Wait for the processes to finish
         for processor_checker in processor_checkers:
@@ -139,6 +141,9 @@ class HealthChecker:
         """
         Connects to a processor.
         """
+        # TODO: Waits for the whole system to start so that it doesn't try to restart all the containers.
+        #       Change this to a more robust solution.
+        time.sleep(HEALTH_CHECK_INTERVAL)
         while self.running:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
