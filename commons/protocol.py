@@ -1,6 +1,10 @@
 from enum import Enum
 from commons.message_utils import MessageBytesReader, MessageBytesWriter
 
+"""
+Messages used by the communication protocol between the client and the server.
+"""
+
 
 class MessageType(Enum):
     ANNOUNCE = 0
@@ -9,6 +13,8 @@ class MessageType(Enum):
     EOF = 3
     HEALTH_CHECK = 4
     HEALTH_OK = 5
+    ACK = 6
+    ANNOUNCE_ACK = 7
 
 
 class MessageProtocolType(Enum):
@@ -40,6 +46,10 @@ class Message:
             return HealthCheckMessage.from_bytes(reader)
         elif type == MessageType.HEALTH_OK.value:
             return HealthOkMessage.from_bytes(reader)
+        elif type == MessageType.ACK.value:
+            return ACKMessage.from_bytes(reader)
+        elif type == MessageType.ANNOUNCE_ACK.value:
+            return AnnounceACKMessage.from_bytes(reader)
         else:
             raise Exception("Unknown message type")
 
@@ -143,4 +153,29 @@ class HealthOkMessage(Message):
         return HealthOkMessage()
 
     def to_bytes_impl(self, writer):
+        return writer.get_bytes()
+
+
+class AnnounceACKMessage(Message):
+    def __init__(self):
+        super().__init__(MessageType.ANNOUNCE_ACK)
+
+    def from_bytes(reader):
+        return AnnounceACKMessage()
+
+    def to_bytes_impl(self, writer):
+        return writer.get_bytes()
+
+
+class ACKMessage(Message):
+    def __init__(self, message_id):
+        super().__init__(MessageType.ACK)
+        self.message_id = message_id
+
+    def from_bytes(reader):
+        message_id = reader.read_int(8)
+        return ACKMessage(message_id)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.message_id, 8)
         return writer.get_bytes()

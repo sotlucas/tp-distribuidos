@@ -9,6 +9,7 @@ from result_handler import ResultHandler
 from commons.protocol import (
     AnnounceMessage,
     MessageProtocolType,
+    MessageType,
 )
 
 
@@ -53,6 +54,10 @@ class Client:
         # Send the announce message
         announce_message = AnnounceMessage(self.config.client_id)
         self.buff.send_message(announce_message)
+        while self.buff.get_message().message_type != MessageType.ANNOUNCE_ACK:
+            # TODO: retry with exponential backoff
+            announce_message = AnnounceMessage(self.config.client_id)
+            self.buff.send_message(announce_message)
 
         # Start the process to send the airports
         self.airports_sender = Process(

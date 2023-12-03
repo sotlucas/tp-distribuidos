@@ -8,6 +8,7 @@ from commons.protocol import (
     Message,
     MessageProtocolType,
     MessageType,
+    AnnounceACKMessage,
 )
 from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
@@ -50,6 +51,7 @@ class ClientHandler:
         logging.info(
             f"action: client_announce | client_id: {announce_message.client_id}"
         )
+        buff.send_message(AnnounceACKMessage())
         return announce_message.client_id
 
     def handle_client(self):
