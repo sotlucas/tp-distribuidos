@@ -7,7 +7,7 @@ from commons.communication_initializer import CommunicationInitializer
 from max_avg import MaxAvg
 from commons.connection import ConnectionConfig, Connection
 from commons.restorer import Restorer
-from commons.log_storer import LogStorer
+from commons.log_guardian import LogGuardian
 
 
 def main():
@@ -30,23 +30,19 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    restore_state = Restorer().restore()
+    log_guardian = LogGuardian()
 
     communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"],
+        config_params["rabbit_host"], log_guardian
     )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
         config_params["replica_id"],
         config_params["replicas_count"],
-        messages_received_restore_state=restore_state.get_messages_received(),
-        possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"],
-        config_params["output_type"],
-        messages_sent_restore_state=restore_state.get_messages_sent(),
+        config_params["output"], config_params["output_type"]
     )
 
     input_fields = ["route", "prices"]
@@ -55,7 +51,7 @@ def main():
     connection_config = ConnectionConfig(
         config_params["replica_id"], input_fields, output_fields
     )
-    Connection(connection_config, receiver, sender, MaxAvg).run()
+    Connection(connection_config, receiver, sender, log_guardian, MaxAvg).run()
 
     health.join()
 

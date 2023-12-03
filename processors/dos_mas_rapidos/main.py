@@ -7,7 +7,7 @@ from commons.communication_initializer import CommunicationInitializer
 from dos_mas_rapidos import DosMasRapidos
 from commons.connection import ConnectionConfig, Connection
 from commons.restorer import Restorer
-from commons.log_storer import LogStorer
+from commons.log_guardian import LogGuardian
 
 
 # TODO: Ver si se pueden replicar de alguna manera este processor
@@ -33,21 +33,19 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    restore_state = Restorer().restore()
+    log_guardian = LogGuardian()
 
-    communication_initializer = CommunicationInitializer(config_params["rabbit_host"])
+    communication_initializer = CommunicationInitializer(
+        config_params["rabbit_host"], log_guardian
+    )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
         config_params["replica_id"],
         DOS_MAS_RAPIDOS_REPLICAS_COUNT,
-        messages_received_restore_state=restore_state.get_messages_received(),
-        possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"],
-        config_params["output_type"],
-        messages_sent_restore_state=restore_state.get_messages_sent(),
+        config_params["output"], config_params["output_type"]
     )
 
     input_output_fields = [
@@ -64,13 +62,7 @@ def main():
         input_output_fields,
         duplicate_catcher=True,
     )
-    Connection(
-        connection_config,
-        receiver,
-        sender,
-        DosMasRapidos,
-        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher(),
-    ).run()
+    Connection(connection_config, receiver, sender, log_guardian, DosMasRapidos).run()
 
     health.join()
 

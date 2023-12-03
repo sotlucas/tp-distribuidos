@@ -7,7 +7,7 @@ from commons.communication_initializer import CommunicationInitializer
 from media_general import MediaGeneral, MediaGeneralConfig
 from commons.connection import ConnectionConfig, Connection
 from commons.restorer import Restorer
-from commons.log_storer import LogStorer
+from commons.log_guardian import LogGuardian
 
 
 MEDIA_GENERAL_REPLICAS_COUNT = 1
@@ -33,23 +33,19 @@ def main():
     health = Process(target=HealthChecker().run)
     health.start()
 
-    restore_state = Restorer().restore()
+    log_guardian = LogGuardian()
 
     communication_initializer = CommunicationInitializer(
-        config_params["rabbit_host"],
+        config_params["rabbit_host"], log_guardian
     )
     receiver = communication_initializer.initialize_receiver(
         config_params["input"],
         config_params["input_type"],
         config_params["replica_id"],
         MEDIA_GENERAL_REPLICAS_COUNT,
-        messages_received_restore_state=restore_state.get_messages_received(),
-        possible_duplicates_restore_state=restore_state.get_possible_duplicates(),
     )
     sender = communication_initializer.initialize_sender(
-        config_params["output"],
-        config_params["output_type"],
-        messages_sent_restore_state=restore_state.get_messages_sent(),
+        config_params["output"], config_params["output_type"]
     )
 
     input_fields = ["sum", "amount"]
@@ -64,14 +60,10 @@ def main():
         connection_config,
         receiver,
         sender,
+        log_guardian,
         MediaGeneral,
         media_general_config,
-        duplicate_catcher_restore_state=restore_state.get_duplicate_catcher(),
     ).run()
-
-    health.join()
-
-    health.join()
 
     health.join()
 

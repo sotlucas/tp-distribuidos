@@ -4,30 +4,12 @@ from commons.logger import Logger, RestoreType
 
 class RestoreState:
     def __init__(
-        self, messages_received, messages_sent, possible_duplicates, duplicate_catcher
+        self, messages_received, messages_sent, possible_duplicates, duplicate_catchers
     ):
         self.messages_received = messages_received
         self.messages_sent = messages_sent
         self.possible_duplicates = possible_duplicates
-        self.duplicate_catcher = duplicate_catcher
-
-    def get_messages_received(self):
-        logging.info("restoring messages_received: {}".format(self.messages_received))
-        return self.messages_received.copy()
-
-    def get_messages_sent(self):
-        logging.info("restoring messages_sent: {}".format(self.messages_sent))
-        return self.messages_sent.copy()
-
-    def get_possible_duplicates(self):
-        logging.info(
-            "restoring possible_duplicates: {}".format(self.possible_duplicates)
-        )
-        return self.possible_duplicates.copy()
-
-    def get_duplicate_catcher(self):
-        logging.info("restoring duplicate_catcher: {}".format(self.duplicate_catcher))
-        return self.duplicate_catcher.copy()
+        self.duplicate_catchers = duplicate_catchers
 
 
 class Restorer:
@@ -36,13 +18,14 @@ class Restorer:
     """
 
     def __init__(self, suffix=""):
-        self.logger = Logger(suffix)
+        logger = Logger(suffix)
+        self.restored_state = Restorer.restore(logger)
 
-    def restore(self):
+    def restore(logger):
         """
         Restore the state of the processors from the log file.
         """
-        restore_type, message_id, client_id, state = self.logger.restore()
+        restore_type, message_id, client_id, state = logger.restore()
         if restore_type == RestoreType.SAVE_DONE or restore_type == RestoreType.SENT:
             state["possible_duplicates"][client_id].append(message_id)
 
@@ -51,10 +34,40 @@ class Restorer:
                 state.get("messages_received", {}),
                 state.get("messages_sent", {}),
                 state.get("possible_duplicates", {}),
-                state.get("duplicate_catcher", {}),
+                state.get("duplicates_catchers", {}),
             )
         else:
             return RestoreState({}, {}, {}, {})
+
+    def get_messages_received(self):
+        logging.info(
+            "restoring messages_received: {}".format(
+                self.restored_state.messages_received
+            )
+        )
+        return self.restored_state.messages_received.copy()
+
+    def get_messages_sent(self):
+        logging.info(
+            "restoring messages_sent: {}".format(self.restored_state.messages_sent)
+        )
+        return self.restored_state.messages_sent.copy()
+
+    def get_possible_duplicates(self):
+        logging.info(
+            "restoring possible_duplicates: {}".format(
+                self.restored_state.possible_duplicates
+            )
+        )
+        return self.restored_state.possible_duplicates.copy()
+
+    def get_duplicate_catchers(self):
+        logging.info(
+            "restoring duplicate_catchers: {}".format(
+                self.restored_state.duplicate_catchers
+            )
+        )
+        return self.restored_state.duplicate_catchers.copy()
 
         """
         state:{

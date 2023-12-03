@@ -12,8 +12,6 @@ from commons.message import (
     EOFAggregationMessage,
     EOFFinishMessage,
 )
-from commons.log_storer import LogStorer
-
 from pika.exceptions import ConnectionWrongStateError
 
 
@@ -72,17 +70,15 @@ class Communication:
         The config for the sender
     - connection : CommunicationConnection
         The connection to the RabbitMQ server
-
-    ### Optional parameters
-    - log_storer_suffix : str
-        The suffix to add to the log file name
+    - log_guardian : LogGuardian
+        The log guardian to store the messages received and sent
     """
 
-    def __init__(self, config, connection, log_storer_suffix=""):
+    def __init__(self, config, connection, log_guardian):
         self.config = config
         self.connection = connection
         self.parser = FlightParser(self.config.delimiter)
-        self.log_storer = LogStorer(log_storer_suffix)
+        self.log_guardian = log_guardian
 
     def close(self):
         """
@@ -138,26 +134,19 @@ class CommunicationReceiver(Communication):
     and then the `start` method to start receiving messages
     """
 
-    def __init__(
-        self,
-        config,
-        connection,
-        messages_received_restore_state={},
-        possible_duplicates_restore_state={},
-        log_storer_suffix="",
-    ):
-        super().__init__(config, connection, log_storer_suffix)
+    def __init__(self, config, connection, log_guardian):
+        super().__init__(config, connection, log_guardian)
 
         # {client_id: messages_received}
-        self.messages_received = messages_received_restore_state
+        self.messages_received = self.log_guardian.get_messages_received()
 
         # {client_id: [message_id]}
-        self.local_possible_duplicates = possible_duplicates_restore_state
+        self.local_possible_duplicates = self.log_guardian.get_possible_duplicates()
 
         # TODO: Maybe this should be in the sender?
         #       Or maybe we should merge the local_possible_duplicates and possible_duplicates_sent?
         # {client_id: [message_id]}
-        self.possible_duplicates_sent = possible_duplicates_restore_state
+        self.possible_duplicates_sent = self.log_guardian.get_possible_duplicates()
 
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
@@ -218,15 +207,17 @@ class CommunicationReceiver(Communication):
 
         if message.message_type == MessageType.PROTOCOL:
             logging.debug("Received protocol message")
-            self.log_storer.new_message_received(message.message_id, message.client_id)
+            self.log_guardian.new_message_received(
+                message.message_id, message.client_id
+            )
 
             ack_type = self.handle_protocol(message)
 
-            self.log_storer.store_messages_received(self.messages_received)
-            self.log_storer.store_possible_duplicates(self.local_possible_duplicates)
+            self.log_guardian.store_messages_received(self.messages_received)
+            self.log_guardian.store_possible_duplicates(self.local_possible_duplicates)
             if self.sender:
-                self.log_storer.store_messages_sent(self.sender.messages_sent)
-            self.log_storer.finish_storing_message()
+                self.log_guardian.store_messages_sent(self.sender.messages_sent)
+            self.log_guardian.finish_storing_message()
 
         elif message.message_type == MessageType.EOF:
             logging.debug("Received EOF")
@@ -252,7 +243,7 @@ class CommunicationReceiver(Communication):
 
             if message.message_type == MessageType.PROTOCOL:
                 # We only commit the message if it is a protocol message, because the EOF messages are requeued
-                self.log_storer.commit_message()
+                self.log_guardian.commit_message()
 
     def handle_protocol(self, message):
         """
@@ -593,18 +584,12 @@ class CommunicationSender(Communication):
     Abstract class to be used by the CommunicationSender classes
     """
 
-    def __init__(
-        self,
-        config,
-        connection,
-        messages_sent_restore_state={},
-        log_storer_suffix="",
-    ):
-        super().__init__(config, connection, log_storer_suffix)
+    def __init__(self, config, connection, log_guardian):
+        super().__init__(config, connection, log_guardian)
         self.active = False
 
         # {client_id: messages_sent}
-        self.messages_sent = messages_sent_restore_state
+        self.messages_sent = self.log_guardian.get_messages_sent()
 
     def activate(self):
         if not self.active:

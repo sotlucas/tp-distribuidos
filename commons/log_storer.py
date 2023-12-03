@@ -29,18 +29,19 @@ class LogStorer:
     def store_possible_duplicates(self, possible_duplicates):
         self.current_state["possible_duplicates"] = possible_duplicates
 
-    def store_duplicate_catcher(self, duplicate_catcher):
-        self.current_state["duplicate_catcher"] = duplicate_catcher
+    def store_duplicate_catcher(self, duplicate_catchers):
+        self.current_state["duplicate_catchers"] = duplicate_catchers
 
     def store_new_connection_message(self, message):
         self.connection_messages_state.append(message)
 
     def finish_storing_message(self):
-        self.logger.save_connection(
-            self.current_message_id,
-            self.current_client_id,
-            self.connection_messages_state,
-        )
+        if self.connection_messages_state:
+            self.logger.save_connection(
+                self.current_message_id,
+                self.current_client_id,
+                self.connection_messages_state,
+            )
 
         self.logger.save_communication(
             self.current_message_id,
