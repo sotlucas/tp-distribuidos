@@ -141,12 +141,7 @@ class CommunicationReceiver(Communication):
         self.messages_received = self.log_guardian.get_messages_received()
 
         # {client_id: [message_id]}
-        self.local_possible_duplicates = self.log_guardian.get_possible_duplicates()
-
-        # TODO: Maybe this should be in the sender?
-        #       Or maybe we should merge the local_possible_duplicates and possible_duplicates_sent?
-        # {client_id: [message_id]}
-        self.possible_duplicates_sent = self.log_guardian.get_possible_duplicates()
+        self.possible_duplicates = self.log_guardian.get_possible_duplicates()
 
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
@@ -214,7 +209,7 @@ class CommunicationReceiver(Communication):
             ack_type = self.handle_protocol(message)
 
             self.log_guardian.store_messages_received(self.messages_received)
-            self.log_guardian.store_possible_duplicates(self.local_possible_duplicates)
+            self.log_guardian.store_possible_duplicates(self.possible_duplicates)
             if self.sender:
                 self.log_guardian.store_messages_sent(self.sender.messages_sent)
             self.log_guardian.finish_storing_message()
@@ -283,7 +278,6 @@ class CommunicationReceiver(Communication):
             0,
             [],
             [],
-            [],
         )
         return self.handle_eof_discovery(eof_message)
 
@@ -312,8 +306,7 @@ class CommunicationReceiver(Communication):
                 new_discovery.original_possible_duplicates,
                 new_discovery.messages_received,
                 new_discovery.messages_sent,
-                new_discovery.local_possible_duplicates,
-                new_discovery.possible_duplicates_sent,
+                new_discovery.possible_duplicates,
                 [],
                 [],
             )
@@ -425,13 +418,9 @@ class CommunicationReceiver(Communication):
         )
         new_messages_sent = message.messages_sent + sender_messages_sent
 
-        new_local_possible_duplicates = (
-            message.local_possible_duplicates
-            + self.local_possible_duplicates.get(message.client_id, [])
-        )
-        new_possible_duplicates_sent = (
-            message.possible_duplicates_sent
-            + self.possible_duplicates_sent.get(message.client_id, [])
+        new_possible_duplicates = (
+            message.possible_duplicates
+            + self.possible_duplicates.get(message.client_id, [])
         )
 
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
@@ -442,8 +431,7 @@ class CommunicationReceiver(Communication):
             message.original_possible_duplicates,
             new_messages_received,
             new_messages_sent,
-            new_local_possible_duplicates,
-            new_possible_duplicates_sent,
+            new_possible_duplicates,
             new_replica_id_seen,
         )
 
@@ -454,10 +442,10 @@ class CommunicationReceiver(Communication):
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
 
         # TODO: Here we need to search if we processed any of the possible duplicates
-        duplicate_processed = []
+        duplicates_processed = []
 
-        new_possible_duplicate_processed_by = (
-            message.possible_duplicate_processed_by + duplicate_processed
+        new_possible_duplicates_processed_by = (
+            message.possible_duplicates_processed_by + duplicates_processed
         )
 
         return EOFAggregationMessage(
@@ -466,10 +454,9 @@ class CommunicationReceiver(Communication):
             message.original_possible_duplicates,
             message.messages_received,
             message.messages_sent,
-            message.local_possible_duplicates,
-            message.possible_duplicates_sent,
+            message.possible_duplicates,
             new_replica_id_seen,
-            new_possible_duplicate_processed_by,
+            new_possible_duplicates_processed_by,
         )
 
     def update_finish_eof(self, message):

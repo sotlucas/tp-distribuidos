@@ -119,7 +119,7 @@ class Connection:
             duplicate_catcher_states = {}
             for client_id, duplicate_catcher in self.duplicate_catchers.items():
                 duplicate_catcher_states[client_id] = duplicate_catcher.get_state()
-            self.log_guardian.store_duplicate_catcher(duplicate_catcher_states)
+            self.log_guardian.store_duplicate_catchers(duplicate_catcher_states)
 
     def process_duplicate_catcher(self, messages):
         """
