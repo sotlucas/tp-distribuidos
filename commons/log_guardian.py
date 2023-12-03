@@ -1,3 +1,4 @@
+from commons.log_searcher import LogSearcher
 from commons.log_storer import LogStorer
 from commons.restorer import Restorer
 
@@ -6,6 +7,7 @@ class LogGuardian:
     def __init__(self, log_suffix=""):
         self.restorer = Restorer(log_suffix)
         self.storer = LogStorer(log_suffix)
+        self.searcher = LogSearcher(log_suffix)
 
     def get_messages_received(self):
         return self.restorer.get_messages_received()
@@ -47,3 +49,8 @@ class LogGuardian:
 
     def commit_message(self):
         self.storer.commit_message()
+
+    # -------------------------------------------------------------
+
+    def search_for_duplicate_messages(self, client_id, ids_to_search):
+        return self.searcher.search_for_duplicate_messages(client_id, ids_to_search)

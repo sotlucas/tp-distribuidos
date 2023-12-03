@@ -29,7 +29,7 @@ class LogStorer:
     def store_possible_duplicates(self, possible_duplicates):
         self.current_state["possible_duplicates"] = possible_duplicates
 
-    def store_duplicate_catcher(self, duplicate_catchers):
+    def store_duplicate_catchers(self, duplicate_catchers):
         self.current_state["duplicate_catchers"] = duplicate_catchers
 
     def store_new_connection_message(self, message):
