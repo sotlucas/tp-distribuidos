@@ -357,7 +357,8 @@ class CommunicationReceiver(Communication):
                     )
                     self.sender.messages_sent[message.client_id] = real_messages_sent
 
-                # We change the messages_sent of the sender to the new_messages_sent to sincronize the EOF propagation
+                # We change the messages_sent of the sender to the new_messages_sent to sincronize the EOF propagation.
+                # We also add the possible_duplicates and original_possible_duplicates to the sender to warn for duplicates.
                 # TODO: This breaks encapsulation, see if we can do it in a better way
                 if self.sender:
                     logging.debug(
@@ -365,15 +366,10 @@ class CommunicationReceiver(Communication):
                             new_aggregation.possible_duplicates
                         )
                     )
-                    self.possible_duplicates[
-                        message.client_id
-                    ] = new_aggregation.possible_duplicates
-
-                # We update our possible_duplicates
-                # TODO: maybe this is not needed
-                self.possible_duplicates[
-                    message.client_id
-                ] = new_aggregation.possible_duplicates
+                    self.sender.possible_duplicates[message.client_id] = (
+                        new_aggregation.possible_duplicates
+                        + new_aggregation.original_possible_duplicates
+                    )
 
                 if not self.config.routing_key:
                     # We call the eof_callback only if we are in a queue, because in a topic exchange we call it in the handle_eof_finish
@@ -490,9 +486,11 @@ class CommunicationReceiver(Communication):
         """
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
 
-        # TODO: Here we need to search if we processed any of the possible duplicates
+        # We search if we processed any of the possible duplicates and original possible duplicates
+        # to add them to the possible_duplicates_processed_by
         duplicates_processed = self.log_guardian.search_for_duplicate_messages(
-            message.client_id, message.possible_duplicates
+            message.client_id,
+            message.possible_duplicates + message.original_possible_duplicates,
         )
         new_possible_duplicates_processed_by = (
             message.possible_duplicates_processed_by + duplicates_processed
