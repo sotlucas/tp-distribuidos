@@ -1,6 +1,6 @@
 from multiprocessing import Process
 
-from commons.health_checker import HealthChecker
+from commons.health_checker_server import HealthCheckerServer
 from filter import Filter, FilterConfig
 from commons.communication_initializer import CommunicationInitializer
 from commons.log_initializer import initialize_log
@@ -30,7 +30,7 @@ def main():
     initialize_log(logging_level)
 
     # Healthcheck process
-    health = Process(target=HealthChecker().run)
+    health = Process(target=HealthCheckerServer().run)
     health.start()
 
     restore_state = Restorer().restore()

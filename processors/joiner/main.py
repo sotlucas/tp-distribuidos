@@ -1,6 +1,6 @@
 from multiprocessing import Process
 
-from commons.health_checker import HealthChecker
+from commons.health_checker_server import HealthCheckerServer
 from joiner import Joiner, JoinerConfig
 from lat_long import LatLong, LatLongConfig
 from commons.log_initializer import initialize_log
@@ -38,7 +38,7 @@ def main():
     initialize_log(logging_level)
 
     # Healthcheck process
-    health = Process(target=HealthChecker().run)
+    health = Process(target=HealthCheckerServer().run)
     health.start()
 
     LAT_LONG_LOG_STORER_SUFFIX = "lat_long"
