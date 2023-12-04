@@ -35,14 +35,6 @@ class Restorer:
                 "duplicate_catchers": {},
             }
 
-        if restore_type == RestoreType.SAVE_DONE or restore_type == RestoreType.SENT:
-            logging.debug(
-                f"Restorer: Message: {message_id} did not finish correctly, adding it to the possible duplicates"
-            )
-            state["possible_duplicates"][client_id] = state["possible_duplicates"].get(
-                client_id, []
-            ) + [message_id]
-
         # convert the keys to int
         state["messages_received"] = {
             int(k): v for k, v in state.get("messages_received", {}).items()
@@ -56,6 +48,14 @@ class Restorer:
         state["duplicate_catchers"] = {
             int(k): v for k, v in state.get("duplicate_catchers", {}).items()
         }
+
+        if restore_type == RestoreType.SAVE_DONE or restore_type == RestoreType.SENT:
+            logging.debug(
+                f"Restorer: Message: {message_id} did not finish correctly, adding it to the possible duplicates"
+            )
+            state["possible_duplicates"][client_id] = state["possible_duplicates"].get(
+                client_id, []
+            ) + [message_id]
 
         return RestoreState(
             state.get("messages_received", {}),

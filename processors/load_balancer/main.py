@@ -41,6 +41,7 @@ def main():
         config_params["input_type"],
         config_params["replica_id"],
         config_params["replicas_count"],
+        load_balancer_send_multiply=config_params["grouper_replicas_count"],
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]

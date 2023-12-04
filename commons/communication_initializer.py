@@ -27,6 +27,8 @@ class CommunicationInitializer:
         routing_key="",
         input_diff_name="",
         delimiter=",",
+        use_duplicate_catcher=False,
+        load_balancer_send_multiply=None,
     ):
         """
         Initialize the receiver based on the input type
@@ -38,6 +40,8 @@ class CommunicationInitializer:
             routing_key=routing_key,
             input_diff_name=input_diff_name,
             delimiter=delimiter,
+            use_duplicate_catcher=use_duplicate_catcher,
+            load_balancer_send_multiply=load_balancer_send_multiply,
         )
         if input_type == "QUEUE":
             communication_receiver = CommunicationReceiverQueue(

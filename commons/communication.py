@@ -2,6 +2,7 @@ from enum import Enum
 import time
 import pika
 import logging
+from commons.duplicate_catcher import DuplicateCatcher
 from commons.flight_parser import FlightParser
 from commons.log_searcher import ProcessedMessage
 from commons.message import (
@@ -110,6 +111,12 @@ class CommunicationReceiverConfig:
         The input_diff_name used to replicate the input queue, it is used to differentiate the queues for different exchange subscribers
     - delimiter : str
         The delimiter used to parse the messages
+    - use_duplicate_catcher : bool
+        If True, it uses the duplicate catcher to avoid processing duplicate messages.
+        This only should be used if a specific message always goes to the same processor. Like for example if before we have a LoadBalancer.
+    - load_balancer_send_multiply : int
+        If this is set, it means that the processor is a LoadBalancer, this is important because the LoadBalancer sends multiply messages from 1 message.
+        This is used to count the duplicates correctly. The number is the number of messages sent from 1 message, most likely the number of replicas of the next processor.
     """
 
     def __init__(
@@ -120,6 +127,8 @@ class CommunicationReceiverConfig:
         routing_key="",
         input_diff_name="",
         delimiter=",",
+        use_duplicate_catcher=False,
+        load_balancer_send_multiply=None,
     ):
         self.input = input
         self.replica_id = replica_id
@@ -127,6 +136,8 @@ class CommunicationReceiverConfig:
         self.routing_key = routing_key
         self.input_diff_name = input_diff_name
         self.delimiter = delimiter
+        self.use_duplicate_catcher = use_duplicate_catcher
+        self.load_balancer_send_multiply = load_balancer_send_multiply
 
 
 class CommunicationReceiver(Communication):
@@ -142,6 +153,18 @@ class CommunicationReceiver(Communication):
 
         # {client_id: messages_received}
         self.messages_received = self.log_guardian.get_messages_received()
+
+        # {client_id: [DuplicateCatcher]}
+        self.duplicate_catchers = {}
+
+        if self.config.use_duplicate_catcher:
+            # Restore duplicate catcher state
+            for (
+                client_id,
+                duplicate_catcher_state,
+            ) in log_guardian.get_duplicate_catchers().items():
+                duplicate_catcher = DuplicateCatcher(duplicate_catcher_state)
+                self.duplicate_catchers[client_id] = duplicate_catcher
 
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
@@ -199,6 +222,17 @@ class CommunicationReceiver(Communication):
             return
 
         if message.message_type == MessageType.PROTOCOL:
+            # First we check if it is a duplicate if we are using the duplicate catcher
+            if self.config.use_duplicate_catcher:
+                if self.check_duplicate(message):
+                    logging.debug(
+                        f"Duplicate catcher detected duplicate message {message.message_id}, discarding it"
+                    )
+
+                    # It is a duplicate, so we send an NACK with requeue=False to delete the message
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                    return
+
             logging.debug("Received protocol message")
             self.log_guardian.new_message_received(
                 message.message_id, message.client_id
@@ -223,8 +257,17 @@ class CommunicationReceiver(Communication):
 
             self.log_guardian.store_messages_received(self.messages_received)
             self.log_guardian.store_possible_duplicates(self.possible_duplicates)
+
             if self.sender:
                 self.log_guardian.store_messages_sent(self.sender.messages_sent)
+
+            if self.config.use_duplicate_catcher:
+                # We store the duplicate catchers states only if we are using the duplicate catcher
+                duplicate_catcher_states = {}
+                for client_id, duplicate_catcher in self.duplicate_catchers.items():
+                    duplicate_catcher_states[client_id] = duplicate_catcher.get_state()
+                self.log_guardian.store_duplicate_catchers(duplicate_catcher_states)
+
             self.log_guardian.finish_storing_message()
 
         elif message.message_type == MessageType.EOF:
@@ -256,6 +299,17 @@ class CommunicationReceiver(Communication):
             if message.message_type == MessageType.PROTOCOL:
                 # We only commit the message if it is a protocol message, because the EOF messages are requeued
                 self.log_guardian.commit_message()
+
+    def check_duplicate(self, message):
+        """
+        Checks if the message is a duplicate using the duplicate catcher
+        """
+        if message.client_id not in self.duplicate_catchers:
+            self.duplicate_catchers[message.client_id] = DuplicateCatcher()
+
+        duplicate_catcher = self.duplicate_catchers[message.client_id]
+
+        return duplicate_catcher.is_duplicate(message.message_id)
 
     def handle_protocol(self, message):
         """
@@ -379,6 +433,7 @@ class CommunicationReceiver(Communication):
                     logging.debug(
                         "Updating possible_duplicates to {}".format(
                             new_aggregation.possible_duplicates
+                            + new_aggregation.original_possible_duplicates
                         )
                     )
                     self.sender.possible_duplicates[message.client_id] = (
@@ -439,6 +494,16 @@ class CommunicationReceiver(Communication):
                 if processed_message.sent
             ]
         )
+
+        if self.config.load_balancer_send_multiply:
+            # We are in a LoadBalancer, so we need to multiply the duplicate_messages_sent
+            # To count the duplicates sent correctly and send the correct number of real messages
+
+            # TODO: There is a border case when the LoadBalancer does not send the message to all the next replicas,
+            #       this can happen if, for example, the batch of message is smaller than the number of replicas.
+            #       Fix this if needed.
+            duplicate_messages_sent *= self.config.load_balancer_send_multiply
+
         return duplicate_messages_received, duplicate_messages_sent
 
     def handle_eof_finish(self, message):
@@ -501,15 +566,21 @@ class CommunicationReceiver(Communication):
         """
         new_replica_id_seen = message.replica_id_seen + [self.config.replica_id]
 
-        # We search if we processed any of the possible duplicates and original possible duplicates
-        # to add them to the possible_duplicates_processed_by
-        duplicates_processed = self.log_guardian.search_for_duplicate_messages(
-            message.client_id,
-            message.possible_duplicates + message.original_possible_duplicates,
-        )
-        new_possible_duplicates_processed_by = (
-            message.possible_duplicates_processed_by + duplicates_processed
-        )
+        if not self.config.use_duplicate_catcher:
+            # We search if we processed any of the possible duplicates and original possible duplicates
+            # to add them to the possible_duplicates_processed_by
+            duplicates_processed = self.log_guardian.search_for_duplicate_messages(
+                message.client_id,
+                message.possible_duplicates + message.original_possible_duplicates,
+            )
+            new_possible_duplicates_processed_by = (
+                message.possible_duplicates_processed_by + duplicates_processed
+            )
+        else:
+            # We don't need to search for duplicates, because we are using the duplicate catcher
+            new_possible_duplicates_processed_by = (
+                message.possible_duplicates_processed_by
+            )
 
         return EOFAggregationMessage(
             message.client_id,
@@ -600,6 +671,9 @@ class CommunicationReceiverExchange(CommunicationReceiver):
             queue=self.input_queue,
             routing_key=self.config.routing_key,
         )
+
+        # We need to confirm the delivery to ensure the messages are sent
+        self.channel.confirm_delivery()
 
 
 class CommunicationReceiverQueue(CommunicationReceiver):

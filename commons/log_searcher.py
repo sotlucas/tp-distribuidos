@@ -9,7 +9,7 @@ class ProcessedMessage:
 
     def from_str(message_str):
         sent = "S" in message_str
-        message_id = message_str.split("S")[0]
+        message_id = int(message_str.split("S")[0])
         return ProcessedMessage(message_id, sent)
 
     def to_bytes(self, size, byteorder="big"):
@@ -19,7 +19,7 @@ class ProcessedMessage:
         return sent_byte + message_id_bytes
 
     def from_bytes(bytes, byteorder="big"):
-        sent = bytes[0] == b"\x01"
+        sent = bytes[0] == True
         message_id = int.from_bytes(bytes[1:], byteorder)
         return ProcessedMessage(message_id, sent)
 
