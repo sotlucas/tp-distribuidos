@@ -9,6 +9,7 @@ from commons.protocol import (
     MessageProtocolType,
     MessageType,
     AnnounceACKMessage,
+    ACKMessage,
 )
 from message_uploader import MessageUploader
 from results_uploader import ResultsUploader
@@ -62,6 +63,14 @@ class ClientHandler:
             try:
                 client_message = self.buff.get_message()
                 self.__handle_message(client_message)
+                message_id = (
+                    0
+                    if client_message.message_type == MessageType.EOF
+                    else client_message.message_id
+                )
+                self.buff.send_message(
+                    ACKMessage(message_id, client_message.protocol_type)
+                )
             except OSError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
                 self.running = False

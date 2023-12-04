@@ -102,6 +102,9 @@ class ClientProtocolMessage(Message):
         writer.write(self.content.encode("utf-8"))
         return writer.get_bytes()
 
+    def __str__(self):
+        return f"ClientProtocolMessage(message_id={self.message_id}, protocol_type={self.protocol_type})"
+
 
 class ResultMessage(Message):
     def __init__(self, result):
@@ -132,6 +135,9 @@ class EOFMessage(Message):
     def to_bytes_impl(self, writer):
         writer.write_int(self.protocol_type.value, 1)
         return writer.get_bytes()
+
+    def __str__(self):
+        return f"EOFMessage(protocol_type={self.protocol_type})"
 
 
 class HealthCheckMessage(Message):
@@ -168,14 +174,21 @@ class AnnounceACKMessage(Message):
 
 
 class ACKMessage(Message):
-    def __init__(self, message_id):
+    def __init__(self, message_id, protocol_type: MessageProtocolType):
         super().__init__(MessageType.ACK)
         self.message_id = message_id
+        self.protocol_type = protocol_type
 
     def from_bytes(reader):
         message_id = reader.read_int(8)
-        return ACKMessage(message_id)
+        protocol_type_value = reader.read_int(1)
+        protocol_type = MessageProtocolType(protocol_type_value)
+        return ACKMessage(message_id, protocol_type)
 
     def to_bytes_impl(self, writer):
         writer.write_int(self.message_id, 8)
+        writer.write_int(self.protocol_type.value, 1)
         return writer.get_bytes()
+
+    def __str__(self):
+        return f"ACKMessage(message_id={self.message_id}, protocol_type={self.protocol_type})"

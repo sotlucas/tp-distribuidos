@@ -1,14 +1,15 @@
 import signal
-import socket
 import logging
-from multiprocessing import Process
+import multiprocessing as mp
+import socket
+import time
 
 from commons.communication_buffer import CommunicationBuffer
 from file_uploader import FileUploader
 from result_handler import ResultHandler
 from commons.protocol import (
-    AnnounceMessage,
     MessageProtocolType,
+    AnnounceMessage,
     MessageType,
 )
 
@@ -41,55 +42,76 @@ class Client:
         signal.signal(signal.SIGINT, self.__shutdown)
 
     def run(self):
-        # Create a socket
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Connect to the server
-        self.sock.connect((self.config.server_ip, self.config.server_port))
-        logging.info("Connected to server")
-        self.buff = CommunicationBuffer(self.sock)
+        send_queue = mp.Queue()
 
-        # TODO: Send the announce message every time we reconnect.
-        #       When we support server fault tolerance
-
-        # Send the announce message
-        announce_message = AnnounceMessage(self.config.client_id)
-        self.buff.send_message(announce_message)
-        while self.buff.get_message().message_type != MessageType.ANNOUNCE_ACK:
-            # TODO: retry with exponential backoff
-            announce_message = AnnounceMessage(self.config.client_id)
-            self.buff.send_message(announce_message)
-
+        airports_queue = mp.Queue()
         # Start the process to send the airports
-        self.airports_sender = Process(
+        self.airports_sender = mp.Process(
             target=FileUploader(
                 MessageProtocolType.AIRPORT,
                 self.config.airports_file_path,
                 self.config.remove_file_header,
                 self.config.batch_size,
-                self.buff,
                 self.config.client_id,
+                airports_queue,
+                send_queue,
             ).start
         )
         self.airports_sender.start()
 
+        flights_queue = mp.Queue()
         # Start the process to send the flights
-        self.flights_sender = Process(
+        self.flights_sender = mp.Process(
             target=FileUploader(
                 MessageProtocolType.FLIGHT,
                 self.config.flights_file_path,
                 self.config.remove_file_header,
                 self.config.batch_size,
-                self.buff,
                 self.config.client_id,
+                flights_queue,
+                send_queue,
             ).start
         )
         self.flights_sender.start()
 
+        results_queue = mp.Queue()
         # Start the process to receive the results
-        self.results_receiver = Process(
-            target=ResultHandler(self.buff, self.config.client_id).receive_results
+        self.results_receiver = mp.Process(
+            target=ResultHandler(
+                self.config.client_id, results_queue, send_queue
+            ).receive_results
         )
         self.results_receiver.start()
+
+        # Create a socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Connect to the server
+        self.sock.connect((self.config.server_ip, self.config.server_port))
+        logging.info("CLIENT | Connected to server")
+        self.buff = CommunicationBuffer(self.sock)
+
+        # TODO: Send the announce message every time we reconnect.
+        #       When we support server fault tolerance
+        self.send_announce()
+
+        # TODO: this should be two different processes: a sender and a receiver
+        while True:
+            message_to_send = send_queue.get()
+            logging.info(f"CLIENT | Sending message: {message_to_send}")
+            if message_to_send.message_type == MessageType.EOF:
+                self.buff.send_eof(message_to_send.protocol_type)
+            else:
+                self.buff.send_message(message_to_send)
+            message_recv = self.buff.get_message()
+            logging.info(f"CLIENT | Received message: {message_recv}")
+            if message_recv.message_type == MessageType.EOF:
+                continue
+            elif message_recv.message_type == MessageType.RESULT:
+                results_queue.put(message_recv)
+            elif message_recv.protocol_type == MessageProtocolType.FLIGHT:
+                flights_queue.put(message_recv)
+            elif message_recv.protocol_type == MessageProtocolType.AIRPORT:
+                airports_queue.put(message_recv)
 
         # Wait for the processes to finish
         self.airports_sender.join()
@@ -98,6 +120,15 @@ class Client:
         logging.info("Waiting for results")
         self.results_receiver.join()
         logging.info("All processes finished")
+
+    def send_announce(self):
+        announce_message = AnnounceMessage(self.config.client_id)
+        self.buff.send_message(announce_message)
+        while self.buff.get_message().message_type != MessageType.ANNOUNCE_ACK:
+            # TODO: retry with exponential backoff
+            logging.info(f"Retrying announce message: {announce_message}")
+            self.buff.send_message(announce_message)
+            time.sleep(10)
 
     def __shutdown(self, signum=None, frame=None):
         logging.info("Shutting down")
