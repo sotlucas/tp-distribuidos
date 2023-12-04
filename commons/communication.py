@@ -4,7 +4,6 @@ import pika
 import logging
 from commons.duplicate_catcher import DuplicateCatcher
 from commons.flight_parser import FlightParser
-from commons.log_searcher import ProcessedMessage
 from commons.message import (
     Message,
     MessageType,

@@ -1,4 +1,3 @@
-import logging
 from commons.logger import Logger
 
 
