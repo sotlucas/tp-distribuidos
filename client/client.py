@@ -83,16 +83,7 @@ class Client:
         )
         self.results_receiver.start()
 
-        # Create a socket
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Connect to the server
-        self.sock.connect((self.config.server_ip, self.config.server_port))
-        logging.info("CLIENT | Connected to server")
-        self.buff = CommunicationBuffer(self.sock)
-
-        # TODO: Send the announce message every time we reconnect.
-        #       When we support server fault tolerance
-        self.send_announce()
+        self.connect_to_server()
 
         # Start the sender and receiver processes
         self.sender_process = mp.Process(target=self.sender, args=(send_queue,))
@@ -121,7 +112,13 @@ class Client:
         Receives messages from the server.
         """
         while True:
-            message_recv = self.buff.get_message()
+            try:
+                message_recv = self.buff.get_message()
+            except Exception as e:
+                logging.info(f"Server disconnected: {e}. Retrying in 10 seconds")
+                time.sleep(10)
+                self.connect_to_server()
+                continue
             logging.info(f"CLIENT | Received message: {message_recv}")
             if message_recv.message_type == MessageType.EOF:
                 continue
@@ -138,11 +135,31 @@ class Client:
         """
         while True:
             message_to_send = send_queue.get()
-            logging.info(f"CLIENT | Sending message: {message_to_send}")
-            if message_to_send.message_type == MessageType.EOF:
-                self.buff.send_eof(message_to_send.protocol_type)
-            else:
-                self.buff.send_message(message_to_send)
+            try:
+                logging.info(f"CLIENT | Sending message: {message_to_send}")
+                if message_to_send.message_type == MessageType.EOF:
+                    self.buff.send_eof(message_to_send.protocol_type)
+                else:
+                    self.buff.send_message(message_to_send)
+            except Exception as e:
+                logging.info(f"Server disconnected: {e}. Retrying in 10 seconds")
+                time.sleep(10)
+                self.connect_to_server()
+
+    def connect_to_server(self):
+        while True:  # TODO: check
+            try:
+                # Create a socket
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                # Connect to the server
+                self.sock.connect((self.config.server_ip, self.config.server_port))
+                logging.info("CLIENT | Connected to server")
+                self.buff = CommunicationBuffer(self.sock)
+                self.send_announce()
+                break
+            except Exception as e:
+                logging.info(f"Server disconnected: {e}. Retrying in 10 seconds")
+                time.sleep(10)
 
     def send_announce(self):
         announce_message = AnnounceMessage(self.config.client_id)
