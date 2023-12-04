@@ -94,14 +94,33 @@ class Client:
         #       When we support server fault tolerance
         self.send_announce()
 
-        # TODO: this should be two different processes: a sender and a receiver
+        # Start the sender and receiver processes
+        self.sender_process = mp.Process(target=self.sender, args=(send_queue,))
+        self.sender_process.start()
+
+        self.receiver_process = mp.Process(
+            target=self.receiver,
+            args=(results_queue, flights_queue, airports_queue),
+        )
+        self.receiver_process.start()
+
+        # Wait for the processes to finish
+        self.receiver_process.join()
+        logging.info("Receiver finished")
+        self.sender_process.join()
+        logging.info("Sender finished")
+        self.airports_sender.join()
+        logging.info("Airports sender finished")
+        self.flights_sender.join()
+        logging.info("Waiting for results")
+        self.results_receiver.join()
+        logging.info("All processes finished")
+
+    def receiver(self, results_queue, flights_queue, airports_queue):
+        """
+        Receives messages from the server.
+        """
         while True:
-            message_to_send = send_queue.get()
-            logging.info(f"CLIENT | Sending message: {message_to_send}")
-            if message_to_send.message_type == MessageType.EOF:
-                self.buff.send_eof(message_to_send.protocol_type)
-            else:
-                self.buff.send_message(message_to_send)
             message_recv = self.buff.get_message()
             logging.info(f"CLIENT | Received message: {message_recv}")
             if message_recv.message_type == MessageType.EOF:
@@ -113,13 +132,17 @@ class Client:
             elif message_recv.protocol_type == MessageProtocolType.AIRPORT:
                 airports_queue.put(message_recv)
 
-        # Wait for the processes to finish
-        self.airports_sender.join()
-        logging.info("Airports sender finished")
-        self.flights_sender.join()
-        logging.info("Waiting for results")
-        self.results_receiver.join()
-        logging.info("All processes finished")
+    def sender(self, send_queue):
+        """
+        Sends messages to the server.
+        """
+        while True:
+            message_to_send = send_queue.get()
+            logging.info(f"CLIENT | Sending message: {message_to_send}")
+            if message_to_send.message_type == MessageType.EOF:
+                self.buff.send_eof(message_to_send.protocol_type)
+            else:
+                self.buff.send_message(message_to_send)
 
     def send_announce(self):
         announce_message = AnnounceMessage(self.config.client_id)
