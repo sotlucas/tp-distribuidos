@@ -112,9 +112,9 @@ class CommunicationReceiverConfig:
         The delimiter used to parse the messages
     - use_duplicate_catcher : bool
         If True, it uses the duplicate catcher to avoid processing duplicate messages.
-        This only should be used if a specific message always goes to the same processor. Like for example if before we have a LoadBalancer.
+        This only should be used if a specific message always goes to the same processor, even if it was requeued. Like, for example, if before we have a LoadBalancer.
     - load_balancer_send_multiply : int
-        If this is set, it means that the processor is a LoadBalancer, this is important because the LoadBalancer sends multiply messages from 1 message.
+        If this is set, it means that this communication is in a LoadBalancer, this is important because the LoadBalancer sends multiple messages from 1 message received.
         This is used to count the duplicates correctly. The number is the number of messages sent from 1 message, most likely the number of replicas of the next processor.
     """
 
@@ -496,7 +496,7 @@ class CommunicationReceiver(Communication):
 
         if self.config.load_balancer_send_multiply:
             # We are in a LoadBalancer, so we need to multiply the duplicate_messages_sent
-            # To count the duplicates sent correctly and send the correct number of real messages
+            # to count the duplicates sent correctly and send the correct number of real messages
 
             # TODO: There is a border case when the LoadBalancer does not send the message to all the next replicas,
             #       this can happen if, for example, the batch of message is smaller than the number of replicas.
