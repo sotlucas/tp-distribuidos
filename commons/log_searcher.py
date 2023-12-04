@@ -15,13 +15,13 @@ class ProcessedMessage:
     def to_bytes(self, size, byteorder="big"):
         # first byte is 1 if sent, 0 if not sent
         sent_byte = b"\x01" if self.sent else b"\x00"
-        message_id_bytes = int(self.message_id).to_bytes(size, byteorder)
+        message_id_bytes = int(self.message_id).to_bytes(size - 1, byteorder)
         return sent_byte + message_id_bytes
 
     def from_bytes(bytes, byteorder="big"):
         sent = bytes[0] == b"\x01"
         message_id = int.from_bytes(bytes[1:], byteorder)
-        return ProcessedMessage(str(message_id), sent)
+        return ProcessedMessage(message_id, sent)
 
     def __eq__(self, other):
         return self.message_id == other.message_id and self.sent == other.sent

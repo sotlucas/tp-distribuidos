@@ -169,7 +169,7 @@ class CommunicationReceiver(Communication):
         self.sender = sender
         self.input_fields_order = input_fields_order
 
-        self.channel.basic_qos(prefetch_count=100)
+        self.channel.basic_qos(prefetch_count=10)
         self.channel.basic_consume(
             queue=self.input_queue, on_message_callback=self.callback
         )
@@ -203,6 +203,21 @@ class CommunicationReceiver(Communication):
             self.log_guardian.new_message_received(
                 message.message_id, message.client_id
             )
+
+            # TODO: Check if this is ok
+            # Check redeliver to see if it is a duplicate
+            # We need to add redelivered messages to the possible_duplicates, because
+            # another replica may have tried to send the ACK but it failed just after sending it,
+            # so the ack is lost and the message is redelivered.
+            if method.redelivered:
+                logging.debug(
+                    f"Message {message.message_id} has been redelivered, adding it to the possible_duplicates"
+                )
+                self.possible_duplicates[
+                    message.client_id
+                ] = self.possible_duplicates.get(message.client_id, []) + [
+                    message.message_id
+                ]
 
             ack_type = self.handle_protocol(message)
 
