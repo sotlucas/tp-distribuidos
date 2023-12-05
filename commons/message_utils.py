@@ -21,6 +21,12 @@ class MessageBytesReader:
             ints.append(self.read_int(size))
         return ints
 
+    def read_multiple_object(self, size, count, object_class):
+        objects = []
+        for i in range(count):
+            objects.append(object_class.from_bytes(self.read(size)))
+        return objects
+
     def read_to_end(self):
         bytes = self.buffer[self.offset :]
         self.offset = len(self.buffer)

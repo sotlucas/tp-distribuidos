@@ -42,6 +42,7 @@ def main():
         config_params["replica_id"],
         config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
+        use_duplicate_catcher=True,
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["vuelos_output"], config_params["output_type"]
@@ -72,7 +73,6 @@ def main():
         vuelos_input_fields,
         vuelos_output_fields,
         send_eof=False,
-        duplicate_catcher=True,
     )
     Connection(
         connection_config,

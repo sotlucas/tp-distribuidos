@@ -6,7 +6,6 @@ from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
 from dos_mas_rapidos import DosMasRapidos
 from commons.connection import ConnectionConfig, Connection
-from commons.restorer import Restorer
 from commons.log_guardian import LogGuardian
 
 
@@ -43,6 +42,7 @@ def main():
         config_params["input_type"],
         config_params["replica_id"],
         DOS_MAS_RAPIDOS_REPLICAS_COUNT,
+        use_duplicate_catcher=True,
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]
@@ -57,10 +57,7 @@ def main():
     ]
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"],
-        input_output_fields,
-        input_output_fields,
-        duplicate_catcher=True,
+        config_params["replica_id"], input_output_fields, input_output_fields
     )
     Connection(connection_config, receiver, sender, log_guardian, DosMasRapidos).run()
 
