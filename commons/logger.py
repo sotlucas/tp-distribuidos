@@ -45,10 +45,6 @@ class Logger:
                 f.flush()
                 os.fsync(f.fileno())
 
-                # Flush the file to disk
-                f.flush()
-                os.fsync(f.fileno())
-
     def sent(self, message_id, client_id):
         """
         Logs a message as sent in the log file.
@@ -56,10 +52,6 @@ class Logger:
         with self.lock:
             with open(self.communication_log_file_path, "a") as f:
                 f.write(f"{LoggerToken.SENT} {message_id} / {client_id}\n")
-
-                # Flush the file to disk
-                f.flush()
-                os.fsync(f.fileno())
 
                 # Flush the file to disk
                 f.flush()
@@ -79,10 +71,6 @@ class Logger:
                 f.flush()
                 os.fsync(f.fileno())
 
-                # Flush the file to disk
-                f.flush()
-                os.fsync(f.fileno())
-
     def save_connection(self, message_id, client_id, messages):
         """
         Appends a message to the connection log file.
@@ -96,10 +84,6 @@ class Logger:
                 f.flush()
                 os.fsync(f.fileno())
 
-                # Flush the file to disk
-                f.flush()
-                os.fsync(f.fileno())
-
     def commit(self, message_id, client_id):
         """
         Logs a message as committed in the log file.
@@ -107,10 +91,6 @@ class Logger:
         with self.lock:
             with open(self.communication_log_file_path, "a") as f:
                 f.write(f"{LoggerToken.COMMIT} {message_id} / {client_id}\n")
-
-                # Flush the file to disk
-                f.flush()
-                os.fsync(f.fileno())
 
                 # Flush the file to disk
                 f.flush()

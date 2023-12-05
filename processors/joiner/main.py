@@ -56,7 +56,6 @@ def main():
         JOINER_REPLICA_COUNT,
         input_diff_name=str(config_params["replica_id"]),
         use_duplicate_catcher=True,
-        use_duplicate_catcher=True,
     )
 
     lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
