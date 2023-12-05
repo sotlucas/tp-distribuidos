@@ -13,8 +13,7 @@ class FileUploader:
         remove_file_header,
         batch_size,
         client_id,
-        recv_queue,
-        send_queue,
+        protocol_connection,
     ):
         self.message_type = message_type
         self.file_path = file_path
@@ -22,8 +21,7 @@ class FileUploader:
         self.batch_size = batch_size
         self.client_id = client_id
         self.current_message_id = 1
-        self.recv_queue = recv_queue
-        self.send_queue = send_queue
+        self.protocol_connection = protocol_connection
 
     def start(self):
         """
@@ -40,20 +38,10 @@ class FileUploader:
                 message = ClientProtocolMessage(
                     self.current_message_id, self.message_type, batch
                 )
-                self.send_queue.put(message)
-                message_recv = self.recv_queue.get()
-                logging.info(
-                    f"FILE_UPLOADER::{self.message_type} | message_recv: {message_recv}"
-                )
-                while message_recv.message_type != MessageType.ACK:
-                    logging.info(f"Retrying message: {message}")
-                    self.send_queue.put(message)
-                    message_recv = self.recv_queue.get()
-                    time.sleep(10)
+                self.protocol_connection.send_message(message)
                 self.current_message_id += 1
         # Send message to indicate that the file has ended
-        message = EOFMessage(self.message_type)
-        self.send_queue.put(message)
+        self.protocol_connection.send_eof(self.message_type)
         logging.info(f"File sent: {self.file_path}")
 
     def __next_batch(self, file_path, batch_size):

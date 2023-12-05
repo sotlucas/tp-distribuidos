@@ -148,12 +148,13 @@ class Logger:
             line = next(lines)
             while not line.startswith(LoggerToken.COMMIT):
                 line = next(lines)
-            # Go to the START of this message
-            message_lines = []
-            while not line.startswith(LoggerToken.START):
-                message_lines.append(line)
+            # Go to the SAVE_DONE of this message
+            while not line.startswith(LoggerToken.SAVE_DONE):
                 line = next(lines)
-            state = message_lines[-3]
+            state = next(lines)
+            # Go to the START of this message
+            while not line.startswith(LoggerToken.START):
+                line = next(lines)
         except StopIteration:
             # We reached the beggining of the file
             pass

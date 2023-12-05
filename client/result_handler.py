@@ -7,12 +7,11 @@ from commons.communication_buffer import PeerDisconnected
 
 
 class ResultHandler:
-    def __init__(self, client_id, recv_queue, send_queue):
+    def __init__(self, client_id, protocol_connection):
         self.tstamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.running = True
         self.client_id = client_id
-        self.recv_queue = recv_queue
-        self.send_queue = send_queue
+        self.protocol_connection = protocol_connection
 
     def receive_results(self):
         """
@@ -24,7 +23,7 @@ class ResultHandler:
         logging.info("Receiving results")
         while self.running:
             try:
-                message = self.recv_queue.get()
+                message = self.protocol_connection.get_message()
                 if not message:
                     break
                 logging.debug(f"Result received: {message.result}")
@@ -53,7 +52,7 @@ class ResultHandler:
         """
         Saves a single result in the corresponding file.
         """
-        logging.info(f"Saving result: {data}")
+        logging.debug(f"Saving result: {data}")
         file_name = self.__get_message_tag(data)
 
         if not os.path.exists(f"results/client_{self.client_id}"):
