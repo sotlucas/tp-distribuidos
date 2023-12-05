@@ -43,6 +43,7 @@ def main():
         config_params["replica_id"],
         DOS_MAS_RAPIDOS_REPLICAS_COUNT,
         use_duplicate_catcher=True,
+        use_duplicate_catcher=True,
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]

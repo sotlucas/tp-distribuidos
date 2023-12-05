@@ -43,6 +43,7 @@ def main():
         config_params["replicas_count"],
         routing_key=str(config_params["replica_id"]),
         use_duplicate_catcher=True,
+        use_duplicate_catcher=True,
     )
     vuelos_sender = vuelos_communication_initializer.initialize_sender(
         config_params["vuelos_output"], config_params["output_type"]
