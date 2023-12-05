@@ -55,7 +55,10 @@ def main():
     media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], input_fields, output_fields
+        config_params["replica_id"],
+        input_fields,
+        output_fields,
+        has_statefull_processor=True,
     )
     Connection(
         connection_config,
