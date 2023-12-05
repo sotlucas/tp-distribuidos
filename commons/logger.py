@@ -41,6 +41,10 @@ class Logger:
             with open(self.communication_log_file_path, "a") as f:
                 f.write(f"{LoggerToken.START} {message_id} / {client_id}\n")
 
+                # Flush the file to disk
+                f.flush()
+                os.fsync(f.fileno())
+
     def sent(self, message_id, client_id):
         """
         Logs a message as sent in the log file.
@@ -48,6 +52,10 @@ class Logger:
         with self.lock:
             with open(self.communication_log_file_path, "a") as f:
                 f.write(f"{LoggerToken.SENT} {message_id} / {client_id}\n")
+
+                # Flush the file to disk
+                f.flush()
+                os.fsync(f.fileno())
 
     def save_communication(self, message_id, client_id, message):
         """
@@ -59,6 +67,10 @@ class Logger:
                 f.write(f"{json.dumps(message)}\n")
                 f.write(f"{LoggerToken.SAVE_DONE} {message_id} / {client_id}\n")
 
+                # Flush the file to disk
+                f.flush()
+                os.fsync(f.fileno())
+
     def save_connection(self, message_id, client_id, messages):
         """
         Appends a message to the connection log file.
@@ -68,6 +80,10 @@ class Logger:
             with open(file_path, "a") as f:
                 f.write(f"{message_id}/{json.dumps(messages)}\n")
 
+                # Flush the file to disk
+                f.flush()
+                os.fsync(f.fileno())
+
     def commit(self, message_id, client_id):
         """
         Logs a message as committed in the log file.
@@ -75,6 +91,10 @@ class Logger:
         with self.lock:
             with open(self.communication_log_file_path, "a") as f:
                 f.write(f"{LoggerToken.COMMIT} {message_id} / {client_id}\n")
+
+                # Flush the file to disk
+                f.flush()
+                os.fsync(f.fileno())
 
     def restore(self):
         """
@@ -140,7 +160,8 @@ class Logger:
         if state:
             state = json.loads(state)
 
-        self.delete_connection_messages(message_id.strip(), client_id.strip())
+        # TODO: Fix this
+        # self.delete_connection_messages(message_id.strip(), client_id.strip())
 
         return RestoreType.SENT, int(message_id.strip()), int(client_id.strip()), state
 
@@ -174,7 +195,7 @@ class Logger:
                     break
             n += 1
         truncate_file_from_nth_line_from_bottom(file_path, n)
-        
+
     def search_processed(self, client_id, ids_to_search):
         """
         Searches if the given ids were processed and sent.
@@ -184,17 +205,24 @@ class Logger:
             lines = read_file_bottom_to_top_generator(self.communication_log_file_path)
             for line in lines:
                 if line.startswith(LoggerToken.SAVE_DONE):
-                    message_id, message_client_id = line.split(LoggerToken.SAVE_DONE)[1].split(" / ")
-                    if int(message_client_id.strip()) != client_id or int(message_id.strip()) not in ids_to_search:
+                    message_id, message_client_id = line.split(LoggerToken.SAVE_DONE)[
+                        1
+                    ].split(" / ")
+                    if (
+                        int(message_client_id.strip()) != client_id
+                        or int(message_id.strip()) not in ids_to_search
+                    ):
                         continue
                     try:
-                        while not line.startswith(LoggerToken.START) and not line.startswith(LoggerToken.SENT):
+                        while not line.startswith(
+                            LoggerToken.START
+                        ) and not line.startswith(LoggerToken.SENT):
                             line = next(lines)
                     except StopIteration:
                         # We reached the beggining of the file
                         pass
                     if line.startswith(LoggerToken.SENT):
-                        processed_ids_found.append(message_id.strip()+"S")
+                        processed_ids_found.append(message_id.strip() + "S")
                     elif line.startswith(LoggerToken.START):
                         processed_ids_found.append(message_id.strip())
         return processed_ids_found

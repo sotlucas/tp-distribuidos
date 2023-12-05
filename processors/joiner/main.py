@@ -55,6 +55,7 @@ def main():
         config_params["replica_id"],
         JOINER_REPLICA_COUNT,
         input_diff_name=str(config_params["replica_id"]),
+        use_duplicate_catcher=True,
     )
 
     lat_long_input_fields = ["AirportCode", "Latitude", "Longitude"]
@@ -62,11 +63,7 @@ def main():
     lat_long_config = LatLongConfig(state)
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"],
-        lat_long_input_fields,
-        None,
-        send_eof=False,
-        duplicate_catcher=True,
+        config_params["replica_id"], lat_long_input_fields, None, send_eof=False
     )
     connection = Connection(
         connection_config,

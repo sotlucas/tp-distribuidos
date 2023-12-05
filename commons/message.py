@@ -1,4 +1,5 @@
 from enum import Enum
+from commons.log_searcher import ProcessedMessage
 from commons.message_utils import MessageBytesReader, MessageBytesWriter
 
 
@@ -255,8 +256,8 @@ class EOFAggregationMessage(Message):
         replica_id_seen = reader.read_multiple_int(8, replica_id_seen_count)
 
         possible_duplicates_processed_by_count = reader.read_int(4)
-        possible_duplicates_processed_by = reader.read_multiple_int(
-            8, possible_duplicates_processed_by_count
+        possible_duplicates_processed_by = reader.read_multiple_object(
+            9, possible_duplicates_processed_by_count, ProcessedMessage
         )
 
         return EOFAggregationMessage(
@@ -286,7 +287,7 @@ class EOFAggregationMessage(Message):
         writer.write_multiple_int(self.replica_id_seen, 8)
 
         writer.write_int(len(self.possible_duplicates_processed_by), 4)
-        writer.write_multiple_int(self.possible_duplicates_processed_by, 8)
+        writer.write_multiple_int(self.possible_duplicates_processed_by, 9)
 
         return writer.get_bytes()
 

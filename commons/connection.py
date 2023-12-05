@@ -2,7 +2,6 @@ import logging
 import signal
 from commons.message import ProtocolMessage
 from commons.processor import ResponseType
-from commons.duplicate_catcher import DuplicateCatcher
 
 
 class ConnectionConfig:
@@ -13,14 +12,12 @@ class ConnectionConfig:
         output_fields=None,
         send_eof=True,
         is_topic=False,
-        duplicate_catcher=False,
     ):
         self.replica_id = replica_id
         self.input_fields = input_fields
         self.output_fields = output_fields
         self.send_eof = send_eof
         self.is_topic = is_topic
-        self.duplicate_catcher = duplicate_catcher
 
 
 class Connection:
@@ -41,15 +38,6 @@ class Connection:
         self.log_guardian = log_guardian
 
         self.processors = {}
-
-        self.duplicate_catchers = {}
-        # Restore duplicate catcher state
-        for (
-            client_id,
-            duplicate_catcher_state,
-        ) in log_guardian.get_duplicate_catchers().items():
-            duplicate_catcher = DuplicateCatcher(duplicate_catcher_state)
-            self.duplicate_catchers[client_id] = duplicate_catcher
 
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
@@ -73,18 +61,7 @@ class Connection:
             self.processors[client_id] = processor
         return self.processors[client_id]
 
-    def get_duplicate_catcher(self, client_id):
-        if client_id not in self.duplicate_catchers:
-            duplicate_catcher = DuplicateCatcher()
-            self.duplicate_catchers[client_id] = duplicate_catcher
-        return self.duplicate_catchers[client_id]
-
     def process(self, messages):
-        if self.config.duplicate_catcher:
-            if self.process_duplicate_catcher(messages):
-                # It means that the message is a duplicate
-                return
-
         processor = self.get_processor(messages.client_id)
         processed_messages = []
         for message in messages.payload:
@@ -94,13 +71,6 @@ class Connection:
                     processed_messages.append(processed_message.payload)
                 elif processed_message.type == ResponseType.MULTIPLE:
                     processed_messages.extend(processed_message.payload)
-
-        if self.config.duplicate_catcher:
-            # If we are using duplicate catcher, it means that we have a state to save, so we need to store the messages.
-            for message in processed_messages:
-                pass
-                # TODO: See how we should store the messages
-                # self.log_guardian.store_new_connection_message(message.payload)
 
         if processed_messages:
             if self.config.is_topic:
@@ -113,20 +83,6 @@ class Connection:
                 )
             # Log the messages sent
             self.log_guardian.message_sent()
-
-        if self.config.duplicate_catcher:
-            # If we are using duplicate catcher, it means that we have a state to save, so we need to store the messages.
-            duplicate_catcher_states = {}
-            for client_id, duplicate_catcher in self.duplicate_catchers.items():
-                duplicate_catcher_states[client_id] = duplicate_catcher.get_state()
-            self.log_guardian.store_duplicate_catchers(duplicate_catcher_states)
-
-    def process_duplicate_catcher(self, messages):
-        """
-        Returns True if the message is a duplicate.
-        """
-        duplicate_catcher = self.get_duplicate_catcher(messages.client_id)
-        return duplicate_catcher.is_duplicate(messages.message_id)
 
     def send_messages_topic(self, messages, client_id, message_id):
         # message: (topic, message)

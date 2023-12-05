@@ -43,6 +43,7 @@ def main():
         config_params["input_type"],
         config_params["replica_id"],
         MEDIA_GENERAL_REPLICAS_COUNT,
+        use_duplicate_catcher=True,
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"], config_params["output_type"]
@@ -54,7 +55,7 @@ def main():
     media_general_config = MediaGeneralConfig(config_params["grouper_replicas_count"])
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], input_fields, output_fields, duplicate_catcher=True
+        config_params["replica_id"], input_fields, output_fields
     )
     Connection(
         connection_config,
@@ -66,6 +67,7 @@ def main():
     ).run()
 
     health.join()
+
 
 if __name__ == "__main__":
     main()

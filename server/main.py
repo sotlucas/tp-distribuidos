@@ -6,7 +6,6 @@ from server import Server, ServerConfig
 from commons.log_initializer import initialize_log
 from commons.config_initializer import initialize_config
 from commons.communication_initializer import CommunicationInitializer
-from commons.restorer import Restorer
 from commons.log_guardian import LogGuardian
 
 SERVER_REPLICAS_COUNT = 1

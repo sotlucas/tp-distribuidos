@@ -40,6 +40,7 @@ def main():
         config_params["input_type"],
         config_params["replica_id"],
         config_params["replicas_count"],
+        use_duplicate_catcher=True,
     )
     sender = communication_initializer.initialize_sender(
         config_params["output"],
@@ -50,11 +51,7 @@ def main():
 
     # We don't need to specify input and output fields for the Tagger
     # TODO: We do not need to send EOF now, but maybe we will need it when we handle multiple clients
-    connection_config = ConnectionConfig(
-        config_params["replica_id"],
-        send_eof=False,
-        duplicate_catcher=True,
-    )
+    connection_config = ConnectionConfig(config_params["replica_id"], send_eof=False)
     Connection(
         connection_config, receiver, sender, log_guardian, Tagger, tagger_config
     ).run()
