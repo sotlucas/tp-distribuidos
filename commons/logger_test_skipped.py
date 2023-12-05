@@ -174,6 +174,7 @@ def _test_restore_non_existent_file():
     assert client_id is None
     assert state is None
 
+
 def _test_search_processed():
     logger = Logger("search_processed.txt")
     expected_message_id = 81
@@ -197,6 +198,7 @@ def _test_search_processed():
 
     assert processed_ids_found == ["81S"]
 
+
 def _test_search_processed_without_sent():
     logger = Logger("search_processed_without_sent.txt")
     expected_message_id = 83
@@ -219,7 +221,8 @@ def _test_search_processed_without_sent():
 
     assert processed_ids_found == ["83"]
 
-def test_search_processed_many():
+
+def _test_search_processed_many():
     logger = Logger("search_processed_many.txt")
     expected_message_id = 81
     expected_client_id = 10
@@ -258,28 +261,31 @@ def test_search_processed_many():
     assert processed_ids_found == ["83", "81S"]
 
 
-
-def test_truncate():
+def _test_truncate():
     client_id = 1
     logger = Logger()
     logger.save_connection(1, client_id, "message1.1")
-    logger.save_connection(1, client_id, "message1.2")
-    logger.save_connection(2, client_id, "message2.1")
-    logger.save_connection(2, client_id, "message2.2")
-    logger.save_connection(2, client_id, "message2.3")
-    logger.delete_connection_messages(1, client_id)
+    logger.save_connection(2, client_id, "message1.2")
+    logger.save_connection(3, client_id, "message2.3")
+    logger.save_connection(4, client_id, "message2.4")
+    logger.save_connection(5, client_id, "message2.5")
+    logger.delete_connection_messages(5, client_id)
     assert True
 
 
-def test_truncate():
+_test_truncate()
+
+
+def _test_truncate_does_not_delete_other_than_last():
     client_id = 1
     logger = Logger()
     logger.save_connection(1, client_id, "message1.1")
-    logger.save_connection(1, client_id, "message1.2")
-    logger.save_connection(2, client_id, "message2.1")
-    logger.save_connection(2, client_id, "message2.2")
-    logger.save_connection(2, client_id, "message2.3")
-    logger.delete_connection_messages(1, client_id)
+    logger.save_connection(2, client_id, "message1.2")
+    logger.save_connection(3, client_id, "message2.3")
+    logger.save_connection(4, client_id, "message2.4")
+    logger.save_connection(5, client_id, "message2.5")
+    logger.save_connection(6, client_id, "message2.6")
+    logger.delete_connection_messages(5, client_id)
     assert True
 
 

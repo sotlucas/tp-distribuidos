@@ -21,7 +21,7 @@ class LogGuardian:
     def get_duplicate_catchers(self):
         return self.restorer.get_duplicate_catchers()
 
-    # -------------------------------------------------------------
+    # ------------------------------STORER------------------------------
 
     def new_message_received(self, message_id, client_id):
         self.storer.new_message_received(message_id, client_id)
@@ -50,7 +50,13 @@ class LogGuardian:
     def commit_message(self):
         self.storer.commit_message()
 
-    # -------------------------------------------------------------
+    # ------------------------------SEARCHER------------------------------
 
     def search_for_duplicate_messages(self, client_id, ids_to_search):
         return self.searcher.search_for_duplicate_messages(client_id, ids_to_search)
+
+    def search_for_all_connection_messages(self, client_id):
+        return self.searcher.search_for_all_connection_messages(client_id)
+
+    def obtain_all_active_clients(self):
+        return self.searcher.obtain_all_active_clients()
