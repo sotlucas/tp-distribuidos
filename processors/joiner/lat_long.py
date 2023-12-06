@@ -21,4 +21,4 @@ class LatLong(Processor):
         self.config.state.add_airport(self.client_id, airport_code, latitude, longitude)
 
     def finish_processing(self):
-        self.config.state.all_airports_received(self.client_id)
+        pass

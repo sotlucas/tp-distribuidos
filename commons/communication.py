@@ -254,6 +254,19 @@ class CommunicationReceiver(Communication):
 
             ack_type = self.handle_protocol(message)
 
+            if ack_type == ACKType.NACK:
+                # We requeue the message with a nack
+
+                # TODO: Watch out if for some reason we are using the duplicate catcher, because we can not
+                #       requeue the message with a nack, because it can not be received again.
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
+
+            # We add 1 to the messages_received
+            self.messages_received[message.client_id] = (
+                self.messages_received.get(message.client_id, 0) + 1
+            )
+
             self.log_guardian.store_messages_received(self.messages_received)
             self.log_guardian.store_possible_duplicates(self.possible_duplicates)
 
@@ -324,14 +337,14 @@ class CommunicationReceiver(Communication):
             ]
             message.payload = messages_parsed
 
-        self.messages_received[message.client_id] = (
-            self.messages_received.get(message.client_id, 0) + 1
-        )
-
         logging.debug("Received message_id {}".format(message.message_id))
 
         try:
-            self.input_callback(message)
+            not_ready = self.input_callback(message)
+            if not_ready:
+                # The input_callback returned True, telling us that it is not ready
+                # to process the message. So we requeue it with a nack
+                return ACKType.NACK
         except Exception as e:
             logging.exception(f"Error processing message in input_callback: {e}")
 

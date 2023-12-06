@@ -12,6 +12,7 @@ class GrouperConfig:
     def __init__(
         self,
         replica_id,
+        media_general_log_guardian,
         media_general_communication_initializer,
         media_general_input,
         input_type,
@@ -21,6 +22,7 @@ class GrouperConfig:
         output_type,
     ):
         self.replica_id = replica_id
+        self.media_general_log_guardian = media_general_log_guardian
         self.media_general_communication_initializer = (
             media_general_communication_initializer
         )
@@ -48,6 +50,7 @@ class Grouper(Processor):
     def __init__(self, config, client_id):
         self.replica_id = config.replica_id
         self.client_id = client_id
+        self.media_general_log_guardian = config.media_general_log_guardian
         self.media_general_receiver = config.media_general_communication_initializer.initialize_receiver(
             config.media_general_input,
             config.input_type,
@@ -68,6 +71,7 @@ class Grouper(Processor):
 
         self.routes = {}
         self.vuelos_message_to_send = []
+        self.waiting_for_media_general = False
 
     def process(self, message):
         # 1. Agrupa totalFare por route.
@@ -92,6 +96,8 @@ class Grouper(Processor):
         return float(message[TOTAL_FARE])
 
     def finish_processing(self):
+        self.restore_media_general()
+
         if self.vuelos_message_to_send:
             # It means we already processed the EOF but we didn't send the results
             return Response(ResponseType.MULTIPLE, self.vuelos_message_to_send)
@@ -118,51 +124,39 @@ class Grouper(Processor):
             message_to_send,
             output_fields_order=self.media_general_output_fields,
         )
+        self.waiting_for_media_general = True
         self.media_general_receiver.start()
+
         return Response(ResponseType.MULTIPLE, self.vuelos_message_to_send)
 
-    def process_media_general(self, messages):
-        for message in messages.payload:
-            results = self.process_single(message)
-            self.vuelos_message_to_send.extend(results)
+    def restore_media_general(self):
+        clients_ids = self.media_general_log_guardian.obtain_all_active_clients()
+        if self.client_id in clients_ids:
+            all_messages = (
+                self.media_general_log_guardian.search_for_all_connection_messages(
+                    self.client_id
+                )
+            )
+            for message_batch in all_messages:
+                for message in message_batch:
+                    self.process_single(message)
 
-        # TODO: Save state con el logger
-        # sefl.save_especial_de_groupers(vuelos_message_to_send : list, client_id : int)
+    def process_media_general(self, messages):
+        # We save the message to disk to be able to recover it
+        self.media_general_log_guardian.store_new_connection_message(messages.payload)
+
+        for message in messages.payload:
+            self.process_single(message)
 
         # Stop media general receiver because it's not needed anymore & it doesn't send EOF
         self.media_general_receiver.stop()
-
-    # def save_especial_de_groupers(vuelos_message_to_send : list, client_id : int):
-    #     restore = self.restore()
-    #     restore["connection"]["processors"][client_id]["vuelos_message_to_send"] = vuelos_message_to_send
-    #     communication_receiver = {
-    #             "messages_received": {
-    #                 "1": 10,
-    #             },
-    #             "local_possible_duplicates": {"1": [1, 2, 3]},
-    #             "possible_duplicates_sent": {"1": [1, 2, 3, 4, 5]},
-    #         }
-    #         communication_sender = {
-    #             "messages_sent": {
-    #                 "1": 0,
-    #             }
-    #         }
-    #         connection = {
-    #             "processors": {
-    #                 "1": {
-    #                     "routes": {
-    #                         "EZE-MAD": [121, 203],
-    #                     },
-    #                     "vuelos_message_to_send" : []
-    #                 }
-    #             }
-    #         }
-    #     self.save(restore)
+        self.waiting_for_media_general = False
 
     def process_single(self, message):
         # 4. Filtra los precios que estén por encima de la media general.
         # 5. Finalmente, envía cada trayecto con los precios filtrados a la cola de salida.
         media_general = float(message[AVERAGE])
+        logging.debug(f"Media general received: {media_general}")
         result = []
         for route, prices in self.routes.items():
             prices_filtered = self.filter_prices(prices, media_general)
@@ -172,7 +166,7 @@ class Grouper(Processor):
                     "prices": ";".join(map(str, prices_filtered)),
                 }
                 result.append(message)
-        return result
+        self.vuelos_message_to_send.extend(result)
 
     def filter_prices(self, prices, media_general):
         return list(filter(lambda price: price > media_general, prices))

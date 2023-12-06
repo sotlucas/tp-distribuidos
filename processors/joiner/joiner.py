@@ -1,3 +1,4 @@
+import logging
 from commons.processor import Processor, Response, ResponseType
 
 LEG_ID = "legId"
@@ -19,49 +20,58 @@ class Joiner(Processor):
     def __init__(self, config, client_id):
         self.config = config
         self.client_id = client_id
-        self.flights_cache = []
-        self.all_airports_received = False
         self.airports = {}
 
     def process(self, message):
         # message fields: legId,startingAirport,destinationAirport,totalTravelDistance
         # output fields: legId,startingAirport,destinationAirport,totalTravelDistance,startingLatitude,startingLongitude,destinationLatitude,destinationLongitude
 
-        if not self.all_airports_received:
-            if not self.config.state.is_client_done(self.client_id):
-                self.flights_cache.append(message)
-                return
-            self.all_airports_received = True
+        starting_airport_code = message[STARTING_AIRPORT]
+        destination_airport_code = message[DESTINATION_AIRPORT]
 
-        if not self.airports:
-            self.airports = self.config.state.get_airports(self.client_id)
+        starting_airport_lat_long = self.obtain_airport_lat_long(starting_airport_code)
+        destination_airport_lat_long = self.obtain_airport_lat_long(
+            destination_airport_code
+        )
 
-        if self.flights_cache:
-            # Process the cached messages
-            messages = []
-            for flight in self.flights_cache:
-                messages.append(self.process_flight(flight))
-            self.flights_cache = []
+        if not starting_airport_lat_long or not destination_airport_lat_long:
+            # We are not ready to process the message, we need to wait for all the airports
+            logging.debug(
+                "Joiner {} not ready to process messages".format(self.client_id)
+            )
+            return Response(ResponseType.NOT_READY, None)
 
-            # Process the message that triggered the cache
-            messages.append(self.process_flight(message))
-            
-            return Response(ResponseType.MULTIPLE, messages)
-
-        message = self.process_flight(message)
+        message = self.process_flight(
+            message,
+            starting_airport_code,
+            starting_airport_lat_long,
+            destination_airport_code,
+            destination_airport_lat_long,
+        )
         return Response(ResponseType.SINGLE, message)
 
-    def process_flight(self, flight):
-        starting_airport = flight[STARTING_AIRPORT]
-        destination_airport = flight[DESTINATION_AIRPORT]
+    def obtain_airport_lat_long(self, airport_code):
+        if not airport_code in self.airports:
+            airport = self.config.state.obtain_client_airport(
+                self.client_id, airport_code
+            )
+            if not airport:
+                return None
+            self.airports[airport_code] = airport
+        return self.airports[airport_code]
 
-        starting_airport_lat_long = self.airports[starting_airport]
-        destination_airport_lat_long = self.airports[destination_airport]
-
+    def process_flight(
+        self,
+        flight,
+        starting_airport_code,
+        starting_airport_lat_long,
+        destination_airport_code,
+        destination_airport_lat_long,
+    ):
         message = {
             LEG_ID: flight[LEG_ID],
-            STARTING_AIRPORT: starting_airport,
-            DESTINATION_AIRPORT: destination_airport,
+            STARTING_AIRPORT: starting_airport_code,
+            DESTINATION_AIRPORT: destination_airport_code,
             TOTAL_TRAVEL_DISTANCE: flight[TOTAL_TRAVEL_DISTANCE],
             STARTING_LATITUDE: starting_airport_lat_long[0],
             STARTING_LONGITUDE: starting_airport_lat_long[1],

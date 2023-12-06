@@ -43,7 +43,7 @@ def main():
     LAT_LONG_LOG_STORER_SUFFIX = "lat_long"
     lat_long_log_guardian = LogGuardian(LAT_LONG_LOG_STORER_SUFFIX)
 
-    # TODO: When restoring we need that the lat longs send the airports to the state.
+    # State shared between processors (lat_long and joiner)
     state = State()
 
     lat_long_communication_initializer = CommunicationInitializer(
@@ -63,7 +63,11 @@ def main():
     lat_long_config = LatLongConfig(state)
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], lat_long_input_fields, None, send_eof=False
+        config_params["replica_id"],
+        lat_long_input_fields,
+        None,
+        send_eof=False,
+        has_statefull_processor=True,
     )
     connection = Connection(
         connection_config,
