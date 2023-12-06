@@ -47,7 +47,10 @@ class CommunicationConnection:
         """
         Returns a channel to the RabbitMQ server
         """
-        return self.connection.channel()
+        channel = self.connection.channel()
+        # We need to confirm the delivery to ensure the messages are sent
+        channel.confirm_delivery()
+        return channel
 
     def close(self):
         """
@@ -690,9 +693,6 @@ class CommunicationReceiverExchange(CommunicationReceiver):
             routing_key=self.config.routing_key,
         )
 
-        # We need to confirm the delivery to ensure the messages are sent
-        self.channel.confirm_delivery()
-
 
 class CommunicationReceiverQueue(CommunicationReceiver):
     def declare_input(self):
@@ -754,6 +754,8 @@ class CommunicationSender(Communication):
         messages.payload = "\n".join(messages.payload)
 
         self.send(messages, routing_key)
+        # Log the messages sent
+        self.log_guardian.message_sent()
 
     def send(self, message, routing_key=""):
         """
@@ -775,7 +777,9 @@ class CommunicationSender(Communication):
             self.messages_sent.get(message.client_id, 0) + 1
         )
 
-    def send_eof(self, client_id, routing_key=""):
+    def send_eof(
+        self, client_id, routing_key="", messages_sent=None, possible_duplicates=None
+    ):
         """
         Function to send the EOF to propagate through the distributed system.
 
@@ -787,11 +791,17 @@ class CommunicationSender(Communication):
         0     1               9
         """
         logging.debug("Sending EOF")
-        messages_sent = self.get_client_messages_sent(client_id)
-        logging.debug("Messages sent: {}".format(messages_sent))
-        message = EOFMessage(
-            client_id, messages_sent, self.possible_duplicates.get(client_id, [])
+        messages_sent = (
+            messages_sent if messages_sent else self.get_client_messages_sent(client_id)
         )
+        logging.debug("Messages sent: {}".format(messages_sent))
+        possible_duplicates = (
+            possible_duplicates
+            if possible_duplicates
+            else self.possible_duplicates.get(client_id, [])
+        )
+        logging.debug("Possible duplicates: {}".format(possible_duplicates))
+        message = EOFMessage(client_id, messages_sent, possible_duplicates)
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):

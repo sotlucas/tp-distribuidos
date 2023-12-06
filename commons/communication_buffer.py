@@ -2,9 +2,7 @@ import multiprocessing as mp
 import socket
 
 from commons.protocol import (
-    EOFMessage,
     Message,
-    MessageProtocolType,
 )
 
 BUFFER_SIZE = 8192  # 8 KiB
@@ -43,13 +41,6 @@ class CommunicationBuffer:
         """
         with self.lock:
             self.sock.sendall(message.to_bytes() + END_OF_MESSAGE)
-
-    def send_eof(self, eof_type: MessageProtocolType):
-        """
-        Send an EOF message through the socket.
-        """
-        message = EOFMessage(eof_type)
-        self.send_message(message)
 
     def stop(self):
         """

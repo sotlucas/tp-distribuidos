@@ -1,20 +1,27 @@
 import logging
 import signal
+import time
 
-from commons.protocol import ClientProtocolMessage
+from commons.protocol import ClientProtocolMessage, MessageType, EOFMessage
 
 
 class FileUploader:
     def __init__(
-        self, message_type, file_path, remove_file_header, batch_size, buff, client_id
+        self,
+        message_type,
+        file_path,
+        remove_file_header,
+        batch_size,
+        client_id,
+        send_queue,
     ):
         self.message_type = message_type
         self.file_path = file_path
         self.remove_file_header = remove_file_header
         self.batch_size = batch_size
-        self.buff = buff
         self.client_id = client_id
         self.current_message_id = 1
+        self.send_queue = send_queue
 
     def start(self):
         """
@@ -31,10 +38,11 @@ class FileUploader:
                 message = ClientProtocolMessage(
                     self.current_message_id, self.message_type, batch
                 )
-                self.buff.send_message(message)
+                self.send_queue.put(message)
                 self.current_message_id += 1
         # Send message to indicate that the file has ended
-        self.buff.send_eof(self.message_type)
+        eof_message = EOFMessage(self.message_type, self.current_message_id - 1)
+        self.send_queue.put(eof_message)
         logging.info(f"File sent: {self.file_path}")
 
     def __next_batch(self, file_path, batch_size):

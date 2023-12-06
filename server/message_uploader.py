@@ -13,11 +13,17 @@ class MessageUploader:
 
     def send(self, message):
         self.sender.send_all(message)
-        logging.debug(f"action: message_upload | result: success")
+        logging.debug(f"action: message_upload {message.message_id} | result: success")
 
-    def finish_sending(self, client_id):
+    def finish_sending(self, client_id, messages_sent, possible_duplicates):
         logging.info("Sending EOF")
-        self.sender.send_eof(client_id)
+        # Parse possible_duplicates list of str to int
+        possible_duplicates = list(map(int, possible_duplicates))
+        self.sender.send_eof(
+            client_id,
+            messages_sent=messages_sent,
+            possible_duplicates=possible_duplicates,
+        )
         self.sender.close()
 
     def stop(self):
