@@ -130,7 +130,9 @@ class Grouper(Processor):
         return Response(ResponseType.MULTIPLE, self.vuelos_message_to_send)
 
     def restore_media_general(self):
-        clients_ids = self.media_general_log_guardian.obtain_all_active_clients()
+        clients_ids = (
+            self.media_general_log_guardian.obtain_all_active_connection_clients()
+        )
         if self.client_id in clients_ids:
             all_messages = (
                 self.media_general_log_guardian.search_for_all_connection_messages(

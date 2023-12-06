@@ -8,10 +8,12 @@ class LogStorer:
         self.current_message_id = None
         self.current_state = {}
         self.connection_messages_state = []
+        self.new_message_for_duplicate_catcher = False
 
     def new_message_received(self, message_id, client_id):
         self.current_state = {}
         self.connection_messages_state = []
+        self.new_message_for_duplicate_catcher = False
         self.current_message_id = message_id
         self.current_client_id = client_id
 
@@ -29,8 +31,8 @@ class LogStorer:
     def store_possible_duplicates(self, possible_duplicates):
         self.current_state["possible_duplicates"] = possible_duplicates
 
-    def store_duplicate_catchers(self, duplicate_catchers):
-        self.current_state["duplicate_catchers"] = duplicate_catchers
+    def store_new_message_for_duplicate_catcher(self):
+        self.new_message_for_duplicate_catcher = True
 
     def store_new_connection_message(self, message):
         self.connection_messages_state = message
@@ -41,6 +43,12 @@ class LogStorer:
                 self.current_message_id,
                 self.current_client_id,
                 self.connection_messages_state,
+            )
+
+        if self.new_message_for_duplicate_catcher:
+            self.logger.save_duplicate_catcher(
+                self.current_message_id,
+                self.current_client_id,
             )
 
         self.logger.save_communication(

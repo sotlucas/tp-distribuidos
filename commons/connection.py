@@ -43,7 +43,7 @@ class Connection:
 
         if self.config.has_statefull_processor:
             # If we have a statefull processor, we need to restore all the processors.
-            clients_ids = self.log_guardian.obtain_all_active_clients()
+            clients_ids = self.log_guardian.obtain_all_active_connection_clients()
             for client_id in clients_ids:
                 processor = self.get_processor(client_id)
                 self.restore_statefull_processor(client_id, processor)
