@@ -81,8 +81,6 @@ class Connection:
                 self.send_messages(
                     processed_messages, messages.client_id, messages.message_id
                 )
-            # Log the messages sent
-            self.log_guardian.message_sent()
 
     def send_messages_topic(self, messages, client_id, message_id):
         # message: (topic, message)

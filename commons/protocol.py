@@ -15,6 +15,7 @@ class MessageType(Enum):
     HEALTH_OK = 5
     ACK = 6
     ANNOUNCE_ACK = 7
+    RESULT_ACK = 8
 
 
 class MessageProtocolType(Enum):
@@ -50,6 +51,8 @@ class Message:
             return ACKMessage.from_bytes(reader)
         elif type == MessageType.ANNOUNCE_ACK.value:
             return AnnounceACKMessage.from_bytes(reader)
+        elif type == MessageType.RESULT_ACK.value:
+            return ResultACKMessage.from_bytes(reader)
         else:
             raise Exception("Unknown message type")
 
@@ -192,3 +195,14 @@ class ACKMessage(Message):
 
     def __str__(self):
         return f"ACKMessage(message_id={self.message_id}, protocol_type={self.protocol_type})"
+
+
+class ResultACKMessage(Message):
+    def __init__(self):
+        super().__init__(MessageType.RESULT_ACK)
+
+    def from_bytes(reader):
+        return ResultACKMessage()
+
+    def to_bytes_impl(self, writer):
+        return writer.get_bytes()

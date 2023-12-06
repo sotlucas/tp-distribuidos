@@ -9,9 +9,10 @@ class ResultsUploader:
     It sends the results to the client through a socket
     """
 
-    def __init__(self, receiver, buff):
+    def __init__(self, receiver, buff, ack_results_queue):
         self.receiver = receiver
         self.buff = buff
+        self.ack_results_queue = ack_results_queue
 
     def start(self):
         # Register signal handler for SIGTERM
@@ -28,6 +29,7 @@ class ResultsUploader:
         try:
             message = ResultMessage(content)
             self.buff.send_message(message)
+            self.ack_results_queue.get()
             logging.debug(f"action: result_upload | result: success")
         except OSError as e:
             logging.error(f"action: result_upload | result: fail | error: {e}")

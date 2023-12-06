@@ -735,6 +735,8 @@ class CommunicationSender(Communication):
         messages.payload = "\n".join(messages.payload)
 
         self.send(messages, routing_key)
+        # Log the messages sent
+        self.log_guardian.message_sent()
 
     def send(self, message, routing_key=""):
         """

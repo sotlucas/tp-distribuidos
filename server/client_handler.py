@@ -38,8 +38,11 @@ class ClientHandler:
             1,  # REPLICAS_COUNT
             routing_key=str(self.client_id),
         )
+        self.ack_results_queue = mp.Queue()
         self.results_uploader = mp.Process(
-            target=ResultsUploader(vuelos_receiver, self.buff).start
+            target=ResultsUploader(
+                vuelos_receiver, self.buff, self.ack_results_queue
+            ).start
         )
         self.results_uploader.start()
         self.running = True
@@ -62,15 +65,18 @@ class ClientHandler:
         while self.running:
             try:
                 client_message = self.buff.get_message()
-                self.__handle_message(client_message)
-                message_id = (
-                    0
-                    if client_message.message_type == MessageType.EOF
-                    else client_message.message_id
-                )
-                self.buff.send_message(
-                    ACKMessage(message_id, client_message.protocol_type)
-                )
+                if client_message.message_type == MessageType.RESULT_ACK:
+                    self.ack_results_queue.put(client_message)
+                else:
+                    self.__handle_message(client_message)
+                    message_id = (
+                        0
+                        if client_message.message_type == MessageType.EOF
+                        else client_message.message_id
+                    )
+                    self.buff.send_message(
+                        ACKMessage(message_id, client_message.protocol_type)
+                    )
             except OSError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
                 self.running = False
@@ -96,10 +102,11 @@ class ClientHandler:
         if message.message_type == MessageType.EOF:
             # Send EOF to queue to communicate that all the file has been sent.
             uploader.finish_sending(self.client_id)
-            if message.protocol_type == MessageProtocolType.FLIGHT:
-                # The client will not send any more messages
-                # TODO: If the airpors file is large, the client will send more messages, fix this
-                raise PeerDisconnected
+            # TODO: Take a look at this when doing the termination of the client (all EOFs received by they clien)
+            # if message.protocol_type == MessageProtocolType.FLIGHT:
+            #     # The client will not send any more messages
+            #     # TODO: If the airpors file is large, the client will send more messages, fix this
+            #     raise PeerDisconnected
         else:
             # TODO: Decoding here because send needs a string, find a better way
             #       And it is a list because send needs a list, find a better way

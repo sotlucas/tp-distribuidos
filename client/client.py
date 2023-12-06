@@ -38,10 +38,20 @@ class Client:
         signal.signal(signal.SIGINT, self.__shutdown)
 
     def run(self):
+        send_queue = mp.Queue(maxsize=1)
+        results_queue = mp.Queue()
+
         protocol_connection_config = ProtocolConnectionConfig(
             self.config.server_ip, self.config.server_port, self.config.client_id
         )
-        protocol_connection = ProtocolConnection(protocol_connection_config)
+
+        # Start the process to connect to the server
+        self.protocol_connection = mp.Process(
+            target=ProtocolConnection(
+                protocol_connection_config, send_queue, results_queue
+            ).start
+        )
+        self.protocol_connection.start()
 
         # Start the process to send the airports
         self.airports_sender = mp.Process(
@@ -51,7 +61,7 @@ class Client:
                 self.config.remove_file_header,
                 self.config.batch_size,
                 self.config.client_id,
-                protocol_connection,
+                send_queue,
             ).start
         )
         self.airports_sender.start()
@@ -64,16 +74,14 @@ class Client:
                 self.config.remove_file_header,
                 self.config.batch_size,
                 self.config.client_id,
-                protocol_connection,
+                send_queue,
             ).start
         )
         self.flights_sender.start()
 
         # Start the process to receive the results
         self.results_receiver = mp.Process(
-            target=ResultHandler(
-                self.config.client_id, protocol_connection
-            ).receive_results
+            target=ResultHandler(self.config.client_id, results_queue).receive_results
         )
         self.results_receiver.start()
 
