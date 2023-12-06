@@ -12,12 +12,14 @@ class ConnectionConfig:
         output_fields=None,
         send_eof=True,
         is_topic=False,
+        has_statefull_processor=False,
     ):
         self.replica_id = replica_id
         self.input_fields = input_fields
         self.output_fields = output_fields
         self.send_eof = send_eof
         self.is_topic = is_topic
+        self.has_statefull_processor = has_statefull_processor
 
 
 class Connection:
@@ -38,6 +40,13 @@ class Connection:
         self.log_guardian = log_guardian
 
         self.processors = {}
+
+        if self.config.has_statefull_processor:
+            # If we have a statefull processor, we need to restore all the processors.
+            clients_ids = self.log_guardian.obtain_all_active_clients()
+            for client_id in clients_ids:
+                processor = self.get_processor(client_id)
+                self.restore_statefull_processor(client_id, processor)
 
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
@@ -61,7 +70,19 @@ class Connection:
             self.processors[client_id] = processor
         return self.processors[client_id]
 
+    def restore_statefull_processor(self, client_id, processor):
+        all_messages = self.log_guardian.search_for_all_connection_messages(client_id)
+
+        for message_batch in all_messages:
+            for message in message_batch:
+                # A statefull processor should not return a response, so we don't need to do anything with it.
+                processor.process(message)
+
     def process(self, messages):
+        if self.config.has_statefull_processor:
+            # If we have a statefull processor, we also need to save the messages to disk to be able to recover them
+            self.save_messages(messages)
+
         processor = self.get_processor(messages.client_id)
         processed_messages = []
         for message in messages.payload:
@@ -71,6 +92,10 @@ class Connection:
                     processed_messages.append(processed_message.payload)
                 elif processed_message.type == ResponseType.MULTIPLE:
                     processed_messages.extend(processed_message.payload)
+                elif processed_message.type == ResponseType.NOT_READY:
+                    # If the message is not ready, it means that we need to wait for more messages.
+                    # So we need to requeue the message, sending a nack.
+                    return True
 
         if processed_messages:
             if self.config.is_topic:
@@ -83,6 +108,10 @@ class Connection:
                 )
             # Log the messages sent
             self.log_guardian.message_sent()
+        return False
+
+    def save_messages(self, messages):
+        self.log_guardian.store_new_connection_message(messages.payload)
 
     def send_messages_topic(self, messages, client_id, message_id):
         # message: (topic, message)
@@ -92,6 +121,9 @@ class Connection:
                 message[1]
             ]
         for topic, messages in messages_by_topic.items():
+            logging.debug(
+                f"Sending messages to topic {topic} with client_id {client_id}"
+            )
             message_to_send = ProtocolMessage(client_id, message_id, messages)
             self.communication_sender.send_all(
                 message_to_send,
@@ -117,6 +149,7 @@ class Connection:
         if self.config.is_topic:
             # TODO: If needed, we should move the topic name the finish_processing of the processor.
             DEFAULT_TOPIC_EOF = "1"
+            # TODO: if self.config.send_eof: ?
             self.communication_sender.send_eof(client_id, routing_key=DEFAULT_TOPIC_EOF)
             return
         if messages:

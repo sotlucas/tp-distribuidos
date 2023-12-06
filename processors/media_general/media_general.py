@@ -21,6 +21,7 @@ class MediaGeneral(Processor):
         self.price_sum += float(prices_sum)
         self.amount += int(amount)
         self.amount_received += 1
+
         if self.amount_received == self.config.grouper_replicas_count:
             logging.info("received all messages, calculating media")
             media_general = self.price_sum / self.amount

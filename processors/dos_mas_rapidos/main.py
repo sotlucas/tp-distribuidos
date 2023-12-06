@@ -57,7 +57,10 @@ def main():
     ]
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], input_output_fields, input_output_fields
+        config_params["replica_id"],
+        input_output_fields,
+        input_output_fields,
+        has_statefull_processor=True,
     )
     Connection(connection_config, receiver, sender, log_guardian, DosMasRapidos).run()
 

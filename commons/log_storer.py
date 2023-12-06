@@ -33,7 +33,7 @@ class LogStorer:
         self.current_state["duplicate_catchers"] = duplicate_catchers
 
     def store_new_connection_message(self, message):
-        self.connection_messages_state.append(message)
+        self.connection_messages_state = message
 
     def finish_storing_message(self):
         if self.connection_messages_state:

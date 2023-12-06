@@ -59,6 +59,7 @@ def main():
 
     grouper_config = GrouperConfig(
         config_params["replica_id"],
+        media_general_log_guardian,
         media_general_communication_initializer,
         config_params["media_general_input"],
         config_params["input_type"],
@@ -73,6 +74,7 @@ def main():
         vuelos_input_fields,
         vuelos_output_fields,
         send_eof=False,
+        has_statefull_processor=True,
     )
     Connection(
         connection_config,

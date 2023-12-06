@@ -39,3 +39,15 @@ class LogSearcher:
         """
         messages = self.logger.search_processed(client_id, ids_to_search)
         return [ProcessedMessage.from_str(message) for message in messages]
+
+    def search_for_all_connection_messages(self, client_id):
+        """
+        Searches for all connection messages in the connection log file.
+        """
+        return self.logger.obtain_all_connection_messages(client_id)
+
+    def obtain_all_active_clients(self):
+        """
+        Obtains all the active clients from the log file.
+        """
+        return self.logger.obtain_all_active_clients()

@@ -148,30 +148,33 @@ class Logger:
             line = next(lines)
             while not line.startswith(LoggerToken.COMMIT):
                 line = next(lines)
-            # Go to the START of this message
-            message_lines = []
-            while not line.startswith(LoggerToken.START):
-                message_lines.append(line)
+            # Go to the SAVE DONE of this message
+            while not line.startswith(LoggerToken.SAVE_DONE):
                 line = next(lines)
-            state = message_lines[-3]
+            state = next(lines)
         except StopIteration:
             # We reached the beggining of the file
             pass
         if state:
             state = json.loads(state)
 
-        # TODO: Fix this
-        # self.delete_connection_messages(message_id.strip(), client_id.strip())
+        try:
+            self.delete_connection_messages(message_id.strip(), client_id.strip())
+        except (FileNotFoundError, StopIteration):
+            logging.debug(
+                "The connection log file doesn't exist or it is empty, nothing to delete"
+            )
+            pass
 
         return RestoreType.SENT, int(message_id.strip()), int(client_id.strip()), state
 
     def __get_last_message(self, restore_type, line, lines):
         # Go to the START of this message
-        message_lines = []
-        while not line.startswith(LoggerToken.START):
-            message_lines.append(line)
+        while not line.startswith(LoggerToken.SAVE_DONE):
             line = next(lines)
-        state = message_lines[-3]
+        state = next(lines)
+        while not line.startswith(LoggerToken.START):
+            line = next(lines)
         message_id, client_id = line.split(LoggerToken.START)[1].split(" / ")
         return (
             restore_type,
@@ -184,17 +187,14 @@ class Logger:
         """
         Deletes the messages of a connection from the connection log file.
         """
-        file_path = f"{client_id}_{CONNECTION_LOG_FILE_SUFFIX}"
-        n = 1
-        found = False
-        for line in read_file_bottom_to_top_generator(file_path):
-            if line.startswith(str(message_id)):
-                found = True
-            else:
-                if found:
-                    break
-            n += 1
-        truncate_file_from_nth_line_from_bottom(file_path, n)
+        file_path = f"{client_id}_{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"
+        lines = read_file_bottom_to_top_generator(file_path)
+        line_to_search = next(lines)
+        if line_to_search.startswith(str(message_id)):
+            logging.debug(
+                f"Deleting last connection message {message_id} of client {client_id}"
+            )
+            truncate_last_line_of_file(file_path)
 
     def search_processed(self, client_id, ids_to_search):
         """
@@ -202,57 +202,105 @@ class Logger:
         """
         processed_ids_found = []
         with self.lock:
-            lines = read_file_bottom_to_top_generator(self.communication_log_file_path)
-            for line in lines:
-                if line.startswith(LoggerToken.SAVE_DONE):
-                    message_id, message_client_id = line.split(LoggerToken.SAVE_DONE)[
-                        1
-                    ].split(" / ")
-                    if (
-                        int(message_client_id.strip()) != client_id
-                        or int(message_id.strip()) not in ids_to_search
-                    ):
-                        continue
-                    try:
-                        while not line.startswith(
-                            LoggerToken.START
-                        ) and not line.startswith(LoggerToken.SENT):
-                            line = next(lines)
-                    except StopIteration:
-                        # We reached the beggining of the file
-                        pass
-                    if line.startswith(LoggerToken.SENT):
-                        processed_ids_found.append(message_id.strip() + "S")
-                    elif line.startswith(LoggerToken.START):
-                        processed_ids_found.append(message_id.strip())
+            try:
+                lines = read_file_bottom_to_top_generator(
+                    self.communication_log_file_path
+                )
+                for line in lines:
+                    if line.startswith(LoggerToken.SAVE_DONE):
+                        message_id, message_client_id = line.split(
+                            LoggerToken.SAVE_DONE
+                        )[1].split(" / ")
+                        if (
+                            int(message_client_id.strip()) != client_id
+                            or int(message_id.strip()) not in ids_to_search
+                        ):
+                            continue
+                        try:
+                            while not line.startswith(
+                                LoggerToken.START
+                            ) and not line.startswith(LoggerToken.SENT):
+                                line = next(lines)
+                        except StopIteration:
+                            # We reached the beggining of the file
+                            pass
+                        if line.startswith(LoggerToken.SENT):
+                            processed_ids_found.append(message_id.strip() + "S")
+                        elif line.startswith(LoggerToken.START):
+                            processed_ids_found.append(message_id.strip())
+            except FileNotFoundError:
+                # The file doesn't exist
+                logging.debug("The file doesn't exist, nothing to search")
+                return processed_ids_found
         return processed_ids_found
 
+    def obtain_all_connection_messages(self, client_id):
+        """
+        Obtains all connection messages from the connection log file.
+        """
+        file_path = f"{client_id}_{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"
+        messages = []
+        with self.lock:
+            try:
+                lines = read_file_bottom_to_top_generator(file_path)
+                for line in lines:
+                    message_id, message = line.split("/", 1)
+                    messages.append(json.loads(message.strip()))
+            except FileNotFoundError:
+                # The file doesn't exist
+                logging.debug("The file doesn't exist, no connection messages found")
+                return messages
+        return messages
 
-def truncate_file_from_nth_line_from_bottom(filename, n):
+    def obtain_all_active_clients(self):
+        """
+        Obtains all the active clients from all the connections log files.
+
+        It does this by reading the names of the files and extracting the client ids from them.
+        """
+        file_names = os.listdir()
+        client_ids = []
+        for file_name in file_names:
+            if file_name.endswith(f"{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"):
+                client_id = file_name.split("_")[0]
+                client_ids.append(int(client_id))
+        logging.debug(f"Active clients: {client_ids}")
+        return client_ids
+
+
+def truncate_last_line_of_file(filename):
     """
     Truncates a file from the nth line from the bottom.
 
     Parameters:
         filename: The path of the file to truncate.
-        n: The nth line from the bottom to truncate.
     """
-    print(f"Truncating {filename} from line {n} from the bottom")
     with open(filename, "rb+") as f:
+        # Move the pointer (similar to a cursor in a text editor) to the end of the file
         f.seek(0, os.SEEK_END)
-        file_size = f.tell()
-        lines_to_delete = n
-        while file_size > 0 and lines_to_delete > 0:
-            print(f"FILE SIZE: {file_size} | LINES TO DELETE: {lines_to_delete}")
-            f.seek(-1, os.SEEK_CUR)
-            file_size -= 1
-            if f.read(1) == b"\n":
-                lines_to_delete -= 1
-                file_size -= 1
-            else:
-                f.seek(-1, os.SEEK_CUR)
-                file_size -= 1
-            f.truncate()
-            f.seek(-1, os.SEEK_CUR)
+
+        # This code means the following code skips the very last character in the file -
+        # i.e. in the case the last line is null we delete the last line
+        # and the penultimate one
+        pos = f.tell() - 1
+
+        # Read each character in the file one at a time from the penultimate
+        # character going backwards, searching for a newline character
+        # If we find a new line, exit the search
+        while pos > 0 and f.read(1) != b"\n":
+            pos -= 1
+            f.seek(pos, os.SEEK_SET)
+
+        f.seek(pos, os.SEEK_SET)
+        f.truncate()
+
+        if pos > 0:
+            # Write the end of file character
+            f.write(b"\n")
+
+        # Flush the file to disk
+        f.flush()
+        os.fsync(f.fileno())
 
 
 def read_file_bottom_to_top_generator(filename, chunk_size=1024):
