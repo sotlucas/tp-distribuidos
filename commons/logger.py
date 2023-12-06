@@ -19,8 +19,9 @@ class LoggerToken:
     COMMIT = "COMMIT"
 
 
-CONNECTION_LOG_FILE_SUFFIX = "connection_log.txt"
+CONNECTION_LOG_FILE_PATH = "connection_log.txt"
 COMMUNICATION_LOG_FILE_PATH = "communication_log.txt"
+DUPLICATE_CATCHER_LOG_FILE_PATH = "duplicate_catcher_log.txt"
 
 
 class Logger:
@@ -76,9 +77,22 @@ class Logger:
         Appends a message to the connection log file.
         """
         with self.lock:
-            file_path = f"{client_id}_{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"
+            file_path = f"{client_id}_{CONNECTION_LOG_FILE_PATH}{self.suffix}"
             with open(file_path, "a") as f:
                 f.write(f"{message_id}/{json.dumps(messages)}\n")
+
+                # Flush the file to disk
+                f.flush()
+                os.fsync(f.fileno())
+
+    def save_duplicate_catcher(self, message_id, client_id):
+        """
+        Saves a message to the duplicate catcher log file.
+        """
+        with self.lock:
+            file_path = f"{client_id}_{DUPLICATE_CATCHER_LOG_FILE_PATH}{self.suffix}"
+            with open(file_path, "a") as f:
+                f.write(f"{message_id}\n")
 
                 # Flush the file to disk
                 f.flush()
@@ -166,6 +180,16 @@ class Logger:
             )
             pass
 
+        try:
+            self.delete_duplicate_catcher_messages(
+                message_id.strip(), client_id.strip()
+            )
+        except (FileNotFoundError, StopIteration):
+            logging.debug(
+                "The duplicate catcher log file doesn't exist or it is empty, nothing to delete"
+            )
+            pass
+
         return RestoreType.SENT, int(message_id.strip()), int(client_id.strip()), state
 
     def __get_last_message(self, restore_type, line, lines):
@@ -185,14 +209,27 @@ class Logger:
 
     def delete_connection_messages(self, message_id, client_id):
         """
-        Deletes the messages of a connection from the connection log file.
+        Deletes if necessary the messages of a connection from the connection log file.
         """
-        file_path = f"{client_id}_{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"
+        file_path = f"{client_id}_{CONNECTION_LOG_FILE_PATH}{self.suffix}"
         lines = read_file_bottom_to_top_generator(file_path)
         line_to_search = next(lines)
         if line_to_search.startswith(str(message_id)):
             logging.debug(
                 f"Deleting last connection message {message_id} of client {client_id}"
+            )
+            truncate_last_line_of_file(file_path)
+
+    def delete_duplicate_catcher_messages(self, message_id, client_id):
+        """
+        Deletes if necessary the messages of a connection from the duplicate catcher log file.
+        """
+        file_path = f"{client_id}_{DUPLICATE_CATCHER_LOG_FILE_PATH}{self.suffix}"
+        lines = read_file_bottom_to_top_generator(file_path)
+        line_to_search = next(lines)
+        if line_to_search.startswith(str(message_id)):
+            logging.debug(
+                f"Deleting last duplicate catcher message {message_id} of client {client_id}"
             )
             truncate_last_line_of_file(file_path)
 
@@ -238,7 +275,7 @@ class Logger:
         """
         Obtains all connection messages from the connection log file.
         """
-        file_path = f"{client_id}_{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"
+        file_path = f"{client_id}_{CONNECTION_LOG_FILE_PATH}{self.suffix}"
         messages = []
         with self.lock:
             try:
@@ -252,7 +289,7 @@ class Logger:
                 return messages
         return messages
 
-    def obtain_all_active_clients(self):
+    def obtain_all_active_connection_clients(self):
         """
         Obtains all the active clients from all the connections log files.
 
@@ -261,10 +298,45 @@ class Logger:
         file_names = os.listdir()
         client_ids = []
         for file_name in file_names:
-            if file_name.endswith(f"{CONNECTION_LOG_FILE_SUFFIX}{self.suffix}"):
+            if file_name.endswith(f"{CONNECTION_LOG_FILE_PATH}{self.suffix}"):
                 client_id = file_name.split("_")[0]
                 client_ids.append(int(client_id))
-        logging.debug(f"Active clients: {client_ids}")
+        logging.debug(f"Active connection clients: {client_ids}")
+        return client_ids
+
+    def obtain_all_duplicate_catcher_messages(self, client_id):
+        """
+        Obtains all duplicate catcher messages from the connection log file.
+        """
+        file_path = f"{client_id}_{DUPLICATE_CATCHER_LOG_FILE_PATH}{self.suffix}"
+        messages = []
+        with self.lock:
+            try:
+                lines = read_file_bottom_to_top_generator(file_path)
+                for line in lines:
+                    message_id = line.strip()
+                    messages.append(message_id)
+            except FileNotFoundError:
+                # The file doesn't exist
+                logging.debug(
+                    "The file doesn't exist, no duplicate catcher messages found"
+                )
+                return messages
+        return messages
+
+    def obtain_all_active_duplicate_catcher_clients(self):
+        """
+        Obtains all the active clients from all the duplicate catcher log files.
+
+        It does this by reading the names of the files and extracting the client ids from them.
+        """
+        file_names = os.listdir()
+        client_ids = []
+        for file_name in file_names:
+            if file_name.endswith(f"{DUPLICATE_CATCHER_LOG_FILE_PATH}{self.suffix}"):
+                client_id = file_name.split("_")[0]
+                client_ids.append(int(client_id))
+        logging.debug(f"Active duplicate catcher clients: {client_ids}")
         return client_ids
 
 
