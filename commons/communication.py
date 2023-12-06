@@ -758,7 +758,9 @@ class CommunicationSender(Communication):
             self.messages_sent.get(message.client_id, 0) + 1
         )
 
-    def send_eof(self, client_id, routing_key=""):
+    def send_eof(
+        self, client_id, routing_key="", messages_sent=None, possible_duplicates=None
+    ):
         """
         Function to send the EOF to propagate through the distributed system.
 
@@ -770,11 +772,16 @@ class CommunicationSender(Communication):
         0     1               9
         """
         logging.debug("Sending EOF")
-        messages_sent = self.get_client_messages_sent(client_id)
-        logging.debug("Messages sent: {}".format(messages_sent))
-        message = EOFMessage(
-            client_id, messages_sent, self.possible_duplicates.get(client_id, [])
+        messages_sent = (
+            messages_sent if messages_sent else self.get_client_messages_sent(client_id)
         )
+        logging.debug("Messages sent: {}".format(messages_sent))
+        possible_duplicates = (
+            possible_duplicates
+            if possible_duplicates
+            else self.possible_duplicates.get(client_id, [])
+        )
+        message = EOFMessage(client_id, messages_sent, possible_duplicates)
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):

@@ -24,6 +24,7 @@ class ProtocolConnection:
         self.ack_queue = mp.Queue()
         self.current_message = None
         self.eofs_received = 0
+        self.possible_duplicates = []
 
     def start(self):
         """
@@ -79,6 +80,12 @@ class ProtocolConnection:
                 logging.debug(
                     f"Current message found: {self.current_message}. Resending..."
                 )
+                logging.debug(
+                    f"Adding message {self.current_message.message_id} to possible duplicates"
+                )
+                self.possible_duplicates.append(self.current_message.message_id)
+            if self.current_message.message_type == MessageType.EOF:
+                self.current_message.possible_duplicates = self.possible_duplicates
             self.__send(self.current_message)
             if self.eofs_received == 2:
                 logging.debug("All EOFs sent.")

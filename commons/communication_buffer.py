@@ -2,9 +2,7 @@ import multiprocessing as mp
 import socket
 
 from commons.protocol import (
-    EOFMessage,
     Message,
-    MessageProtocolType,
 )
 
 BUFFER_SIZE = 8192  # 8 KiB

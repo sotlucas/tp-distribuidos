@@ -126,21 +126,31 @@ class ResultMessage(Message):
 
 
 class EOFMessage(Message):
-    def __init__(self, protocol_type: MessageProtocolType):
+    def __init__(
+        self, protocol_type: MessageProtocolType, messages_sent, possible_duplicates=[]
+    ):
         super().__init__(MessageType.EOF)
         self.protocol_type = protocol_type
+        self.messages_sent = messages_sent
+        self.possible_duplicates = possible_duplicates
 
     def from_bytes(reader):
         protocol_type_value = reader.read_int(1)
         protocol_type = MessageProtocolType(protocol_type_value)
-        return EOFMessage(protocol_type)
+        messages_sent = reader.read_int(8)
+        possible_duplicates_count = reader.read_int(4)
+        possible_duplicates = reader.read_multiple_int(8, possible_duplicates_count)
+        return EOFMessage(protocol_type, messages_sent, possible_duplicates)
 
     def to_bytes_impl(self, writer):
         writer.write_int(self.protocol_type.value, 1)
+        writer.write_int(self.messages_sent, 8)
+        writer.write_int(len(self.possible_duplicates), 4)
+        writer.write_multiple_int(self.possible_duplicates, 8)
         return writer.get_bytes()
 
     def __str__(self):
-        return f"EOFMessage(protocol_type={self.protocol_type})"
+        return f"EOFMessage(protocol_type={self.protocol_type}, messages_sent={self.messages_sent}, possible_duplicates={self.possible_duplicates})"
 
 
 class HealthCheckMessage(Message):

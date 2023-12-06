@@ -101,7 +101,9 @@ class ClientHandler:
         )
         if message.message_type == MessageType.EOF:
             # Send EOF to queue to communicate that all the file has been sent.
-            uploader.finish_sending(self.client_id)
+            uploader.finish_sending(
+                self.client_id, message.messages_sent, message.possible_duplicates
+            )
             # TODO: Take a look at this when doing the termination of the client (all EOFs received by they clien)
             # if message.protocol_type == MessageProtocolType.FLIGHT:
             #     # The client will not send any more messages
