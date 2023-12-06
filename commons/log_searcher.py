@@ -46,8 +46,20 @@ class LogSearcher:
         """
         return self.logger.obtain_all_connection_messages(client_id)
 
-    def obtain_all_active_clients(self):
+    def obtain_all_active_connection_clients(self):
         """
-        Obtains all the active clients from the log file.
+        Obtains all the active connection clients from the log file.
         """
-        return self.logger.obtain_all_active_clients()
+        return self.logger.obtain_all_active_connection_clients()
+
+    def search_for_all_duplicate_catcher_messages(self, client_id):
+        """
+        Searches for all duplicate catcher messages in the duplicate catcher log file.
+        """
+        return self.logger.obtain_all_duplicate_catcher_messages(client_id)
+
+    def obtain_all_active_duplicate_catcher_clients(self):
+        """
+        Obtains all the active duplicate catcher clients from the log file.
+        """
+        return self.logger.obtain_all_active_duplicate_catcher_clients()

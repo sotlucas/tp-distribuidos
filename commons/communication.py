@@ -160,13 +160,23 @@ class CommunicationReceiver(Communication):
         self.duplicate_catchers = {}
 
         if self.config.use_duplicate_catcher:
-            # Restore duplicate catcher state
-            for (
-                client_id,
-                duplicate_catcher_state,
-            ) in log_guardian.get_duplicate_catchers().items():
-                duplicate_catcher = DuplicateCatcher(duplicate_catcher_state)
-                self.duplicate_catchers[client_id] = duplicate_catcher
+            # Restore duplicate catcher states only if we are using the duplicate catcher
+            self.restore_duplicate_catchers()
+
+    def restore_duplicate_catchers(self):
+        logging.debug("Restoring duplicate catchers")
+        clients_ids = self.log_guardian.obtain_all_active_duplicate_catcher_clients()
+        for client_id in clients_ids:
+            duplicate_catcher = DuplicateCatcher()
+            all_messages_already_received = (
+                self.log_guardian.search_for_all_duplicate_catcher_messages(client_id)
+            )
+            logging.debug(
+                f"Restoring duplicate catcher for client_id {client_id} with len of messages received {len(all_messages_already_received)}"
+            )
+            for message_id in all_messages_already_received:
+                duplicate_catcher.is_duplicate(int(message_id))
+            self.duplicate_catchers[client_id] = duplicate_catcher
 
     def bind(self, input_callback, eof_callback, sender=None, input_fields_order=None):
         """
@@ -277,11 +287,7 @@ class CommunicationReceiver(Communication):
                 self.log_guardian.store_messages_sent(self.sender.messages_sent)
 
             if self.config.use_duplicate_catcher:
-                # We store the duplicate catchers states only if we are using the duplicate catcher
-                duplicate_catcher_states = {}
-                for client_id, duplicate_catcher in self.duplicate_catchers.items():
-                    duplicate_catcher_states[client_id] = duplicate_catcher.get_state()
-                self.log_guardian.store_duplicate_catchers(duplicate_catcher_states)
+                self.log_guardian.store_new_message_for_duplicate_catcher()
 
             self.log_guardian.finish_storing_message()
 
