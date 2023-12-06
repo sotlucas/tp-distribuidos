@@ -47,7 +47,10 @@ class CommunicationConnection:
         """
         Returns a channel to the RabbitMQ server
         """
-        return self.connection.channel()
+        channel = self.connection.channel()
+        # We need to confirm the delivery to ensure the messages are sent
+        channel.confirm_delivery()
+        return channel
 
     def close(self):
         """
@@ -684,9 +687,6 @@ class CommunicationReceiverExchange(CommunicationReceiver):
             routing_key=self.config.routing_key,
         )
 
-        # We need to confirm the delivery to ensure the messages are sent
-        self.channel.confirm_delivery()
-
 
 class CommunicationReceiverQueue(CommunicationReceiver):
     def declare_input(self):
@@ -794,6 +794,7 @@ class CommunicationSender(Communication):
             if possible_duplicates
             else self.possible_duplicates.get(client_id, [])
         )
+        logging.debug("Possible duplicates: {}".format(possible_duplicates))
         message = EOFMessage(client_id, messages_sent, possible_duplicates)
         self.send(message, routing_key)
 

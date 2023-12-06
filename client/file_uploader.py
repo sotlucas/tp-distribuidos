@@ -41,7 +41,7 @@ class FileUploader:
                 self.send_queue.put(message)
                 self.current_message_id += 1
         # Send message to indicate that the file has ended
-        eof_message = EOFMessage(self.message_type, self.current_message_id)
+        eof_message = EOFMessage(self.message_type, self.current_message_id - 1)
         self.send_queue.put(eof_message)
         logging.info(f"File sent: {self.file_path}")
 
