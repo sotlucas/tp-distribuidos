@@ -69,14 +69,7 @@ class ClientHandler:
                     self.ack_results_queue.put(client_message)
                 else:
                     self.__handle_message(client_message)
-                    message_id = (
-                        0
-                        if client_message.message_type == MessageType.EOF
-                        else client_message.message_id
-                    )
-                    self.buff.send_message(
-                        ACKMessage(message_id, client_message.protocol_type)
-                    )
+                    self.send_ack(client_message)
             except OSError as e:
                 logging.error(f"action: receive_message | result: fail | error: {e}")
                 self.running = False
@@ -89,6 +82,14 @@ class ClientHandler:
         self.results_uploader.join()
         self.client_sock.close()
         logging.info(f"action: handle_client | result: complete")
+
+    def send_ack(self, client_message):
+        message_id = (
+            0
+            if client_message.message_type == MessageType.EOF
+            else client_message.message_id
+        )
+        self.buff.send_message(ACKMessage(message_id, client_message.protocol_type))
 
     def __handle_message(self, message: Message):
         """

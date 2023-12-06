@@ -878,6 +878,7 @@ services:
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${TAGGER_DOS_MAS_RAPIDOS_REPLICAS}
       - TAG_NAME=DOS_MAS_RAPIDOS
+      - TAG_ID=1
       - REPLICA_ID=1
     depends_on:
       rabbitmq:
@@ -898,6 +899,7 @@ services:
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${TAGGER_TRES_ESCALAS_O_MAS_REPLICAS}
       - TAG_NAME=TRES_ESCALAS
+      - TAG_ID=2
       - REPLICA_ID=1
     depends_on:
       rabbitmq:
@@ -918,6 +920,7 @@ services:
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${TAGGER_DISTANCIAS_REPLICAS}
       - TAG_NAME=DISTANCIAS
+      - TAG_ID=3
       - REPLICA_ID=1
     depends_on:
       rabbitmq:
@@ -938,6 +941,7 @@ services:
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${TAGGER_MAX_AVG_REPLICAS}
       - TAG_NAME=MAX_AVG
+      - TAG_ID=4
       - REPLICA_ID=1
     depends_on:
       rabbitmq:

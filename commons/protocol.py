@@ -110,17 +110,23 @@ class ClientProtocolMessage(Message):
 
 
 class ResultMessage(Message):
-    def __init__(self, result):
+    def __init__(self, tag_id, message_id, result):
         super().__init__(MessageType.RESULT)
+        self.tag_id = tag_id
+        self.message_id = message_id
         self.result = result
 
     def from_bytes(reader):
+        tag_id = reader.read_int(1)
+        message_id = reader.read_int(8)
         result_bytes = reader.read_to_end()
         result = result_bytes.decode("utf-8")
 
-        return ResultMessage(result)
+        return ResultMessage(tag_id, message_id, result)
 
     def to_bytes_impl(self, writer):
+        writer.write_int(self.tag_id, 1)
+        writer.write_int(self.message_id, 8)
         writer.write(self.result.encode("utf-8"))
         return writer.get_bytes()
 

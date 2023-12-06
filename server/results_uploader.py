@@ -23,11 +23,20 @@ class ResultsUploader:
 
     def output_callback(self, messages):
         message_batch = "\n".join(messages.payload)
-        self.output_single(message_batch)
+        self.output_single(
+            messages.tag_id,
+            messages.message_id,
+            message_batch,
+        )
 
-    def output_single(self, content):
+    def output_single(
+        self,
+        tag_id,
+        message_id,
+        content,
+    ):
         try:
-            message = ResultMessage(content)
+            message = ResultMessage(tag_id, message_id, content)
             self.buff.send_message(message)
             self.ack_results_queue.get()
             logging.debug(f"action: result_upload | result: success")

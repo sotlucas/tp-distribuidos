@@ -20,7 +20,7 @@ class ResultsListener:
 
     def output_callback(self, messages):
         logging.debug(
-            f"action: results_listener | client_id: {messages.client_id} | messages: {messages.payload}"
+            f"action: results_listener | client_id: {messages.client_id} | messages_id: {messages.message_id}"
         )
         self.sender.send_all(messages, routing_key=str(messages.client_id))
 

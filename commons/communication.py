@@ -233,7 +233,10 @@ class CommunicationReceiver(Communication):
             logging.exception(f"Error parsing message: {e}")
             return
 
-        if message.message_type == MessageType.PROTOCOL:
+        if (
+            message.message_type == MessageType.PROTOCOL
+            or message.message_type == MessageType.PROTOCOL_RESULT
+        ):
             # First we check if it is a duplicate if we are using the duplicate catcher
             if self.config.use_duplicate_catcher:
                 if self.check_duplicate(message):
