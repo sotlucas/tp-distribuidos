@@ -1,5 +1,6 @@
 import datetime
 import logging
+import multiprocessing
 import os
 import signal
 
@@ -20,12 +21,36 @@ class ResultHandler:
         # {tag_id: messages_sent}
         self.eofs_received = {}
 
+        self.create_save_dir()
+
+    def create_save_dir(self):
+        """
+        Creates the directory to save the results.
+        """
+        if not os.path.exists(f"results/client_{self.client_id}/temp"):
+            os.makedirs(f"results/client_{self.client_id}/temp")
+        else:
+            # Remove previous temp files
+            for file in os.listdir(f"results/client_{self.client_id}/temp"):
+                os.remove(f"results/client_{self.client_id}/temp/{file}")
+
     def receive_results(self):
         """
         Receive the results from the server.
         """
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__stop)
+
+        processes = multiprocessing.cpu_count()
+        workers_queue = multiprocessing.Queue(maxsize=processes)
+
+        # start processes
+        workers = []
+        for _ in range(processes):
+            result_saver = ResultSaver(self.client_id, workers_queue)
+            p = multiprocessing.Process(target=result_saver.run)
+            workers.append(p)
+            p.start()
 
         logging.info("Receiving results")
         while self.running:
@@ -41,7 +66,7 @@ class ResultHandler:
                     self.eofs_received[message.tag_id] = message.messages_sent
                 else:
                     if not self.is_duplicate(message):
-                        self.__save_results(message.result)
+                        workers_queue.put((message, False))
 
                 self.check_if_all_results_received()
             except PeerDisconnected:
@@ -54,7 +79,20 @@ class ResultHandler:
                     raise e
                 return
 
-        logging.info("Results received")
+        # Send shutdown signal to workers
+        logging.info("Sending shutdown signal to workers")
+        for _ in range(processes):
+            workers_queue.put((None, None))
+
+        logging.info("Waiting for workers to finish")
+        # Wait for workers to finish
+        for p in workers:
+            p.join()
+        logging.info("Workers finished")
+
+        self.merge_results()
+
+        logging.info("All results received!")
 
     def is_duplicate(self, message):
         """
@@ -87,33 +125,63 @@ class ResultHandler:
             logging.info("action: result_handler | result: all_results_received")
             self.running = False
 
-    def __save_results(self, data):
+    def merge_results(self):
         """
-        Saves the results in the corresponding file.
+        Merges all the results in a single file for each tag.
         """
-        results = data.split("\n")
-        for result in results:
-            self.__save_result_single(result)
+        logging.info("Merging results")
+        workers = []
+        for tag_id in self.results_received:
+            # Create a new process to merge the results for each tag
+            p = multiprocessing.Process(
+                target=self.merge_results_for_tag, args=(tag_id,)
+            )
+            workers.append(p)
+            p.start()
 
-    def __save_result_single(self, data):
-        """
-        Saves a single result in the corresponding file.
-        """
-        file_name = self.__get_message_tag(data)
+        # Wait for workers to finish
+        for p in workers:
+            p.join()
+        logging.info("Merge workers finished")
 
-        if not os.path.exists(f"results/client_{self.client_id}"):
-            os.makedirs(f"results/client_{self.client_id}")
-
-        with open(
-            f"results/client_{self.client_id}/{self.tstamp}_{file_name}.txt", "a"
-        ) as f:
-            f.write(data + "\n")
-
-    def __get_message_tag(self, data):
+    def merge_results_for_tag(self, tag_id):
         """
-        Gets the tag between [] to identify the file.
+        Merges all the results for a single tag.
         """
-        return data.split("[")[1].split("]")[0].lower()
+        logging.info(f"Merging results for tag {tag_id}")
+
+        tag_name = self.get_tag_name_by_id(tag_id)
+        file_name = f"results/client_{self.client_id}/{self.tstamp}_{tag_name}.txt"
+        with open(file_name, "w") as merged_file:
+            for file in os.listdir(f"results/client_{self.client_id}/temp"):
+                if file.startswith(tag_name):
+                    with open(f"results/client_{self.client_id}/temp/{file}") as f:
+                        for line in f:
+                            merged_file.write(line)
+                        merged_file.write("\n")
+
+        self.remove_temp_files_for_tag(tag_name)
+
+    def remove_temp_files_for_tag(self, tag_name):
+        """
+        Removes the temp files for a single tag.
+        """
+        for file in os.listdir(f"results/client_{self.client_id}/temp"):
+            if file.startswith(tag_name):
+                os.remove(f"results/client_{self.client_id}/temp/{file}")
+
+    def get_tag_name_by_id(self, tag_id):
+        """
+        Gets the tag name by the tag id.
+        """
+        if tag_id == 1:
+            return "dos_mas_rapidos"
+        elif tag_id == 2:
+            return "tres_escalas"
+        elif tag_id == 3:
+            return "distancias"
+        elif tag_id == 4:
+            return "max_avg"
 
     def __stop(self, *args):
         """
@@ -122,3 +190,37 @@ class ResultHandler:
         logging.info("action: result_handler_shutdown | result: in_progress")
         self.running = False
         logging.info("action: result_handler_shutdown | result: success")
+
+
+class ResultSaver:
+    def __init__(self, client_id, results_queue):
+        self.running = True
+        self.client_id = client_id
+        self.results_queue = results_queue
+
+    def run(self):
+        while True:
+            result_message, end = self.results_queue.get()
+            if not result_message and not end:
+                logging.info("action: result_saver | result: shutdown")
+                return
+            self.save_temp_results(result_message)
+
+    def save_temp_results(self, result_message):
+        """
+        Saves the temp results in the corresponding file.
+        """
+        result_id = result_message.message_id
+        message_tag = self.get_message_tag(result_message.result)
+
+        file_name = (
+            f"results/client_{self.client_id}/temp/{message_tag}_{result_id}.txt"
+        )
+        with open(file_name, "a") as f:
+            f.write(result_message.result)
+
+    def get_message_tag(self, data):
+        """
+        Gets the tag between [] to identify the file.
+        """
+        return data.split("[")[1].split("]")[0].lower()
