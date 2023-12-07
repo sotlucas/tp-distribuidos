@@ -1,0 +1,1 @@
+docker kill $(docker container ls -q --filter name="tp1-filter_lat_long*" --filter name="tp1-filter_distancia*" --filter name="tp1-joiner*" --filter name="tp1-processor_distancia*" --filter name="tp1-tagger_distancia*")

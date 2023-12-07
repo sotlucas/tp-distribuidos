@@ -1,0 +1,1 @@
+docker kill $(docker container ls -q --filter name="tp1-filter*" --filter name="tp1-grouper*" --filter name="tp1-joiner*" --filter name="tp1-load_balancer*" --filter name="tp1-processor*" --filter name="tp1-tagger*") tp1-health_checker_1-1 tp1-health_checker_2-1 tp1-server_1-1

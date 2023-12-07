@@ -1,0 +1,1 @@
+docker kill $(docker container ls -q --filter name="tp1-filter_avg_max_*" --filter name="tp1-load_balancer_*" --filter name="tp1-grouper*" --filter name="tp1-processor_media_general*" --filter name="tp1-processor_max_avg*" --filter name="tp1-tagger_max_avg*")
