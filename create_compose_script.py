@@ -972,7 +972,7 @@ def main():
     for i in range(1, TAGGER_MAX_AVG_REPLICAS + 1):
         services.append(TaggerMaxAvg(i))
 
-    with open("docker-compose-test.yml", "w") as f:
+    with open("docker-compose.yml", "w") as f:
         f.write('version: "3.4"\n')
         f.write("name: tp1\n")
         f.write("\n")
