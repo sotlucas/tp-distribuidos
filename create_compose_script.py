@@ -19,6 +19,9 @@ TAGGER_DISTANCIAS_REPLICAS = 1
 TAGGER_MAX_AVG_REPLICAS = 1
 CLIENT_REPLICAS = 2
 
+SERVER_REPLICAS = 1
+HEALTH_CHECKER_REPLICAS = 3
+
 
 class Service:
     def __init__(self, replica_id=1):
@@ -907,6 +910,226 @@ class TaggerMaxAvg(InsideEntity):
 """
 
 
+class HealthChecker1(InsideEntity):
+    def __init__(self, replica_id=1):
+        super().__init__(replica_id)
+        self.name = "health_checker"
+        self.image = "health_checker:latest"
+        self.entrypoint = "python3 /main.py"
+        self.environment["FILTER_GENERAL_REPLICAS"] = FILTER_GENERAL_REPLICAS
+        self.environment["FILTER_MULTIPLE_REPLICAS"] = FILTER_MULTIPLE_REPLICAS
+        self.environment["FILTER_AVG_MAX_REPLICAS"] = FILTER_AVG_MAX_REPLICAS
+        self.environment["FILTER_DISTANCIA_REPLICAS"] = FILTER_DISTANCIA_REPLICAS
+        self.environment[
+            "FILTER_TRES_ESCALAS_O_MAS_REPLICAS"
+        ] = FILTER_TRES_ESCALAS_O_MAS_REPLICAS
+        self.environment[
+            "FILTER_DOS_MAS_RAPIDOS_REPLICAS"
+        ] = FILTER_DOS_MAS_RAPIDOS_REPLICAS
+        self.environment["FILTER_LAT_LONG_REPLICAS"] = FILTER_LAT_LONG_REPLICAS
+        self.environment["PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS"] = 0
+        self.environment["PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS"] = 0
+        self.environment["PROCESSOR_DISTANCIAS_REPLICAS"] = 0
+        self.environment["PROCESSOR_MAX_AVG_REPLICAS"] = 0
+        self.environment["PROCESSOR_MEDIA_GENERAL_REPLICAS"] = 0
+        self.environment["TAGGER_DOS_MAS_RAPIDOS_REPLICAS"] = 0
+        self.environment["TAGGER_TRES_ESCALAS_O_MAS_REPLICAS"] = 0
+        self.environment["TAGGER_DISTANCIAS_REPLICAS"] = 0
+        self.environment["TAGGER_MAX_AVG_REPLICAS"] = 0
+        self.environment["LOAD_BALANCER_REPLICAS"] = 0
+        self.environment["GROUPER_REPLICAS"] = 0
+        self.environment["JOINER_REPLICAS"] = 0
+        self.environment["SERVER_REPLICAS"] = 0
+        self.environment["HEALTH_CHECKER_REPLICAS"] = HEALTH_CHECKER_REPLICAS
+
+    def __str__(self):
+        return f"""
+  {self.name}_{self.replica_id}:
+    image: {self.image}
+    entrypoint: {self.entrypoint}
+    environment:
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - REPLICA_ID={self.replica_id}
+      - FILTER_GENERAL_REPLICAS={self.environment["FILTER_GENERAL_REPLICAS"]}
+      - FILTER_MULTIPLE_REPLICAS={self.environment["FILTER_MULTIPLE_REPLICAS"]}
+      - FILTER_AVG_MAX_REPLICAS={self.environment["FILTER_AVG_MAX_REPLICAS"]}
+      - FILTER_DISTANCIA_REPLICAS={self.environment["FILTER_DISTANCIA_REPLICAS"]}
+      - FILTER_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["FILTER_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - FILTER_DOS_MAS_RAPIDOS_REPLICAS={self.environment["FILTER_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - FILTER_LAT_LONG_REPLICAS={self.environment["FILTER_LAT_LONG_REPLICAS"]}
+      - PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS={self.environment["PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - PROCESSOR_DISTANCIAS_REPLICAS={self.environment["PROCESSOR_DISTANCIAS_REPLICAS"]}
+      - PROCESSOR_MAX_AVG_REPLICAS={self.environment["PROCESSOR_MAX_AVG_REPLICAS"]}
+      - PROCESSOR_MEDIA_GENERAL_REPLICAS={self.environment["PROCESSOR_MEDIA_GENERAL_REPLICAS"]}
+      - TAGGER_DOS_MAS_RAPIDOS_REPLICAS={self.environment["TAGGER_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - TAGGER_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["TAGGER_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - TAGGER_DISTANCIAS_REPLICAS={self.environment["TAGGER_DISTANCIAS_REPLICAS"]}
+      - TAGGER_MAX_AVG_REPLICAS={self.environment["TAGGER_MAX_AVG_REPLICAS"]}
+      - LOAD_BALANCER_REPLICAS={self.environment["LOAD_BALANCER_REPLICAS"]}
+      - GROUPER_REPLICAS={self.environment["GROUPER_REPLICAS"]}
+      - JOINER_REPLICAS={self.environment["JOINER_REPLICAS"]}
+      - SERVER_REPLICAS={self.environment["SERVER_REPLICAS"]}
+      - HEALTH_CHECKER_REPLICAS={self.environment["HEALTH_CHECKER_REPLICAS"]}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - {self.networks[0]}
+"""
+
+
+class HealthChecker2(InsideEntity):
+    def __init__(self, replica_id=1):
+        super().__init__(replica_id)
+        self.name = "health_checker"
+        self.image = "health_checker:latest"
+        self.entrypoint = "python3 /main.py"
+        self.environment["FILTER_GENERAL_REPLICAS"] = 0
+        self.environment["FILTER_MULTIPLE_REPLICAS"] = 0
+        self.environment["FILTER_AVG_MAX_REPLICAS"] = 0
+        self.environment["FILTER_DISTANCIA_REPLICAS"] = 0
+        self.environment["FILTER_TRES_ESCALAS_O_MAS_REPLICAS"] = 0
+        self.environment["FILTER_DOS_MAS_RAPIDOS_REPLICAS"] = 0
+        self.environment["FILTER_LAT_LONG_REPLICAS"] = 0
+        self.environment[
+            "PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS"
+        ] = PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS
+        self.environment[
+            "PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS"
+        ] = PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS
+        self.environment[
+            "PROCESSOR_DISTANCIAS_REPLICAS"
+        ] = PROCESSOR_DISTANCIAS_REPLICAS
+        self.environment["PROCESSOR_MAX_AVG_REPLICAS"] = PROCESSOR_MAX_AVG_REPLICAS
+        self.environment[
+            "PROCESSOR_MEDIA_GENERAL_REPLICAS"
+        ] = PROCESSOR_MEDIA_GENERAL_REPLICAS
+        self.environment["TAGGER_DOS_MAS_RAPIDOS_REPLICAS"] = 0
+        self.environment["TAGGER_TRES_ESCALAS_O_MAS_REPLICAS"] = 0
+        self.environment["TAGGER_DISTANCIAS_REPLICAS"] = 0
+        self.environment["TAGGER_MAX_AVG_REPLICAS"] = 0
+        self.environment["LOAD_BALANCER_REPLICAS"] = 0
+        self.environment["GROUPER_REPLICAS"] = 0
+        self.environment["JOINER_REPLICAS"] = 0
+        self.environment["SERVER_REPLICAS"] = 0
+        self.environment["HEALTH_CHECKER_REPLICAS"] = HEALTH_CHECKER_REPLICAS
+
+    def __str__(self):
+        return f"""
+  {self.name}_{self.replica_id}:
+    image: {self.image}
+    entrypoint: {self.entrypoint}
+    environment:
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - REPLICA_ID={self.replica_id}
+      - FILTER_GENERAL_REPLICAS={self.environment["FILTER_GENERAL_REPLICAS"]}
+      - FILTER_MULTIPLE_REPLICAS={self.environment["FILTER_MULTIPLE_REPLICAS"]}
+      - FILTER_AVG_MAX_REPLICAS={self.environment["FILTER_AVG_MAX_REPLICAS"]}
+      - FILTER_DISTANCIA_REPLICAS={self.environment["FILTER_DISTANCIA_REPLICAS"]}
+      - FILTER_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["FILTER_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - FILTER_DOS_MAS_RAPIDOS_REPLICAS={self.environment["FILTER_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - FILTER_LAT_LONG_REPLICAS={self.environment["FILTER_LAT_LONG_REPLICAS"]}
+      - PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS={self.environment["PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - PROCESSOR_DISTANCIAS_REPLICAS={self.environment["PROCESSOR_DISTANCIAS_REPLICAS"]}
+      - PROCESSOR_MAX_AVG_REPLICAS={self.environment["PROCESSOR_MAX_AVG_REPLICAS"]}
+      - PROCESSOR_MEDIA_GENERAL_REPLICAS={self.environment["PROCESSOR_MEDIA_GENERAL_REPLICAS"]}
+      - TAGGER_DOS_MAS_RAPIDOS_REPLICAS={self.environment["TAGGER_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - TAGGER_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["TAGGER_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - TAGGER_DISTANCIAS_REPLICAS={self.environment["TAGGER_DISTANCIAS_REPLICAS"]}
+      - TAGGER_MAX_AVG_REPLICAS={self.environment["TAGGER_MAX_AVG_REPLICAS"]}
+      - LOAD_BALANCER_REPLICAS={self.environment["LOAD_BALANCER_REPLICAS"]}
+      - GROUPER_REPLICAS={self.environment["GROUPER_REPLICAS"]}
+      - JOINER_REPLICAS={self.environment["JOINER_REPLICAS"]}
+      - SERVER_REPLICAS={self.environment["SERVER_REPLICAS"]}
+      - HEALTH_CHECKER_REPLICAS={self.environment["HEALTH_CHECKER_REPLICAS"]}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - {self.networks[0]}
+"""
+
+
+class HealthChecker3(InsideEntity):
+    def __init__(self, replica_id=1):
+        super().__init__(replica_id)
+        self.name = "health_checker"
+        self.image = "health_checker:latest"
+        self.entrypoint = "python3 /main.py"
+        self.environment["FILTER_GENERAL_REPLICAS"] = 0
+        self.environment["FILTER_MULTIPLE_REPLICAS"] = 0
+        self.environment["FILTER_AVG_MAX_REPLICAS"] = 0
+        self.environment["FILTER_DISTANCIA_REPLICAS"] = 0
+        self.environment["FILTER_TRES_ESCALAS_O_MAS_REPLICAS"] = 0
+        self.environment["FILTER_DOS_MAS_RAPIDOS_REPLICAS"] = 0
+        self.environment["FILTER_LAT_LONG_REPLICAS"] = 0
+        self.environment["PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS"] = 0
+        self.environment["PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS"] = 0
+        self.environment["PROCESSOR_DISTANCIAS_REPLICAS"] = 0
+        self.environment["PROCESSOR_MAX_AVG_REPLICAS"] = 0
+        self.environment["PROCESSOR_MEDIA_GENERAL_REPLICAS"] = 0
+        self.environment[
+            "TAGGER_DOS_MAS_RAPIDOS_REPLICAS"
+        ] = TAGGER_DOS_MAS_RAPIDOS_REPLICAS
+        self.environment[
+            "TAGGER_TRES_ESCALAS_O_MAS_REPLICAS"
+        ] = TAGGER_TRES_ESCALAS_O_MAS_REPLICAS
+        self.environment["TAGGER_DISTANCIAS_REPLICAS"] = TAGGER_DISTANCIAS_REPLICAS
+        self.environment["TAGGER_MAX_AVG_REPLICAS"] = TAGGER_MAX_AVG_REPLICAS
+        self.environment["LOAD_BALANCER_REPLICAS"] = LOAD_BALANCER_REPLICAS
+        self.environment["GROUPER_REPLICAS"] = GROUPER_REPLICAS
+        self.environment["JOINER_REPLICAS"] = JOINER_REPLICAS
+        self.environment["SERVER_REPLICAS"] = SERVER_REPLICAS
+        self.environment["HEALTH_CHECKER_REPLICAS"] = HEALTH_CHECKER_REPLICAS
+
+    def __str__(self):
+        return f"""
+  {self.name}_{self.replica_id}:
+    image: {self.image}
+    entrypoint: {self.entrypoint}
+    environment:
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - REPLICA_ID={self.replica_id}
+      - FILTER_GENERAL_REPLICAS={self.environment["FILTER_GENERAL_REPLICAS"]}
+      - FILTER_MULTIPLE_REPLICAS={self.environment["FILTER_MULTIPLE_REPLICAS"]}
+      - FILTER_AVG_MAX_REPLICAS={self.environment["FILTER_AVG_MAX_REPLICAS"]}
+      - FILTER_DISTANCIA_REPLICAS={self.environment["FILTER_DISTANCIA_REPLICAS"]}
+      - FILTER_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["FILTER_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - FILTER_DOS_MAS_RAPIDOS_REPLICAS={self.environment["FILTER_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - FILTER_LAT_LONG_REPLICAS={self.environment["FILTER_LAT_LONG_REPLICAS"]}
+      - PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["PROCESSOR_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS={self.environment["PROCESSOR_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - PROCESSOR_DISTANCIAS_REPLICAS={self.environment["PROCESSOR_DISTANCIAS_REPLICAS"]}
+      - PROCESSOR_MAX_AVG_REPLICAS={self.environment["PROCESSOR_MAX_AVG_REPLICAS"]}
+      - PROCESSOR_MEDIA_GENERAL_REPLICAS={self.environment["PROCESSOR_MEDIA_GENERAL_REPLICAS"]}
+      - TAGGER_DOS_MAS_RAPIDOS_REPLICAS={self.environment["TAGGER_DOS_MAS_RAPIDOS_REPLICAS"]}
+      - TAGGER_TRES_ESCALAS_O_MAS_REPLICAS={self.environment["TAGGER_TRES_ESCALAS_O_MAS_REPLICAS"]}
+      - TAGGER_DISTANCIAS_REPLICAS={self.environment["TAGGER_DISTANCIAS_REPLICAS"]}
+      - TAGGER_MAX_AVG_REPLICAS={self.environment["TAGGER_MAX_AVG_REPLICAS"]}
+      - LOAD_BALANCER_REPLICAS={self.environment["LOAD_BALANCER_REPLICAS"]}
+      - GROUPER_REPLICAS={self.environment["GROUPER_REPLICAS"]}
+      - JOINER_REPLICAS={self.environment["JOINER_REPLICAS"]}
+      - SERVER_REPLICAS={self.environment["SERVER_REPLICAS"]}
+      - HEALTH_CHECKER_REPLICAS={self.environment["HEALTH_CHECKER_REPLICAS"]}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - {self.networks[0]}
+"""
+
+
 def main():
     services = [RabbitMQ()]
 
@@ -972,6 +1195,10 @@ def main():
     for i in range(1, TAGGER_MAX_AVG_REPLICAS + 1):
         services.append(TaggerMaxAvg(i))
 
+    services.append(HealthChecker1(1))
+    services.append(HealthChecker2(2))
+    services.append(HealthChecker3(3))
+
     with open("docker-compose.yml", "w") as f:
         f.write('version: "3.4"\n')
         f.write("name: tp1\n")
@@ -981,11 +1208,11 @@ def main():
             f.write(str(service))
         f.write("\n")
         f.write("networks:\n")
-        f.write("    testing_net:\n")
-        f.write("       ipam:\n")
-        f.write("           driver: default\n")
-        f.write("           config:\n")
-        f.write("               - subnet: 172.25.125.0/24\n")
+        f.write("  testing_net:\n")
+        f.write("    ipam:\n")
+        f.write("      driver: default\n")
+        f.write("      config:\n")
+        f.write("        - subnet: 172.25.125.0/24")
 
 
 if __name__ == "__main__":
