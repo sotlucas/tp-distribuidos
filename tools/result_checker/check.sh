@@ -38,10 +38,3 @@ do
   rm -rf ./tools/result_checker/temp/client_$client_id
   cd ../../ || exit
 done
-
-
-
-
-
-
-
