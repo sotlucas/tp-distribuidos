@@ -5,7 +5,7 @@
 # Get all client ids
 client_ids=$(ls -d ./results/client_* | cut -d '_' -f 2)
 
-# Do the check for each client}
+# Do the check for each client
 for client_id in $client_ids
 do
     echo "Checking client $client_id..."
@@ -35,6 +35,6 @@ do
         echo "---"
     done
 
-  rm -rf ./tools/result_checker/temp/client_$client_id
-  cd ../../ || exit
+    rm -rf ./tools/result_checker/temp/client_$client_id
+    cd ../../ || exit
 done
