@@ -20,6 +20,7 @@ def main():
         "input_type": str,
         "replicas_count": int,
         "replica_id": int,
+        "grouper_replicas_count": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -49,7 +50,10 @@ def main():
     output_fields = ["route", "avg", "max_price"]
 
     connection_config = ConnectionConfig(
-        config_params["replica_id"], input_fields, output_fields
+        config_params["replica_id"],
+        input_fields,
+        output_fields,
+        send_eof_default_sent_value=config_params["grouper_replicas_count"],
     )
     Connection(connection_config, receiver, sender, log_guardian, MaxAvg).run()
 

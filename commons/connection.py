@@ -14,6 +14,7 @@ class ConnectionConfig:
         is_topic=False,
         has_statefull_processor=False,
         result_tag_id=None,
+        send_eof_default_sent_value=None,
     ):
         self.replica_id = replica_id
         self.input_fields = input_fields
@@ -22,6 +23,9 @@ class ConnectionConfig:
         self.is_topic = is_topic
         self.has_statefull_processor = has_statefull_processor
         self.result_tag_id = result_tag_id
+        self.send_eof_default_sent_value = (
+            send_eof_default_sent_value  # only used for avg_max processor
+        )
 
 
 class Connection:
@@ -81,6 +85,8 @@ class Connection:
                 processor.process(message)
 
     def process(self, messages):
+        send_eof = False
+
         if self.config.has_statefull_processor:
             # If we have a statefull processor, we also need to save the messages to disk to be able to recover them
             self.save_messages(messages)
@@ -98,6 +104,11 @@ class Connection:
                     # If the message is not ready, it means that we need to wait for more messages.
                     # So we need to requeue the message, sending a nack.
                     return True
+                elif processed_message.type == ResponseType.SEND_EOF:
+                    # If the message is SEND_EOF, it means that we need to send the EOF message
+                    # after sending the processed messages.
+                    processed_messages.append(processed_message.payload)
+                    send_eof = True
 
         if processed_messages:
             if self.config.is_topic:
@@ -110,6 +121,14 @@ class Connection:
                 )
             # Log the messages sent
             self.log_guardian.message_sent()
+        if send_eof:
+            logging.debug(
+                f"Send EOF response received from processor with client_id {messages.client_id}, sending EOF"
+            )
+            self.communication_sender.send_eof(
+                messages.client_id,
+                messages_sent=self.config.send_eof_default_sent_value,
+            )
         return False
 
     def save_messages(self, messages):
@@ -170,14 +189,32 @@ class Connection:
             # TODO: If needed, we should move the topic name the finish_processing of the processor.
             DEFAULT_TOPIC_EOF = "1"
             # TODO: if self.config.send_eof: ?
-            self.communication_sender.send_eof(client_id, routing_key=DEFAULT_TOPIC_EOF)
+            if self.config.result_tag_id:
+                # If we have a result_tag_id, it means we are at the end of the query,
+                # so we need to send a special EOF message with the result_tag_id to differentiate it
+                # from the other EOF messages of other queries.
+                self.communication_sender.send_special_result_eof(
+                    client_id, self.config.result_tag_id
+                )
+            else:
+                self.communication_sender.send_eof(
+                    client_id, routing_key=DEFAULT_TOPIC_EOF
+                )
             return
         if messages:
             # TODO: We send the message with message_id as the replica_id to differentiate the protocol EOF messages sent by other replicas.
             #       Maybe we should change this to other value.
             self.send_messages(messages, client_id, self.config.replica_id)
         if self.config.send_eof:
-            self.communication_sender.send_eof(client_id)
+            if self.config.result_tag_id:
+                # If we have a result_tag_id, it means we are at the end of the query,
+                # so we need to send a special EOF message with the result_tag_id to differentiate it
+                # from the other EOF messages of other queries.
+                self.communication_sender.send_special_result_eof(
+                    client_id, self.config.result_tag_id
+                )
+            else:
+                self.communication_sender.send_eof(client_id)
 
     def __shutdown(self, *args):
         """

@@ -1,4 +1,5 @@
 import logging
+import signal
 import socket
 import multiprocessing as mp
 from enum import Enum
@@ -30,12 +31,20 @@ class ProtocolConnection:
         """
         Starts the protocol connection.
         """
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
+        signal.signal(signal.SIGINT, self.__shutdown)
+
         self.__reconnect()
 
     def __reconnect(self):
         """
         Reconnects to the server.
         """
+        if not self.waiting_results and not self.sending_messages:
+            # If we are not waiting for results and we are not sending messages, we don't need to reconnect
+            return
+
         connected = False
         while not connected:
             try:
@@ -124,6 +133,16 @@ class ProtocolConnection:
                 self.eofs_received += 1
             self.current_message = None
 
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: ProtocolConnection shutdown | result: in_progress")
+        self.sending_messages = False
+        self.waiting_results = False
+        self.receiver_proc.terminate()
+        logging.info("action: ProtocolConnection shutdown | result: success")
+
 
 class Receiver:
     def __init__(self, buff, send_queue, results_queue, ack_queue):
@@ -137,21 +156,38 @@ class Receiver:
         """
         Receives messages from the server.
         """
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
+        signal.signal(signal.SIGINT, self.__shutdown)
+
         while self.running:
             try:
                 message = self.buff.get_message()
-                logging.debug(
-                    f"Received message: {message.message_type}, {message.message_id}"
-                )
-                if message.message_type == MessageType.RESULT:
+                if (
+                    message.message_type == MessageType.RESULT
+                    or message.message_type == MessageType.RESULT_EOF
+                ):
+                    if message.message_type == MessageType.RESULT:
+                        logging.debug(
+                            f"Received Result: {message.message_id}, {message.tag_id}"
+                        )
                     self.results_queue.put(message)
                     self.buff.send_message(ResultACKMessage())
                 else:
+                    logging.debug(f"Received ACK: {message.message_id}")
                     self.ack_queue.put((ConnectionState.CONNECTED, message))
             except Exception as e:
                 logging.error(f"Error while receiving message from Receiver: {e}")
                 self.running = False
                 self.ack_queue.put((ConnectionState.DISCONNECTED, None))
+
+    def __shutdown(self, *args):
+        """
+        Graceful shutdown. Closing all connections.
+        """
+        logging.info("action: Receiver shutdown | result: in_progress")
+        self.buff.stop()
+        logging.info("action: Receiver shutdown | result: success")
 
 
 class ConnectionState(Enum):

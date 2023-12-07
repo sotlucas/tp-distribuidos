@@ -5,9 +5,7 @@ import multiprocessing as mp
 from protocol_connection import ProtocolConnection, ProtocolConnectionConfig
 from file_uploader import FileUploader
 from result_handler import ResultHandler
-from commons.protocol import (
-    MessageProtocolType,
-)
+from commons.protocol import MessageProtocolType
 
 
 class ClientConfig:
@@ -33,11 +31,7 @@ class ClientConfig:
 class Client:
     def __init__(self, config):
         self.config = config
-        # Register signal handler for SIGTERM
-        signal.signal(signal.SIGTERM, self.__shutdown)
-        signal.signal(signal.SIGINT, self.__shutdown)
 
-    def run(self):
         # maxsize=1 to avoid having too many messages in memory
         send_queue = mp.Queue(maxsize=1)
         results_queue = mp.Queue(maxsize=1)
@@ -52,7 +46,6 @@ class Client:
                 protocol_connection_config, send_queue, results_queue
             ).start
         )
-        self.protocol_connection.start()
 
         # Start the process to send the airports
         self.airports_sender = mp.Process(
@@ -65,7 +58,6 @@ class Client:
                 send_queue,
             ).start
         )
-        self.airports_sender.start()
 
         # Start the process to send the flights
         self.flights_sender = mp.Process(
@@ -78,12 +70,20 @@ class Client:
                 send_queue,
             ).start
         )
-        self.flights_sender.start()
 
         # Start the process to receive the results
         self.results_receiver = mp.Process(
             target=ResultHandler(self.config.client_id, results_queue).receive_results
         )
+
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.__shutdown)
+        signal.signal(signal.SIGINT, self.__shutdown)
+
+    def run(self):
+        self.protocol_connection.start()
+        self.airports_sender.start()
+        self.flights_sender.start()
         self.results_receiver.start()
 
         # Wait for the processes to finish
@@ -92,6 +92,12 @@ class Client:
         self.flights_sender.join()
         logging.info("Waiting for results")
         self.results_receiver.join()
+
+        # Disconnect from the server
+        logging.info("Disconnecting from server")
+        self.protocol_connection.terminate()
+        self.protocol_connection.join()
+
         logging.info("All processes finished")
 
     def __shutdown(self, signum=None, frame=None):

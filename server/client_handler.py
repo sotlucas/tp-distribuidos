@@ -79,8 +79,12 @@ class ClientHandler:
             except PeerDisconnected as e:
                 logging.info("action: client_disconected")
                 self.running = False
+
+        logging.debug("Terminating results uploader")
+        self.results_uploader.terminate()
         self.results_uploader.join()
-        self.client_sock.close()
+
+        self.buff.stop()
         logging.info(f"action: handle_client | result: complete")
 
     def send_ack(self, client_message):

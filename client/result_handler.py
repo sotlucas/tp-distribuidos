@@ -4,6 +4,7 @@ import os
 import signal
 
 from commons.communication_buffer import PeerDisconnected
+from commons.protocol import MessageType
 
 
 class ResultHandler:
@@ -14,6 +15,10 @@ class ResultHandler:
         self.results_queue = results_queue
 
         self.results_received = {}
+
+        # We need to keep track of the EOFs received to know when to stop the result handler
+        # {tag_id: messages_sent}
+        self.eofs_received = {}
 
     def receive_results(self):
         """
@@ -28,8 +33,17 @@ class ResultHandler:
                 message = self.results_queue.get()
                 if not message:
                     break
-                if not self.is_duplicate(message):
-                    self.__save_results(message.result)
+
+                if message.message_type == MessageType.RESULT_EOF:
+                    logging.info(
+                        f"action: eof_result_received, tag_id: {message.tag_id}, messages_sent: {message.messages_sent}"
+                    )
+                    self.eofs_received[message.tag_id] = message.messages_sent
+                else:
+                    if not self.is_duplicate(message):
+                        self.__save_results(message.result)
+
+                self.check_if_all_results_received()
             except PeerDisconnected:
                 logging.info("action: server_disconected")
                 self.running = False
@@ -57,6 +71,21 @@ class ResultHandler:
             return True
         self.results_received[tag_id].add(message_id)
         return False
+
+    def check_if_all_results_received(self):
+        """
+        Checks if all the results have been received.
+        """
+        QUERY_NUMBER = 4
+        if len(self.eofs_received) < QUERY_NUMBER:
+            return
+        eof_finished = 0
+        for tag_id, messages_sent in self.eofs_received.items():
+            if len(self.results_received[tag_id]) == messages_sent:
+                eof_finished += 1
+        if eof_finished == QUERY_NUMBER:
+            logging.info("action: result_handler | result: all_results_received")
+            self.running = False
 
     def __save_results(self, data):
         """

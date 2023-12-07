@@ -5,6 +5,7 @@ import logging
 from commons.duplicate_catcher import DuplicateCatcher
 from commons.flight_parser import FlightParser
 from commons.message import (
+    EOFResultMessage,
     Message,
     MessageType,
     EOFMessage,
@@ -313,6 +314,15 @@ class CommunicationReceiver(Communication):
             logging.debug("Received EOF finish")
             logging.debug("Received {}".format(body))
             ack_type = self.handle_eof_finish(message)
+
+        elif message.message_type == MessageType.EOF_RESULT:
+            logging.debug("Received EOF result")
+            logging.debug("Received {}".format(body))
+
+            # We are in the server, so we need to send the result to the client.
+            # So we call the output_callback function with the message
+            self.eof_callback(message)
+            ack_type = ACKType.ACK
 
         if ack_type == ACKType.NACK:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
@@ -757,6 +767,11 @@ class CommunicationSender(Communication):
         messages.payload = "\n".join(messages.payload)
 
         self.send(messages, routing_key)
+
+        self.messages_sent[messages.client_id] = (
+            self.messages_sent.get(messages.client_id, 0) + 1
+        )
+
         # Log the messages sent
         self.log_guardian.message_sent()
 
@@ -776,22 +791,12 @@ class CommunicationSender(Communication):
                 delivery_mode=pika.DeliveryMode.Persistent,
             ),
         )
-        self.messages_sent[message.client_id] = (
-            self.messages_sent.get(message.client_id, 0) + 1
-        )
 
     def send_eof(
         self, client_id, routing_key="", messages_sent=None, possible_duplicates=None
     ):
         """
         Function to send the EOF to propagate through the distributed system.
-
-        Protocol:
-        - First byte is 0
-        - Next 8 bytes are the number of messages sent
-
-        | EOF | messages_sent |
-        0     1               9
         """
         logging.debug("Sending EOF")
         messages_sent = (
@@ -805,6 +810,19 @@ class CommunicationSender(Communication):
         )
         logging.debug("Possible duplicates: {}".format(possible_duplicates))
         message = EOFMessage(client_id, messages_sent, possible_duplicates)
+        self.send(message, routing_key)
+
+    def send_special_result_eof(
+        self, client_id, tag_id, routing_key="", messages_sent=None
+    ):
+        """
+        Function to send the special result EOF to send the result of the query.
+        """
+        logging.debug("Sending special result EOF")
+        messages_sent = (
+            messages_sent if messages_sent else self.get_client_messages_sent(client_id)
+        )
+        message = EOFResultMessage(client_id, tag_id, messages_sent)
         self.send(message, routing_key)
 
     def get_client_messages_sent(self, client_id):

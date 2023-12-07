@@ -109,6 +109,7 @@ class Server:
         except Exception as e:
             logging.exception(f"Error: {e}")
         finally:
+            logging.debug("action: client_handler_finished, releasing semaphore")
             sema.release()  # allow a new process to be started now that this one is exiting
 
     def __accept_new_connection(self):

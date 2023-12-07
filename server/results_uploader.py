@@ -1,7 +1,7 @@
 import logging
 import signal
 
-from commons.protocol import ResultMessage
+from commons.protocol import ResultEOFMessage, ResultMessage
 
 
 class ResultsUploader:
@@ -18,7 +18,7 @@ class ResultsUploader:
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
         logging.info(f"action: results_uploader | result: started")
-        self.receiver.bind(self.output_callback, self.handle_eof)
+        self.receiver.bind(self.output_callback, self.handle_result_eof)
         self.receiver.start()
 
     def output_callback(self, messages):
@@ -43,9 +43,20 @@ class ResultsUploader:
         except OSError as e:
             logging.error(f"action: result_upload | result: fail | error: {e}")
 
-    def handle_eof(self):
-        # TODO: handle
-        pass
+    def handle_result_eof(self, eof_result_message):
+        try:
+            # We convert the message to a ResultEOFMessage to be able to send it to the buffer
+            logging.debug(
+                f"action: eof_result_upload | tag_id: {eof_result_message.tag_id} | messages_sent: {eof_result_message.messages_sent}"
+            )
+            message = ResultEOFMessage(
+                eof_result_message.tag_id, eof_result_message.messages_sent
+            )
+            self.buff.send_message(message)
+            self.ack_results_queue.get()
+            logging.debug(f"action: eof_result_upload | result: success")
+        except OSError as e:
+            logging.error(f"action: eof_result_upload | result: fail | error: {e}")
 
     def __shutdown(self, *args):
         """
@@ -53,5 +64,4 @@ class ResultsUploader:
         """
         logging.info("action: results_uploader_shutdown | result: in_progress")
         self.receiver.stop()
-        self.buff.stop()
         logging.info("action: results_uploader_shutdown | result: success")
