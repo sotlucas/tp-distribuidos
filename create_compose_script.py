@@ -492,7 +492,7 @@ class FilterLatLong(InsideEntity):
         super().__init__(replica_id)
         self.name = "filter_lat_long"
         self.image = "filter:latest"
-        self.environment["DELIMITER"] = ","
+        self.environment["DELIMITER"] = ";"
         self.environment[
             "INPUT_FIELDS"
         ] = "AirportCode,AirportName,CityName,CountryName,CountryCode,Latitude,Longitude,WorldAreaCode,CityNamegeo_name_id,CountryNamegeo_name_id,coordinates"
@@ -592,20 +592,20 @@ class ProcessorDistancias(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -628,22 +628,22 @@ class Grouper(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - VUELOS_INPUT={self.environment["VUELOS_INPUT"]}
-        - VUELOS_OUTPUT={self.environment["VUELOS_OUTPUT"]}
-        - MEDIA_GENERAL_INPUT={self.environment["MEDIA_GENERAL_INPUT"]}
-        - MEDIA_GENERAL_OUTPUT={self.environment["MEDIA_GENERAL_OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - VUELOS_INPUT={self.environment["VUELOS_INPUT"]}
+      - VUELOS_OUTPUT={self.environment["VUELOS_OUTPUT"]}
+      - MEDIA_GENERAL_INPUT={self.environment["MEDIA_GENERAL_INPUT"]}
+      - MEDIA_GENERAL_OUTPUT={self.environment["MEDIA_GENERAL_OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -665,21 +665,21 @@ class LoadBalancer(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - GROUPER_REPLICAS_COUNT={self.environment["GROUPER_REPLICAS_COUNT"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - GROUPER_REPLICAS_COUNT={self.environment["GROUPER_REPLICAS_COUNT"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -701,21 +701,21 @@ class ProcessorMediaGeneral(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - GROUPER_REPLICAS_COUNT={self.environment["GROUPER_REPLICAS_COUNT"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - GROUPER_REPLICAS_COUNT={self.environment["GROUPER_REPLICAS_COUNT"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -737,21 +737,21 @@ class ProcessorMaxAvg(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - GROUPER_REPLICAS_COUNT={self.environment["GROUPER_REPLICAS_COUNT"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - GROUPER_REPLICAS_COUNT={self.environment["GROUPER_REPLICAS_COUNT"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -774,22 +774,22 @@ class TaggerDosMasRapidos(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - TAG_NAME={self.environment["TAG_NAME"]}
-        - TAG_ID={self.environment["TAG_ID"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - TAG_NAME={self.environment["TAG_NAME"]}
+      - TAG_ID={self.environment["TAG_ID"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -812,22 +812,22 @@ class TaggerTresEscalasOMas(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - TAG_NAME={self.environment["TAG_NAME"]}
-        - TAG_ID={self.environment["TAG_ID"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - TAG_NAME={self.environment["TAG_NAME"]}
+      - TAG_ID={self.environment["TAG_ID"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -850,22 +850,22 @@ class TaggerDistancias(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - TAG_NAME={self.environment["TAG_NAME"]}
-        - TAG_ID={self.environment["TAG_ID"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - TAG_NAME={self.environment["TAG_NAME"]}
+      - TAG_ID={self.environment["TAG_ID"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
@@ -888,22 +888,22 @@ class TaggerMaxAvg(InsideEntity):
     image: {self.image}
     entrypoint: {self.entrypoint}
     environment:
-        - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
-        - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
-        - INPUT={self.environment["INPUT"]}
-        - OUTPUT={self.environment["OUTPUT"]}
-        - RABBIT_HOST={self.environment["RABBIT_HOST"]}
-        - INPUT_TYPE={self.environment["INPUT_TYPE"]}
-        - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
-        - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
-        - TAG_NAME={self.environment["TAG_NAME"]}
-        - TAG_ID={self.environment["TAG_ID"]}
-        - REPLICA_ID={self.replica_id}
+      - PYTHONUNBUFFERED={self.environment["PYTHONUNBUFFERED"]}
+      - LOGGING_LEVEL={self.environment["LOGGING_LEVEL"]}
+      - INPUT={self.environment["INPUT"]}
+      - OUTPUT={self.environment["OUTPUT"]}
+      - RABBIT_HOST={self.environment["RABBIT_HOST"]}
+      - INPUT_TYPE={self.environment["INPUT_TYPE"]}
+      - OUTPUT_TYPE={self.environment["OUTPUT_TYPE"]}
+      - REPLICAS_COUNT={self.environment["REPLICAS_COUNT"]}
+      - TAG_NAME={self.environment["TAG_NAME"]}
+      - TAG_ID={self.environment["TAG_ID"]}
+      - REPLICA_ID={self.replica_id}
     depends_on:
-        rabbitmq:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
-        - {self.networks[0]}
+      - {self.networks[0]}
 """
 
 
