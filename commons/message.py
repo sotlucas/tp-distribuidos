@@ -10,6 +10,7 @@ class MessageType(Enum):
     EOF_DISCOVERY = 3
     EOF_AGGREGATION = 4
     EOF_FINISH = 5
+    EOF_RESULT = 6
 
 
 class Message:
@@ -38,6 +39,8 @@ class Message:
             return EOFAggregationMessage.from_bytes(client_id, reader)
         elif type == MessageType.EOF_FINISH.value:
             return EOFFinishMessage.from_bytes(client_id, reader)
+        elif type == MessageType.EOF_RESULT.value:
+            return EOFResultMessage.from_bytes(client_id, reader)
         else:
             raise Exception("Unknown message type")
 
@@ -349,5 +352,33 @@ class EOFFinishMessage(Message):
     def to_bytes_impl(self, writer):
         writer.write_int(len(self.replica_id_seen), 4)
         writer.write_multiple_int(self.replica_id_seen, 8)
+
+        return writer.get_bytes()
+
+
+class EOFResultMessage(Message):
+    """
+    EOF result message structure:
+
+        0      2          10       11              19
+        | type | client_id | tag_id | messages_sent |
+
+    """
+
+    def __init__(self, client_id, tag_id, messages_sent):
+        message_type = MessageType.EOF_RESULT
+        super().__init__(message_type, client_id)
+        self.tag_id = tag_id
+        self.messages_sent = messages_sent
+
+    def from_bytes(client_id, reader):
+        tag_id = reader.read_int(1)
+        messages_sent = reader.read_int(8)
+
+        return EOFResultMessage(client_id, tag_id, messages_sent)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.tag_id, 1)
+        writer.write_int(self.messages_sent, 8)
 
         return writer.get_bytes()

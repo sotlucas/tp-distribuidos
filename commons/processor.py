@@ -4,7 +4,8 @@ from enum import Enum
 class ResponseType(Enum):
     SINGLE = 0
     MULTIPLE = 1
-    NOT_READY = 2
+    NOT_READY = 2  # Only used for joiner processor
+    SEND_EOF = 3  # Only used for max_avg processor
 
 
 class Response:

@@ -15,7 +15,7 @@ class ResultsListener:
         # Register signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.__shutdown)
         logging.info(f"action: results_listener | result: started")
-        self.receiver.bind(self.output_callback, self.handle_eof)
+        self.receiver.bind(self.output_callback, self.handle_result_eof)
         self.receiver.start()
 
     def output_callback(self, messages):
@@ -24,9 +24,16 @@ class ResultsListener:
         )
         self.sender.send_all(messages, routing_key=str(messages.client_id))
 
-    def handle_eof(self):
-        # TODO: handle
-        pass
+    def handle_result_eof(self, eof_result_message):
+        logging.debug(
+            f"received result eof | client_id: {eof_result_message.client_id}, tag_id: {eof_result_message.tag_id}, messages_sent: {eof_result_message.messages_sent}"
+        )
+        self.sender.send_special_result_eof(
+            eof_result_message.client_id,
+            eof_result_message.tag_id,
+            routing_key=str(eof_result_message.client_id),
+            messages_sent=eof_result_message.messages_sent,
+        )
 
     def __shutdown(self, *args):
         """

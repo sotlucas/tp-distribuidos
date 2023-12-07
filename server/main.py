@@ -34,13 +34,13 @@ def main():
     health.start()
 
     # TODO: Should the server even have a log storer or a state to restore? Check this
-    vuelos_log_guardian = LogGuardian("vuelos")
+    vuelos_log_guardian = LogGuardian(no_log=True)
 
     vuelos_initializer = CommunicationInitializer(
         config_params["rabbit_host"], vuelos_log_guardian
     )
 
-    resultados_log_guardian = LogGuardian("resultados")
+    resultados_log_guardian = LogGuardian(no_log=True)
 
     resultados_initializer = CommunicationInitializer(
         config_params["rabbit_host"], resultados_log_guardian
@@ -49,7 +49,7 @@ def main():
         config_params["vuelos_output"], config_params["output_type"]
     )
 
-    lat_long_log_guardian = LogGuardian("lat_long")
+    lat_long_log_guardian = LogGuardian(no_log=True)
 
     lat_long_initializer = CommunicationInitializer(
         config_params["rabbit_host"], lat_long_log_guardian

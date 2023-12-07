@@ -858,6 +858,7 @@ services:
       - INPUT_TYPE=QUEUE
       - OUTPUT_TYPE=QUEUE
       - REPLICAS_COUNT=${PROCESSOR_MAX_AVG_REPLICAS}
+      - GROUPER_REPLICAS_COUNT=${GROUPER_REPLICAS}
       - REPLICA_ID=1
     depends_on:
       rabbitmq:

@@ -16,6 +16,7 @@ class MessageType(Enum):
     ACK = 6
     ANNOUNCE_ACK = 7
     RESULT_ACK = 8
+    RESULT_EOF = 9
 
 
 class MessageProtocolType(Enum):
@@ -53,6 +54,8 @@ class Message:
             return AnnounceACKMessage.from_bytes(reader)
         elif type == MessageType.RESULT_ACK.value:
             return ResultACKMessage.from_bytes(reader)
+        elif type == MessageType.RESULT_EOF.value:
+            return ResultEOFMessage.from_bytes(reader)
         else:
             raise Exception("Unknown message type")
 
@@ -157,6 +160,25 @@ class EOFMessage(Message):
 
     def __str__(self):
         return f"EOFMessage(protocol_type={self.protocol_type}, messages_sent={self.messages_sent}, possible_duplicates={self.possible_duplicates})"
+
+
+class ResultEOFMessage(Message):
+    def __init__(self, tag_id, messages_sent):
+        super().__init__(MessageType.RESULT_EOF)
+        self.tag_id = tag_id
+        self.messages_sent = messages_sent
+
+    def from_bytes(reader):
+        tag_id = reader.read_int(1)
+        messages_sent = reader.read_int(8)
+
+        return ResultEOFMessage(tag_id, messages_sent)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.tag_id, 1)
+        writer.write_int(self.messages_sent, 8)
+
+        return writer.get_bytes()
 
 
 class HealthCheckMessage(Message):

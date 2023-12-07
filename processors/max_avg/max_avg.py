@@ -19,7 +19,7 @@ class MaxAvg(Processor):
 
         # 2. Formateo el resultado de salida.
         message = {"route": route, "avg": avg, "max_price": max_price}
-        return Response(ResponseType.SINGLE, message)
+        return Response(ResponseType.SEND_EOF, message)
 
     def get_avg(self, prices):
         return sum(prices) / len(prices)
