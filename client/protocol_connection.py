@@ -53,6 +53,10 @@ class ProtocolConnection:
                 self.buff, self.send_queue, self.results_queue, self.ack_queue
             ).run
         )
+        # Clear the ack queue to avoid receiving old messages
+        while not self.ack_queue.empty():
+            self.ack_queue.get()
+
         self.receiver_proc.start()
         self.__run()
 
@@ -96,7 +100,6 @@ class ProtocolConnection:
             try:
                 self.__receive_ack()
             except Exception as e:
-                logging.error("Server disconnected")
                 self.__reconnect()
 
     def __send(self, message):
@@ -108,12 +111,13 @@ class ProtocolConnection:
             self.buff.send_message(message)
             self.__receive_ack()
         except Exception as e:
-            logging.error("Server disconnected")
+            logging.error("Error while sending a message to server in the Sender")
             self.__reconnect()
 
     def __receive_ack(self):
         connection_state, recv_message = self.ack_queue.get()
         if connection_state == ConnectionState.DISCONNECTED:
+            logging.error("Received a disconnection message from the receiver")
             raise Exception("Server disconnected")
         if recv_message.message_type == MessageType.ACK:
             if self.current_message.message_type == MessageType.EOF:
@@ -136,14 +140,16 @@ class Receiver:
         while self.running:
             try:
                 message = self.buff.get_message()
-                logging.debug(f"Received message: {message.message_type}")
+                logging.debug(
+                    f"Received message: {message.message_type}, {message.message_id}"
+                )
                 if message.message_type == MessageType.RESULT:
                     self.results_queue.put(message)
                     self.buff.send_message(ResultACKMessage())
                 else:
                     self.ack_queue.put((ConnectionState.CONNECTED, message))
             except Exception as e:
-                logging.exception(f"Error receiving message: {e}")
+                logging.error(f"Error while receiving message from Receiver: {e}")
                 self.running = False
                 self.ack_queue.put((ConnectionState.DISCONNECTED, None))
 

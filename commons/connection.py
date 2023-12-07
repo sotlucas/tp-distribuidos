@@ -1,6 +1,6 @@
 import logging
 import signal
-from commons.message import ProtocolMessage
+from commons.message import ProtocolMessage, ProtocolResultMessage
 from commons.processor import ResponseType
 
 
@@ -13,6 +13,7 @@ class ConnectionConfig:
         send_eof=True,
         is_topic=False,
         has_statefull_processor=False,
+        result_tag_id=None,
     ):
         self.replica_id = replica_id
         self.input_fields = input_fields
@@ -20,6 +21,7 @@ class ConnectionConfig:
         self.send_eof = send_eof
         self.is_topic = is_topic
         self.has_statefull_processor = has_statefull_processor
+        self.result_tag_id = result_tag_id
 
 
 class Connection:
@@ -124,7 +126,16 @@ class Connection:
             logging.debug(
                 f"Sending messages to topic {topic} with client_id {client_id}"
             )
-            message_to_send = ProtocolMessage(client_id, message_id, messages)
+            if self.config.result_tag_id:
+                # If we have a result_tag_id, it means we are at the end of the query,
+                # so we need to send the result_tag_id in the message to differentiate
+                # it from the other messages of other queries.
+                message_to_send = ProtocolResultMessage(
+                    client_id, self.config.result_tag_id, message_id, messages
+                )
+            else:
+                message_to_send = ProtocolMessage(client_id, message_id, messages)
+
             self.communication_sender.send_all(
                 message_to_send,
                 routing_key=str(topic),
@@ -132,7 +143,16 @@ class Connection:
             )
 
     def send_messages(self, messages, client_id, message_id):
-        message_to_send = ProtocolMessage(client_id, message_id, messages)
+        if self.config.result_tag_id:
+            # If we have a result_tag_id, it means we are at the end of the query,
+            # so we need to send the result_tag_id in the message to differentiate
+            # it from the other messages of other queries.
+            message_to_send = ProtocolResultMessage(
+                client_id, self.config.result_tag_id, message_id, messages
+            )
+        else:
+            message_to_send = ProtocolMessage(client_id, message_id, messages)
+
         self.communication_sender.send_all(
             message_to_send, output_fields_order=self.config.output_fields
         )

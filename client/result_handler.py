@@ -13,6 +13,8 @@ class ResultHandler:
         self.client_id = client_id
         self.results_queue = results_queue
 
+        self.results_received = {}
+
     def receive_results(self):
         """
         Receive the results from the server.
@@ -26,7 +28,8 @@ class ResultHandler:
                 message = self.results_queue.get()
                 if not message:
                     break
-                self.__save_results(message.result)
+                if not self.is_duplicate(message):
+                    self.__save_results(message.result)
             except PeerDisconnected:
                 logging.info("action: server_disconected")
                 self.running = False
@@ -38,6 +41,22 @@ class ResultHandler:
                 return
 
         logging.info("Results received")
+
+    def is_duplicate(self, message):
+        """
+        Checks if the message is a duplicate. If so, it is not saved.
+        """
+        tag_id = message.tag_id
+        message_id = message.message_id
+        if tag_id not in self.results_received:
+            self.results_received[tag_id] = set()
+        if message_id in self.results_received[tag_id]:
+            logging.warning(
+                f"action: result_handler | result: duplicate | tag_id: {tag_id} | message_id: {message_id}"
+            )
+            return True
+        self.results_received[tag_id].add(message_id)
+        return False
 
     def __save_results(self, data):
         """

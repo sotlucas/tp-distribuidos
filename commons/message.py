@@ -5,10 +5,11 @@ from commons.message_utils import MessageBytesReader, MessageBytesWriter
 
 class MessageType(Enum):
     PROTOCOL = 0
-    EOF = 1
-    EOF_DISCOVERY = 2
-    EOF_AGGREGATION = 3
-    EOF_FINISH = 4
+    PROTOCOL_RESULT = 1
+    EOF = 2
+    EOF_DISCOVERY = 3
+    EOF_AGGREGATION = 4
+    EOF_FINISH = 5
 
 
 class Message:
@@ -27,6 +28,8 @@ class Message:
 
         if type == MessageType.PROTOCOL.value:
             return ProtocolMessage.from_bytes(client_id, reader)
+        elif type == MessageType.PROTOCOL_RESULT.value:
+            return ProtocolResultMessage.from_bytes(client_id, reader)
         elif type == MessageType.EOF.value:
             return EOFMessage.from_bytes(client_id, reader)
         elif type == MessageType.EOF_DISCOVERY.value:
@@ -75,6 +78,37 @@ class ProtocolMessage(Message):
         return ProtocolMessage(client_id, message_id, payload)
 
     def to_bytes_impl(self, writer):
+        writer.write_int(self.message_id, 8)
+        writer.write(self.payload.encode("utf-8"))
+        return writer.get_bytes()
+
+
+class ProtocolResultMessage(Message):
+    """
+    Protocol message structure:
+
+        0      2          10       11           19         N
+        | type | client_id | tag_id | message_id | payload |
+
+    """
+
+    def __init__(self, client_id, tag_id, message_id, payload):
+        message_type = MessageType.PROTOCOL_RESULT
+        super().__init__(message_type, client_id)
+        self.tag_id = tag_id
+        self.message_id = message_id
+        self.payload = payload
+
+    def from_bytes(client_id, reader):
+        tag_id = reader.read_int(1)
+        message_id = reader.read_int(8)
+        payload = reader.read_to_end()
+        payload = payload.decode("utf-8")
+
+        return ProtocolResultMessage(client_id, tag_id, message_id, payload)
+
+    def to_bytes_impl(self, writer):
+        writer.write_int(self.tag_id, 1)
         writer.write_int(self.message_id, 8)
         writer.write(self.payload.encode("utf-8"))
         return writer.get_bytes()

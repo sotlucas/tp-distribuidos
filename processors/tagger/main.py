@@ -19,6 +19,7 @@ def main():
         "input_type": str,
         "replicas_count": int,
         "tag_name": str,
+        "tag_id": int,
         "replica_id": int,
     }
     config_params = initialize_config(config_inputs)
@@ -51,7 +52,11 @@ def main():
 
     # We don't need to specify input and output fields for the Tagger
     # TODO: We do not need to send EOF now, but maybe we will need it when we handle multiple clients
-    connection_config = ConnectionConfig(config_params["replica_id"], send_eof=False)
+    connection_config = ConnectionConfig(
+        config_params["replica_id"],
+        send_eof=False,
+        result_tag_id=config_params["tag_id"],
+    )
     Connection(
         connection_config, receiver, sender, log_guardian, Tagger, tagger_config
     ).run()

@@ -2,7 +2,7 @@ import signal
 import logging
 import multiprocessing as mp
 
-from commons.protocol_connection import ProtocolConnection, ProtocolConnectionConfig
+from protocol_connection import ProtocolConnection, ProtocolConnectionConfig
 from file_uploader import FileUploader
 from result_handler import ResultHandler
 from commons.protocol import (
@@ -38,8 +38,9 @@ class Client:
         signal.signal(signal.SIGINT, self.__shutdown)
 
     def run(self):
+        # maxsize=1 to avoid having too many messages in memory
         send_queue = mp.Queue(maxsize=1)
-        results_queue = mp.Queue()
+        results_queue = mp.Queue(maxsize=1)
 
         protocol_connection_config = ProtocolConnectionConfig(
             self.config.server_ip, self.config.server_port, self.config.client_id
