@@ -30,7 +30,7 @@ def main():
         "grouper_replicas": int,
         "joiner_replicas": int,
         "server_replicas": int,
-        "health_checker_replicas": int
+        "health_checker_replicas": int,
     }
     config_params = initialize_config(config_inputs)
 
@@ -63,7 +63,7 @@ def main():
         config_params["grouper_replicas"],
         config_params["joiner_replicas"],
         config_params["server_replicas"],
-        config_params["health_checker_replicas"]
+        config_params["health_checker_replicas"],
     )
 
     HealthChecker(config).run()

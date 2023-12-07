@@ -44,5 +44,5 @@ test:
 .PHONY: test
 
 check:
-	./tools/result_checker/check.sh
+	sudo ./tools/result_checker/check.sh
 .PHONY: check
