@@ -7,7 +7,9 @@ from commons.config_initializer import initialize_config
 
 def main(arcv):
     if len(arcv) != 3:
-        logging.error("Invalid arguments, usage: python main.py <flights_file_path> <airports_file_path>")
+        logging.error(
+            "Invalid arguments, usage: python main.py <flights_file_path> <airports_file_path>"
+        )
         return
     flights_file_path = arcv[1]
     airports_file_path = arcv[2]
