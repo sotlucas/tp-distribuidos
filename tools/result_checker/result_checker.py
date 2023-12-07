@@ -101,9 +101,9 @@ class ResultChecker:
 def main(result_file, fixture_file, result_type):
     result_checker = ResultChecker(result_file, fixture_file, result_type)
     if result_checker.check():
-        print(f"The file {result_file} is correct")
+        print("OK")
     else:
-        print(f"The file {result_file} is incorrect")
+        print("ERROR")
 
 
 if __name__ == "__main__":
