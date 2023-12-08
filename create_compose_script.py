@@ -25,6 +25,14 @@ TAGGER_TRES_ESCALAS_O_MAS_REPLICAS = 1
 TAGGER_DISTANCIAS_REPLICAS = 1
 TAGGER_MAX_AVG_REPLICAS = 1
 
+# TODO: Los taggers ahora no se pueden replicar por si solos, ya que tienen un duplicate catcher dentro.
+#       Con poner un load balancer antes de cada tagger, se soluciona el problema en parte.
+#       Ya que el load balancer tiene un pequeño bug que es que asume que le manda por cada batch de mensajes que recibe
+#       un mensaje individual a todas las réplicas, esto no sería un problema si no fuera porque las queries de dos mas rápidos
+#       y max avg tienen pocos mensajes que se mandan, haciendo que no se manden mensajes a todas las réplicas.
+#       Por lo tanto, solucionando esto se podría replicar los taggers.
+#       Igualmente se podrían replicar con load balancer en las otras queries, la de Distancias y la de Tres escalas o más.
+
 
 class Service:
     def __init__(self):
